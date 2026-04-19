@@ -1,0 +1,51 @@
+import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+
+export default function Navbar() {
+  const { user, logout } = useAuth();
+
+  return (
+    <nav
+      style={{
+        width: '100%',
+        padding: '1rem 2rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        backdropFilter: 'blur(12px)',
+        background: 'rgba(14, 14, 17, 0.6)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+      }}
+    >
+      <Link to="/" style={{ textDecoration: 'none', color: 'var(--accent-gold)', fontSize: '1.4rem' }}>
+        Studio Flow
+      </Link>
+
+      <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+        <Link to="/feed" style={{ color: 'var(--text-soft)' }}>Feed</Link>
+        <Link to="/profile" style={{ color: 'var(--text-soft)' }}>Profile</Link>
+
+        {user ? (
+          <button
+            onClick={logout}
+            style={{
+              background: 'var(--accent-rose)',
+              border: 'none',
+              padding: '0.4rem 0.8rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              color: '#fff',
+            }}
+          >
+            Log Out
+          </button>
+        ) : (
+          <Link to="/" style={{ color: 'var(--accent-blue)' }}>Log In</Link>
+        )}
+      </div>
+    </nav>
+  );
+}
