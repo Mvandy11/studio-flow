@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import './styles/cinematic.css'
 import Home from './pages/Home.jsx'
 import Feed from './pages/Feed.jsx'
 import CreatorProfile from './pages/CreatorProfile.jsx'
