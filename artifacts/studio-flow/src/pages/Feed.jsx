@@ -20,15 +20,15 @@ export default function Feed() {
     load();
   }, [user]);
 
-  if (!user) return <div>Please log in to view your feed.</div>;
-  if (loading) return <div>Loading feed...</div>;
+  if (!user) return <div className="cinematic-hero">Please log in to view your feed.</div>;
+  if (loading) return <div className="cinematic-hero">Loading feed...</div>;
 
   return (
     <div style={{ padding: '2rem' }}>
       <h1>Your Feed</h1>
 
       {feed.map((item) => (
-        <div key={item.id} style={{ marginBottom: '1.5rem' }}>
+        <div key={item.id} className="cinematic-card" style={{ marginBottom: '1.5rem' }}>
           {item.event_type === 'post' && (
             <div>
               <h3>New Post</h3>

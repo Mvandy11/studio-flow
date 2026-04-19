@@ -1,39 +1,21 @@
-import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Home() {
-  const { user, login, signup, logout } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { user } = useAuth();
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Studio Flow Auth Test</h1>
+    <div className="cinematic-hero">
+      <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+        Welcome to Studio Flow
+      </h1>
+      <p style={{ maxWidth: '600px', opacity: 0.8 }}>
+        A cinematic space for creators to host sessions, share moments, and build community.
+      </p>
 
-      {user ? (
-        <>
-          <p>Logged in as: {user.email}</p>
-          <button onClick={logout}>Log out</button>
-        </>
-      ) : (
-        <>
-          <input
-            type="email"
-            placeholder="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <br />
-          <input
-            type="password"
-            placeholder="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <br />
-          <button onClick={() => signup(email, password)}>Sign Up</button>
-          <button onClick={() => login(email, password)}>Log In</button>
-        </>
+      {!user && (
+        <p style={{ marginTop: '2rem', opacity: 0.7 }}>
+          Log in to begin your creative journey.
+        </p>
       )}
     </div>
   );

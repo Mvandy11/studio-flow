@@ -23,47 +23,51 @@ export default function SessionPage() {
     load();
   }, [id]);
 
-  if (loading) return <div>Loading session...</div>;
-  if (!session) return <div>Session not found.</div>;
+  if (loading) return <div className="cinematic-hero">Loading session...</div>;
+  if (!session) return <div className="cinematic-hero">Session not found.</div>;
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>{session.title}</h1>
-      <p>{session.description}</p>
-
-      {session.livestream_url && (
-        <iframe
-          src={session.livestream_url}
-          width="100%"
-          height="400"
-          allow="autoplay; encrypted-media"
-        />
-      )}
-
-      <h2>Live Chat</h2>
-
-      <div style={{ border: '1px solid #ccc', padding: '1rem', height: '200px', overflowY: 'auto' }}>
-        {messages.map((m) => (
-          <div key={m.id} style={{ marginBottom: '0.5rem' }}>
-            <strong>{m.sender_id}</strong>: {m.message}
-          </div>
-        ))}
+    <div>
+      <div className="cinematic-hero">
+        <h1>{session.title}</h1>
+        <p>{session.description}</p>
       </div>
 
-      {user && (
-        <div style={{ marginTop: '1rem' }}>
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            style={{ width: '80%' }}
+      <div style={{ padding: '2rem' }}>
+        {session.livestream_url && (
+          <iframe
+            src={session.livestream_url}
+            width="100%"
+            height="400"
+            allow="autoplay; encrypted-media"
           />
-          <button onClick={() => { send(text); setText(''); }}>
-            Send
-          </button>
+        )}
+
+        <h2>Live Chat</h2>
+
+        <div className="cinematic-card" style={{ height: '220px', overflowY: 'auto' }}>
+          {messages.map((m) => (
+            <div key={m.id} style={{ marginBottom: '0.5rem' }}>
+              <strong>{m.sender_id}</strong>: {m.message}
+            </div>
+          ))}
         </div>
-      )}
+
+        {user && (
+          <div style={{ marginTop: '1rem' }}>
+            <input
+              type="text"
+              placeholder="Type a message..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              style={{ width: '80%' }}
+            />
+            <button onClick={() => { send(text); setText(''); }}>
+              Send
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
