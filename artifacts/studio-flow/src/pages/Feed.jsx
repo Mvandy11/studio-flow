@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getFeedForUser, expandFeedEvents } from '../lib/feed';
+import CinematicFeedCard from '../components/CinematicFeedCard';
+import SessionTile from '../components/SessionTile';
 
 export default function Feed() {
   const { user } = useAuth();
@@ -20,32 +22,28 @@ export default function Feed() {
     load();
   }, [user]);
 
-  if (!user) return <div className="cinematic-hero cinematic-fade">Please log in to view your feed.</div>;
-  if (loading) return <div className="cinematic-hero cinematic-fade">Loading feed...</div>;
+  if (!user) return <div className="cinematic-hero">Please log in to view your feed.</div>;
+  if (loading) return <div className="cinematic-hero">Loading feed...</div>;
 
   return (
-    <div className="cinematic-fade" style={{ padding: '2rem' }}>
+    <div style={{ padding: '2rem' }} className="cinematic-stagger">
       <h1>Your Feed</h1>
 
-      <div className="cinematic-stagger">
-        {feed.map((item) => (
-          <div key={item.id} className="cinematic-card cinematic-hover" style={{ marginBottom: '1.5rem' }}>
-            {item.event_type === 'post' && (
-              <div>
-                <h3>New Post</h3>
-                <p>{item.post.content}</p>
-              </div>
-            )}
+      {feed.map((item) => (
+        <div key={item.id}>
+          {item.event_type === 'post' && (
+            <CinematicFeedCard title="New Post" body={item.post.content} />
+          )}
 
-            {item.event_type === 'session' && (
-              <div>
-                <h3>New Session</h3>
-                <p>{item.session.title}</p>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+          {item.event_type === 'session' && (
+            <SessionTile
+              title={item.session.title}
+              description={item.session.description}
+              thumbnail={item.session.thumbnail_url}
+            />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
