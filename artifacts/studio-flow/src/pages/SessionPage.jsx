@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getSessionById } from '../lib/session';
 import { useRealtimeChat } from '../hooks/useRealtimeChat';
+import ChatBubble from '../components/ChatBubble';
 
 export default function SessionPage() {
   const { id } = useParams();
@@ -23,11 +24,11 @@ export default function SessionPage() {
     load();
   }, [id]);
 
-  if (loading) return <div className="cinematic-hero cinematic-fade">Loading session...</div>;
-  if (!session) return <div className="cinematic-hero cinematic-fade">Session not found.</div>;
+  if (loading) return <div className="cinematic-hero">Loading session...</div>;
+  if (!session) return <div className="cinematic-hero">Session not found.</div>;
 
   return (
-    <div className="cinematic-fade">
+    <div>
       <div className="cinematic-hero">
         <h1>{session.title}</h1>
         <p>{session.description}</p>
@@ -45,27 +46,34 @@ export default function SessionPage() {
 
         <h2>Live Chat</h2>
 
-        <div className="cinematic-card cinematic-hover cinematic-stagger" style={{ height: '220px', overflowY: 'auto' }}>
+        <div
+          className="cinematic-card cinematic-stagger"
+          style={{ height: '220px', overflowY: 'auto', padding: '1rem' }}
+        >
           {messages.map((m) => (
-            <div key={m.id} style={{ marginBottom: '0.5rem' }}>
-              <strong>{m.sender_id}</strong>: {m.message}
-            </div>
+            <ChatBubble
+              key={m.id}
+              message={m.message}
+              isSelf={m.sender_id === user?.id}
+            />
           ))}
         </div>
 
         {user && (
-          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem' }}>
+          <div style={{ marginTop: '1rem' }}>
             <input
-              className="cinematic-input"
               type="text"
+              className="cinematic-input"
               placeholder="Type a message..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              style={{ marginBottom: 0 }}
             />
             <button
-              className="cinematic-button cinematic-button-accent cinematic-hover"
-              onClick={() => { send(text); setText(''); }}
+              className="cinematic-button-accent"
+              onClick={() => {
+                send(text);
+                setText('');
+              }}
             >
               Send
             </button>
