@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { getMessagesForSession, sendMessage, subscribeToChat } from '../lib/chat';
 
 export function useRealtimeChat(session_id, user_id) {
