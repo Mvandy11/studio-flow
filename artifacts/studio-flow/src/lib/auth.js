@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { createProfile } from './profile';
 
 // Sign up with email + password
 export async function signup(email, password) {
@@ -39,4 +40,19 @@ export function onAuthStateChange(callback) {
   return supabase.auth.onAuthStateChange((event, session) => {
     callback(event, session);
   });
+}
+
+// Automatically create a profile after signup
+export async function signupAndCreateProfile(email, password, username) {
+  const { user } = await signup(email, password);
+
+  await createProfile({
+    id: user.id,
+    username,
+    display_name: username,
+    bio: '',
+    avatar_url: '',
+  });
+
+  return user;
 }
