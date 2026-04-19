@@ -1,15 +1,57 @@
-export function createSession() {
-  // TODO: implement session creation logic
+import { supabase } from './supabase';
+
+// Create a new session
+export async function createSession({ creator_id, title, description, livestream_url, start_time }) {
+  const { data, error } = await supabase
+    .from('sessions')
+    .insert({
+      creator_id,
+      title,
+      description,
+      livestream_url,
+      start_time,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
-export function getSessionById() {
-  // TODO: implement fetch session by ID logic
+// Get a session by ID
+export async function getSessionById(id) {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
-export function getSessionsForCreator() {
-  // TODO: implement fetch sessions for creator logic
+// Get all sessions for a specific creator
+export async function getSessionsForCreator(creator_id) {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('creator_id', creator_id)
+    .order('start_time', { ascending: true });
+
+  if (error) throw error;
+  return data;
 }
 
-export function getUpcomingSessions() {
-  // TODO: implement fetch upcoming sessions logic
+// Get upcoming sessions (future start_time)
+export async function getUpcomingSessions() {
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .gte('start_time', now)
+    .order('start_time', { ascending: true });
+
+  if (error) throw error;
+  return data;
 }
