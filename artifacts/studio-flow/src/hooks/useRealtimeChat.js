@@ -1,6 +1,10 @@
 export function useRealtimeChat() {
+  // TODO: set up Supabase realtime subscription here
+
   return {
     messages: [],
-    sendMessage: async () => {},
+    sendMessage: () => {
+      // TODO: implement send message via realtime channel
+    },
   }
 }

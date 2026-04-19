@@ -1,3 +1,7 @@
-export async function getFeed() {}
+export function getFeedForUser() {
+  // TODO: implement fetch feed for user logic
+}
 
-export async function getFeedItem() {}
+export function createFeedEvent() {
+  // TODO: implement create feed event logic
+}

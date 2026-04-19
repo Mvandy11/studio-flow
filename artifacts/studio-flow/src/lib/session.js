@@ -1,5 +1,15 @@
-export async function createSession() {}
+export function createSession() {
+  // TODO: implement session creation logic
+}
 
-export async function getSession() {}
+export function getSessionById() {
+  // TODO: implement fetch session by ID logic
+}
 
-export async function getSessions() {}
+export function getSessionsForCreator() {
+  // TODO: implement fetch sessions for creator logic
+}
+
+export function getUpcomingSessions() {
+  // TODO: implement fetch upcoming sessions logic
+}
