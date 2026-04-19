@@ -1,0 +1,97 @@
+You will repair the Studio Flow project by restoring the correct session API file, removing invalid artifact directories, and verifying all imports and paths. Apply all changes below:
+
+1. DELETE the entire "artifacts" folder at the project root.
+   - This folder is a Replit scratch directory and must not exist in the project.
+   - Do NOT delete anything inside "studio-flow", "api-server", or "mockup-sandbox".
+
+2. CREATE or OVERWRITE the file:
+     studio-flow/src/lib/session.js
+   with the following complete implementation:
+
+   import { supabase } from './supabase';
+
+   export async function createSession({ creator_id, title, description, livestream_url, start_time }) {
+     const { data, error } = await supabase
+       .from('sessions')
+       .insert({ creator_id, title, description, livestream_url, start_time })
+       .select()
+       .single();
+     if (error) throw error;
+     return data;
+   }
+
+   export async function updateSession(id, updates) {
+     const { data, error } = await supabase
+       .from('sessions')
+       .update(updates)
+       .eq('id', id)
+       .select()
+       .single();
+     if (error) throw error;
+     return data;
+   }
+
+   export async function getSessionById(id) {
+     const { data, error } = await supabase
+       .from('sessions')
+       .select('*')
+       .eq('id', id)
+       .single();
+     if (error) throw error;
+     return data;
+   }
+
+   export async function getSessionsForCreator(creator_id) {
+     const { data, error } = await supabase
+       .from('sessions')
+       .select('*')
+       .eq('creator_id', creator_id)
+       .order('start_time', { ascending: true });
+     if (error) throw error;
+     return data;
+   }
+
+   export async function getUpcomingSessions() {
+     const now = new Date().toISOString();
+     const { data, error } = await supabase
+       .from('sessions')
+       .select('*')
+       .gte('start_time', now)
+       .order('start_time', { ascending: true });
+     if (error) throw error;
+     return data;
+   }
+
+   export async function createSessionFeedEvent(session_id, creator_id) {
+     const { data, error } = await supabase
+       .from('feed_events')
+       .insert({ creator_id, event_type: 'session', event_id: session_id })
+       .select()
+       .single();
+     if (error) throw error;
+     return data;
+   }
+
+3. VERIFY that the following files import from the correct path:
+   - studio-flow/src/pages/StudioSessions.jsx
+   - studio-flow/src/pages/SessionEditor.jsx
+   - studio-flow/src/components/CreateSessionModal.jsx
+   - studio-flow/src/components/SessionTile.jsx
+
+   All should import session functions from:
+     import { createSession, updateSession, getSessionById, getSessionsForCreator } from '../lib/session';
+
+4. VERIFY that storage uploads import correctly:
+     import { uploadSessionThumbnail } from '../lib/storage';
+
+5. ENSURE no component imports anything from the deleted "artifacts" directory.
+
+6. ENSURE the project structure contains exactly:
+   studio-flow/src/lib/session.js
+   studio-flow/src/lib/storage.js
+   studio-flow/src/components/*
+   studio-flow/src/pages/*
+   studio-flow/src/hooks/*
+   and no duplicate or shadow directories.
+
+Do not modify any other functionality. Only restore the correct session.js file, clean artifacts, and verify imports and structure.
