@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useProfile } from '../hooks/useProfile';
+import ProfileHeader from '../components/ProfileHeader';
+import CinematicModal from '../components/CinematicModal';
 
 export default function ProfilePage() {
   const { profile, loading, saveProfile } = useProfile();
-
+  const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     display_name: '',
     bio: '',
     avatar_url: '',
   });
 
-  if (loading) return <div className="cinematic-hero cinematic-fade">Loading profile...</div>;
-  if (!profile) return <div className="cinematic-hero cinematic-fade">No profile found.</div>;
+  if (loading) return <div className="cinematic-hero">Loading profile...</div>;
+  if (!profile) return <div className="cinematic-hero">No profile found.</div>;
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -19,40 +21,56 @@ export default function ProfilePage() {
 
   async function handleSave() {
     await saveProfile(form);
-    alert('Profile updated!');
+    setEditing(false);
   }
 
   return (
-    <div className="cinematic-fade" style={{ padding: '2rem' }}>
-      <h1>Edit Profile</h1>
+    <div style={{ padding: '2rem' }}>
+      <ProfileHeader
+        name={profile.display_name}
+        bio={profile.bio}
+        avatar={profile.avatar_url}
+      />
 
-      <div className="cinematic-card cinematic-hover" style={{ marginTop: '1rem' }}>
+      <button
+        className="cinematic-button-accent cinematic-hover"
+        style={{ marginTop: '1.5rem' }}
+        onClick={() => setEditing(true)}
+      >
+        Edit Profile
+      </button>
+
+      <CinematicModal open={editing} onClose={() => setEditing(false)}>
+        <h2>Edit Profile</h2>
+
         <input
-          className="cinematic-input"
           name="display_name"
+          className="cinematic-input"
           placeholder="Display Name"
           defaultValue={profile.display_name}
           onChange={handleChange}
         />
 
         <textarea
-          className="cinematic-input cinematic-textarea"
           name="bio"
+          className="cinematic-input cinematic-textarea"
           placeholder="Bio"
           defaultValue={profile.bio}
           onChange={handleChange}
         />
 
         <input
-          className="cinematic-input"
           name="avatar_url"
+          className="cinematic-input"
           placeholder="Avatar URL"
           defaultValue={profile.avatar_url}
           onChange={handleChange}
         />
 
-        <button className="cinematic-button cinematic-hover" onClick={handleSave}>Save</button>
-      </div>
+        <button className="cinematic-button-accent" onClick={handleSave}>
+          Save
+        </button>
+      </CinematicModal>
     </div>
   );
 }
