@@ -1,0 +1,118 @@
+:root {
+  /* Cinematic Color Palette */
+  --bg-deep: #0E0E11;
+  --text-soft: #C7C7D1;
+  --accent-gold: #F2C98F;
+  --accent-blue: #6EA8FF;
+  --accent-rose: #C47A7A;
+
+  /* Opacity + Effects */
+  --noise-opacity: 0.12;
+  --card-radius: 14px;
+  --card-blur: 18px;
+}
+
+/* Global Background */
+body {
+  background: var(--bg-deep);
+  color: var(--text-soft);
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Global Noise Overlay */
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background-image: url('/src/assets/art/noise.png');
+  opacity: var(--noise-opacity);
+  mix-blend-mode: overlay;
+  z-index: 9999;
+}
+
+/* Cinematic Hero Background */
+.cinematic-hero {
+  background-image: url('/src/assets/art/hero-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 4rem 2rem;
+  border-radius: 0 0 24px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cinematic-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at top left,
+    rgba(242, 201, 143, 0.18),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+/* Cinematic Card */
+.cinematic-card {
+  background-image: url('/src/assets/art/card-bg.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: var(--card-radius);
+  padding: 1.5rem;
+  backdrop-filter: blur(var(--card-blur));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.cinematic-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0.04),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Avatar Fallback */
+.avatar-fallback {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-image: url('/src/assets/art/avatar-fallback.png');
+  background-size: cover;
+  background-position: center;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Session Thumbnail Fallback */
+.session-fallback {
+  width: 100%;
+  height: 220px;
+  border-radius: var(--card-radius);
+  background-image: url('/src/assets/art/session-fallback.png');
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Cinematic Accent Line */
+.cinematic-accent {
+  width: 100%;
+  height: 2px;
+  background-image: url('/src/assets/art/accent-line.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.8;
+  margin: 1rem 0;
+}
