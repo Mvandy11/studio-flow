@@ -401,3 +401,11 @@ body::after {
   color: var(--accent-blue);
   border-left: 2px solid var(--accent-blue);
 }
+
+/* Modal action button row */
+.cinematic-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}

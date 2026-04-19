@@ -1,0 +1,254 @@
+CreateSessionModal.jsx
+jsx
+import { useState } from 'react';
+import { createSession, updateSession } from '../lib/session';
+import { uploadSessionThumbnail } from '../lib/storage';
+import ThumbnailPicker from './ThumbnailPicker';
+
+export default function CreateSessionModal({ creatorId, onClose, onCreated }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [livestreamUrl, setLivestreamUrl] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleCreate() {
+    try {
+      setLoading(true);
+
+      // Step 1 — create session without thumbnail
+      const session = await createSession({
+        creator_id: creatorId,
+        title,
+        description,
+        livestream_url: livestreamUrl,
+        start_time: startTime,
+      });
+
+      // Step 2 — upload thumbnail if present
+      let thumbnailUrl = null;
+      if (thumbnailFile) {
+        thumbnailUrl = await uploadSessionThumbnail(thumbnailFile, session.id);
+        await updateSession(session.id, { thumbnail_url: thumbnailUrl });
+      }
+
+      onCreated({ ...session, thumbnail_url: thumbnailUrl });
+      onClose();
+    } catch (err) {
+      console.error('Error creating session:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="cinematic-backdrop">
+      <div className="cinematic-card-xl cinematic-fade" style={{ width: '600px' }}>
+        <h2 className="cinematic-title">✦ Create New Session</h2>
+
+        <label>Title</label>
+        <input
+          className="cinematic-input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+
+        <label>Description</label>
+        <textarea
+          className="cinematic-textarea"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+
+        <label>Livestream URL</label>
+        <input
+          className="cinematic-input"
+          value={livestreamUrl}
+          onChange={(e) => setLivestreamUrl(e.target.value)}
+        />
+
+        <label>Start Time</label>
+        <input
+          type="datetime-local"
+          className="cinematic-input"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+        />
+
+        <label>Thumbnail</label>
+        <ThumbnailPicker onThumbnailSelected={setThumbnailFile} />
+
+        <div className="cinematic-modal-actions">
+          <button className="cinematic-button" onClick={onClose}>Cancel</button>
+          <button
+            className="cinematic-button-accent"
+            onClick={handleCreate}
+            disabled={loading}
+          >
+            {loading ? 'Creating…' : 'Create Session'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+🎬 2. ThumbnailPicker.jsx
+jsx
+import { useState } from 'react';
+
+export default function ThumbnailPicker({ onThumbnailSelected }) {
+  const [preview, setPreview] = useState(null);
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setPreview(URL.createObjectURL(file));
+    onThumbnailSelected(file);
+  }
+
+  function remove() {
+    setPreview(null);
+    onThumbnailSelected(null);
+  }
+
+  return (
+    <div className="cinematic-card cinematic-dropzone cinematic-hover" style={{ padding: '1rem' }}>
+      {!preview && (
+        <label style={{ cursor: 'pointer', display: 'block', textAlign: 'center' }}>
+          <div>Drag & Drop Thumbnail</div>
+          <div>or click to upload</div>
+          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
+        </label>
+      )}
+
+      {preview && (
+        <div className="cinematic-thumbnail">
+          <img src={preview} alt="thumbnail preview" style={{ width: '100%', borderRadius: '8px' }} />
+          <button className="cinematic-button" onClick={remove} style={{ marginTop: '0.5rem' }}>
+            Remove
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+🎬 3. SessionTile.jsx
+jsx
+import { Link } from 'react-router-dom';
+
+export default function SessionTile({ session }) {
+  return (
+    <div className="cinematic-card cinematic-hover cinematic-fade" style={{ padding: '1rem' }}>
+      {session.thumbnail_url && (
+        <img
+          src={session.thumbnail_url}
+          alt="session thumbnail"
+          className="cinematic-thumbnail"
+          style={{ width: '100%', borderRadius: '8px', marginBottom: '0.5rem' }}
+        />
+      )}
+
+      <h3>{session.title}</h3>
+      <p>{new Date(session.start_time).toLocaleString()}</p>
+
+      <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+        <Link to={`/studio/session/${session.id}/edit`} className="cinematic-button">
+          Edit
+        </Link>
+        <Link to={`/session/${session.id}`} className="cinematic-button-accent">
+          Open
+        </Link>
+      </div>
+    </div>
+  );
+}
+🎬 4. SessionEditor.jsx
+jsx
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { getSessionById, updateSession } from '../lib/session';
+import { uploadSessionThumbnail } from '../lib/storage';
+import ThumbnailPicker from '../components/ThumbnailPicker';
+
+export default function SessionEditor() {
+  const { id } = useParams();
+  const [session, setSession] = useState(null);
+  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getSessionById(id).then(setSession);
+  }, [id]);
+
+  if (!session) return <div>Loading…</div>;
+
+  async function save() {
+    setLoading(true);
+
+    let updates = {
+      title: session.title,
+      description: session.description,
+      livestream_url: session.livestream_url,
+      start_time: session.start_time,
+    };
+
+    if (thumbnailFile) {
+      const url = await uploadSessionThumbnail(thumbnailFile, id);
+      updates.thumbnail_url = url;
+    }
+
+    await updateSession(id, updates);
+    setLoading(false);
+  }
+
+  return (
+    <div className="cinematic-layout cinematic-fade">
+      <h2 className="cinematic-title">✦ Edit Session</h2>
+
+      <div className="cinematic-card-xl" style={{ padding: '1.5rem' }}>
+        <label>Title</label>
+        <input
+          className="cinematic-input"
+          value={session.title}
+          onChange={(e) => setSession({ ...session, title: e.target.value })}
+        />
+
+        <label>Description</label>
+        <textarea
+          className="cinematic-textarea"
+          value={session.description}
+          onChange={(e) => setSession({ ...session, description: e.target.value })}
+        />
+
+        <label>Livestream URL</label>
+        <input
+          className="cinematic-input"
+          value={session.livestream_url}
+          onChange={(e) => setSession({ ...session, livestream_url: e.target.value })}
+        />
+
+        <label>Start Time</label>
+        <input
+          type="datetime-local"
+          className="cinematic-input"
+          value={session.start_time?.slice(0, 16)}
+          onChange={(e) => setSession({ ...session, start_time: e.target.value })}
+        />
+
+        <label>Thumbnail</label>
+        <ThumbnailPicker onThumbnailSelected={setThumbnailFile} />
+
+        <button
+          className="cinematic-button-accent"
+          onClick={save}
+          disabled={loading}
+          style={{ marginTop: '1rem' }}
+        >
+          {loading ? 'Saving…' : 'Save Changes'}
+        </button>
+      </div>
+    </div>
+  );
+}

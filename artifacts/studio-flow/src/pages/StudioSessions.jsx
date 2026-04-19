@@ -51,20 +51,18 @@ export default function StudioSessions() {
         {sessions.map((session) => (
           <SessionTile
             key={session.id}
-            id={session.id}
-            title={session.title}
-            description={session.description}
-            thumbnail={session.thumbnail_url || undefined}
-            start_time={session.start_time}
+            session={session}
           />
         ))}
       </div>
 
-      <CreateSessionModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={handleCreated}
-      />
+      {modalOpen && (
+        <CreateSessionModal
+          creatorId={user?.id}
+          onClose={() => setModalOpen(false)}
+          onCreated={handleCreated}
+        />
+      )}
     </div>
   );
 }
