@@ -28,30 +28,30 @@ export default function ProfilePage() {
 
       <div className="cinematic-card" style={{ marginTop: '1rem' }}>
         <input
+          className="cinematic-input"
           name="display_name"
           placeholder="Display Name"
           defaultValue={profile.display_name}
           onChange={handleChange}
         />
-        <br />
 
         <textarea
+          className="cinematic-input cinematic-textarea"
           name="bio"
           placeholder="Bio"
           defaultValue={profile.bio}
           onChange={handleChange}
         />
-        <br />
 
         <input
+          className="cinematic-input"
           name="avatar_url"
           placeholder="Avatar URL"
           defaultValue={profile.avatar_url}
           onChange={handleChange}
         />
-        <br />
 
-        <button onClick={handleSave}>Save</button>
+        <button className="cinematic-button" onClick={handleSave}>Save</button>
       </div>
     </div>
   );

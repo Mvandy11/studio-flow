@@ -54,15 +54,19 @@ export default function SessionPage() {
         </div>
 
         {user && (
-          <div style={{ marginTop: '1rem' }}>
+          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem' }}>
             <input
+              className="cinematic-input"
               type="text"
               placeholder="Type a message..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              style={{ width: '80%' }}
+              style={{ marginBottom: 0 }}
             />
-            <button onClick={() => { send(text); setText(''); }}>
+            <button
+              className="cinematic-button cinematic-button-accent"
+              onClick={() => { send(text); setText(''); }}
+            >
               Send
             </button>
           </div>

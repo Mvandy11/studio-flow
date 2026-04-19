@@ -31,14 +31,7 @@ export default function Navbar() {
         {user ? (
           <button
             onClick={logout}
-            style={{
-              background: 'var(--accent-rose)',
-              border: 'none',
-              padding: '0.4rem 0.8rem',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              color: '#fff',
-            }}
+            className="cinematic-button cinematic-button-danger"
           >
             Log Out
           </button>
