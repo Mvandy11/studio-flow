@@ -27,6 +27,7 @@ export default function Navbar() {
       <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
         <Link to="/feed" style={{ color: 'var(--text-soft)' }}>Feed</Link>
         <Link to="/profile" style={{ color: 'var(--text-soft)' }}>Profile</Link>
+        <Link to="/studio" style={{ color: 'var(--text-soft)' }}>Studio</Link>
 
         {user ? (
           <button
