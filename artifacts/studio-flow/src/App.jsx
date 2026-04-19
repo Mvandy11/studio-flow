@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Feed from './pages/Feed';
 import ProfilePage from './pages/Profile';
 import SessionPage from './pages/SessionPage';
+import Studio from './pages/Studio';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="/feed" element={<Feed />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/session/:id" element={<SessionPage />} />
+          <Route path="/studio" element={<Studio />} />
         </Routes>
       </Layout>
     </BrowserRouter>
