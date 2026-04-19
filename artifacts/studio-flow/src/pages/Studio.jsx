@@ -2,7 +2,7 @@ import { useState } from 'react';
 import StudioSidebar from '../components/StudioSidebar';
 import StudioTopbar from '../components/StudioTopbar';
 import CinematicFeedCard from '../components/CinematicFeedCard';
-import SessionTile from '../components/SessionTile';
+import StudioSessions from './StudioSessions';
 
 export default function Studio() {
   const [section, setSection] = useState('overview');
@@ -25,15 +25,7 @@ export default function Studio() {
             </>
           )}
 
-          {section === 'sessions' && (
-            <>
-              <h1>Your Sessions</h1>
-              <SessionTile
-                title="Live Q&A"
-                description="Your next session is scheduled for tomorrow."
-              />
-            </>
-          )}
+          {section === 'sessions' && <StudioSessions />}
 
           {section === 'posts' && (
             <>

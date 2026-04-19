@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 // Create a new session
-export async function createSession({ creator_id, title, description, livestream_url, start_time }) {
+export async function createSession({ creator_id, title, description, livestream_url, start_time, thumbnail_url }) {
   const { data, error } = await supabase
     .from('sessions')
     .insert({
@@ -10,7 +10,21 @@ export async function createSession({ creator_id, title, description, livestream
       description,
       livestream_url,
       start_time,
+      thumbnail_url,
     })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Update an existing session
+export async function updateSession(id, updates) {
+  const { data, error } = await supabase
+    .from('sessions')
+    .update(updates)
+    .eq('id', id)
     .select()
     .single();
 

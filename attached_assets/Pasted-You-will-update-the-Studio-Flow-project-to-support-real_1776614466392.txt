@@ -1,0 +1,84 @@
+You will update the Studio Flow project to support real thumbnail uploads for sessions using Supabase Storage. Follow these steps carefully and apply all changes:
+
+1. Create a Supabase Storage bucket named "session-thumbnails" if it does not already exist.
+
+2. Update the Supabase schema:
+   - Ensure the "sessions" table has a column:
+       thumbnail_url TEXT
+   - If it does not exist, generate the migration to add it.
+
+3. Update the file: studio-flow/src/lib/session.js
+   - Modify createSession() to accept a new field: thumbnail_url
+   - Include thumbnail_url in the insert payload.
+
+4. Create a new helper in studio-flow/src/lib/storage.js:
+   export async function uploadSessionThumbnail(file, sessionId) {
+     const fileExt = file.name.split('.').pop();
+     const filePath = `thumbnails/${sessionId}.${fileExt}`;
+
+     const { error: uploadError } = await supabase.storage
+       .from('session-thumbnails')
+       .upload(filePath, file, { upsert: true });
+
+     if (uploadError) throw uploadError;
+
+     const { data: publicUrl } = supabase.storage
+       .from('session-thumbnails')
+       .getPublicUrl(filePath);
+
+     return publicUrl.publicUrl;
+   }
+
+5. Create a new component:
+   studio-flow/src/components/ThumbnailPicker.jsx
+   - A cinematic card with:
+       - drag-and-drop
+       - file input
+       - preview
+       - remove/reset button
+   - Exports onThumbnailSelected(file)
+
+6. Create a new modal:
+   studio-flow/src/components/CreateSessionModal.jsx
+   - Fields:
+       title
+       description
+       livestream_url
+       start_time (datetime-local)
+       thumbnail (via ThumbnailPicker)
+   - On submit:
+       a) call createSession() WITHOUT thumbnail_url first
+       b) upload thumbnail via uploadSessionThumbnail()
+       c) call updateSession() to save thumbnail_url
+   - Close modal on success.
+
+7. Update Studio Sessions page:
+   studio-flow/src/pages/StudioSessions.jsx
+   - Add a “Create Session” button that opens CreateSessionModal.
+   - Display real sessions using getSessionsForCreator().
+   - Show thumbnail_url if present.
+
+8. Create a new page:
+   studio-flow/src/pages/SessionEditor.jsx
+   - Load session by ID
+   - Allow editing:
+       title
+       description
+       livestream_url
+       start_time
+       thumbnail (via ThumbnailPicker)
+   - Save changes via updateSession()
+
+9. Add route:
+   /studio/session/:id/edit
+   pointing to SessionEditor.jsx
+
+10. Ensure all new components use the existing cinematic classes:
+    - cinematic-card
+    - cinematic-input
+    - cinematic-button
+    - cinematic-fade
+    - cinematic-hover
+    - cinematic-stagger
+
+Do not remove or modify any existing functionality. Only extend the system to support thumbnail uploads and session editing.
