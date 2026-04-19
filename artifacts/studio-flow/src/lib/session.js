@@ -55,3 +55,19 @@ export async function getUpcomingSessions() {
   if (error) throw error;
   return data;
 }
+
+// Create a feed event for a session
+export async function createSessionFeedEvent(session_id, creator_id) {
+  const { data, error } = await supabase
+    .from('feed_events')
+    .insert({
+      creator_id,
+      event_type: 'session',
+      event_id: session_id,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
