@@ -31,7 +31,7 @@ export default function Navbar() {
         {user ? (
           <button
             onClick={logout}
-            className="cinematic-button cinematic-button-danger"
+            className="cinematic-button cinematic-button-danger cinematic-hover"
           >
             Log Out
           </button>

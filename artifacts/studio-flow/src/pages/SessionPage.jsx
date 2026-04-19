@@ -23,11 +23,11 @@ export default function SessionPage() {
     load();
   }, [id]);
 
-  if (loading) return <div className="cinematic-hero">Loading session...</div>;
-  if (!session) return <div className="cinematic-hero">Session not found.</div>;
+  if (loading) return <div className="cinematic-hero cinematic-fade">Loading session...</div>;
+  if (!session) return <div className="cinematic-hero cinematic-fade">Session not found.</div>;
 
   return (
-    <div>
+    <div className="cinematic-fade">
       <div className="cinematic-hero">
         <h1>{session.title}</h1>
         <p>{session.description}</p>
@@ -45,7 +45,7 @@ export default function SessionPage() {
 
         <h2>Live Chat</h2>
 
-        <div className="cinematic-card" style={{ height: '220px', overflowY: 'auto' }}>
+        <div className="cinematic-card cinematic-hover cinematic-stagger" style={{ height: '220px', overflowY: 'auto' }}>
           {messages.map((m) => (
             <div key={m.id} style={{ marginBottom: '0.5rem' }}>
               <strong>{m.sender_id}</strong>: {m.message}
@@ -64,7 +64,7 @@ export default function SessionPage() {
               style={{ marginBottom: 0 }}
             />
             <button
-              className="cinematic-button cinematic-button-accent"
+              className="cinematic-button cinematic-button-accent cinematic-hover"
               onClick={() => { send(text); setText(''); }}
             >
               Send

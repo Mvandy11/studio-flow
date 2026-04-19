@@ -10,8 +10,8 @@ export default function ProfilePage() {
     avatar_url: '',
   });
 
-  if (loading) return <div className="cinematic-hero">Loading profile...</div>;
-  if (!profile) return <div className="cinematic-hero">No profile found.</div>;
+  if (loading) return <div className="cinematic-hero cinematic-fade">Loading profile...</div>;
+  if (!profile) return <div className="cinematic-hero cinematic-fade">No profile found.</div>;
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -23,10 +23,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="cinematic-fade" style={{ padding: '2rem' }}>
       <h1>Edit Profile</h1>
 
-      <div className="cinematic-card" style={{ marginTop: '1rem' }}>
+      <div className="cinematic-card cinematic-hover" style={{ marginTop: '1rem' }}>
         <input
           className="cinematic-input"
           name="display_name"
@@ -51,7 +51,7 @@ export default function ProfilePage() {
           onChange={handleChange}
         />
 
-        <button className="cinematic-button" onClick={handleSave}>Save</button>
+        <button className="cinematic-button cinematic-hover" onClick={handleSave}>Save</button>
       </div>
     </div>
   );
