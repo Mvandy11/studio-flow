@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { getSessionById } from '../lib/session';
+import { useRealtimeChat } from '../hooks/useRealtimeChat';
 
 export default function SessionPage() {
   const { id } = useParams();
+  const { user } = useAuth();
+
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [text, setText] = useState('');
+
+  const { messages, send } = useRealtimeChat(id, user?.id);
 
   useEffect(() => {
     async function load() {
@@ -31,6 +38,31 @@ export default function SessionPage() {
           height="400"
           allow="autoplay; encrypted-media"
         />
+      )}
+
+      <h2>Live Chat</h2>
+
+      <div style={{ border: '1px solid #ccc', padding: '1rem', height: '200px', overflowY: 'auto' }}>
+        {messages.map((m) => (
+          <div key={m.id} style={{ marginBottom: '0.5rem' }}>
+            <strong>{m.sender_id}</strong>: {m.message}
+          </div>
+        ))}
+      </div>
+
+      {user && (
+        <div style={{ marginTop: '1rem' }}>
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            style={{ width: '80%' }}
+          />
+          <button onClick={() => { send(text); setText(''); }}>
+            Send
+          </button>
+        </div>
       )}
     </div>
   );
