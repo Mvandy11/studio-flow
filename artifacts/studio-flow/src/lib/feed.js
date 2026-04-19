@@ -41,3 +41,32 @@ export async function getFeedForUser(user_id) {
 
   return events;
 }
+
+// Expand feed events with their underlying post or session data
+export async function expandFeedEvents(events) {
+  const expanded = [];
+
+  for (const event of events) {
+    if (event.event_type === 'post') {
+      const { data: post } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', event.event_id)
+        .single();
+
+      expanded.push({ ...event, post });
+    }
+
+    if (event.event_type === 'session') {
+      const { data: session } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', event.event_id)
+        .single();
+
+      expanded.push({ ...event, session });
+    }
+  }
+
+  return expanded;
+}
