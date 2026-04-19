@@ -6,6 +6,7 @@ import Feed from './pages/Feed';
 import ProfilePage from './pages/Profile';
 import SessionPage from './pages/SessionPage';
 import Studio from './pages/Studio';
+import StudioSessions from './pages/StudioSessions';
 import SessionEditor from './pages/SessionEditor';
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/session/:id" element={<SessionPage />} />
           <Route path="/studio" element={<Studio />} />
+          <Route path="/studio/sessions" element={<StudioSessions />} />
           <Route path="/studio/session/:id/edit" element={<SessionEditor />} />
         </Routes>
       </Layout>

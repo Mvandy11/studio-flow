@@ -30,37 +30,22 @@ export default function ThumbnailPicker({ onThumbnailSelected }) {
 
   return (
     <div
-      className={`cinematic-card cinematic-fade${dragging ? ' cinematic-hover' : ''}`}
-      style={{
-        border: dragging
-          ? '2px dashed var(--accent-blue)'
-          : '2px dashed rgba(255,255,255,0.12)',
-        borderRadius: '10px',
-        padding: '1.5rem',
-        textAlign: 'center',
-        cursor: 'pointer',
-        transition: 'border-color 0.2s',
-      }}
+      className={`cinematic-dropzone${dragging ? ' active' : ''}`}
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       onClick={() => !preview && inputRef.current?.click()}
     >
       {preview ? (
-        <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+        <div style={{ position: 'relative' }}>
           <img
             src={preview}
             alt="Thumbnail preview"
-            style={{
-              width: '100%',
-              maxHeight: '180px',
-              objectFit: 'cover',
-              borderRadius: '8px',
-            }}
+            className="cinematic-thumbnail"
+            style={{ marginBottom: '0.8rem' }}
           />
           <button
-            className="cinematic-button"
-            style={{ marginTop: '0.8rem' }}
+            className="cinematic-button cinematic-hover"
             onClick={(e) => { e.stopPropagation(); handleReset(); }}
           >
             Remove

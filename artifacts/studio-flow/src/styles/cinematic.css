@@ -293,3 +293,111 @@ body::after {
 .cinematic-stagger > *:nth-child(3) { animation-delay: 0.3s; }
 .cinematic-stagger > *:nth-child(4) { animation-delay: 0.4s; }
 .cinematic-stagger > *:nth-child(5) { animation-delay: 0.5s; }
+
+/* ----------------------------- */
+/* EXTENDED CINEMATIC CLASSES    */
+/* ----------------------------- */
+
+/* Large card variant */
+.cinematic-card-xl {
+  background-image: url('/src/assets/art/card-bg.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 20px;
+  padding: 2.5rem;
+  backdrop-filter: blur(var(--card-blur));
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  position: relative;
+  overflow: hidden;
+  animation: cinematic-card-rise 0.9s ease forwards;
+}
+
+.cinematic-card-xl::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom right, rgba(255,255,255,0.04), transparent);
+  pointer-events: none;
+}
+
+/* Page layout wrapper */
+.cinematic-layout {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Large cinematic title */
+.cinematic-title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-soft);
+  animation: cinematic-fade 0.8s ease forwards;
+  margin-bottom: 1.5rem;
+}
+
+/* Thumbnail display */
+.cinematic-thumbnail {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Drag-and-drop dropzone */
+.cinematic-dropzone {
+  border: 2px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.cinematic-dropzone:hover,
+.cinematic-dropzone.active {
+  border-color: var(--accent-blue);
+  background: rgba(110, 168, 255, 0.05);
+}
+
+/* Modal backdrop */
+.cinematic-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: cinematic-fade 0.3s ease forwards;
+}
+
+/* Sidebar navigation links */
+.cinematic-sidebar-link {
+  display: block;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  color: var(--text-soft);
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.cinematic-sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.cinematic-sidebar-link.active {
+  background: rgba(110, 168, 255, 0.12);
+  color: var(--accent-blue);
+  border-left: 2px solid var(--accent-blue);
+}

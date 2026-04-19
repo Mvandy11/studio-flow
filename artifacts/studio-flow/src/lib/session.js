@@ -70,6 +70,16 @@ export async function getUpcomingSessions() {
   return data;
 }
 
+// Delete a session
+export async function deleteSession(id) {
+  const { error } = await supabase
+    .from('sessions')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 // Create a feed event for a session
 export async function createSessionFeedEvent(session_id, creator_id) {
   const { data, error } = await supabase

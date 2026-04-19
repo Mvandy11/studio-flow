@@ -1,0 +1,90 @@
+You will integrate the new Session Creation system into Studio Flow by adding routes, wiring pages, and connecting components. Apply all changes below:
+
+1. Add new routes to the main router:
+   File: studio-flow/src/App.jsx (or wherever routes are defined)
+   Add:
+     /studio/sessions
+     /studio/session/:id/edit
+
+   Both routes must be wrapped in the existing layout components (sidebar + topbar).
+
+2. Create a new page:
+   File: studio-flow/src/pages/StudioSessions.jsx
+   Responsibilities:
+     - Load sessions using getSessionsForCreator()
+     - Display them using a new SessionTile component
+     - Include a "+ Create Session" button that opens CreateSessionModal
+     - Use cinematic-stagger for tile entrance
+     - Use cinematic-layout for page structure
+
+3. Create a new page:
+   File: studio-flow/src/pages/SessionEditor.jsx
+   Responsibilities:
+     - Load session by ID using getSessionById()
+     - Display editable fields:
+         title
+         description
+         livestream_url
+         start_time
+         thumbnail (via ThumbnailPicker)
+     - Save changes using updateSession()
+     - Use cinematic-title, cinematic-card-xl, cinematic-input, cinematic-textarea
+     - Add a Delete Session button using cinematic-button-danger
+
+4. Create a new component:
+   File: studio-flow/src/components/SessionTile.jsx
+   Responsibilities:
+     - Display thumbnail_url (if present)
+     - Show title, start_time, and status badge
+     - Provide buttons:
+         [ Edit ] → /studio/session/:id/edit
+         [ Open ] → existing session page
+     - Use cinematic-card and cinematic-hover
+
+5. Integrate CreateSessionModal:
+   File: studio-flow/src/components/CreateSessionModal.jsx
+   Requirements:
+     - Accept onClose() and onCreated(session) props
+     - Use ThumbnailPicker for thumbnail selection
+     - On submit:
+         a) call createSession() without thumbnail_url
+         b) upload thumbnail via uploadSessionThumbnail()
+         c) call updateSession() to save thumbnail_url
+         d) call onCreated() with the final session
+     - Close modal after success
+     - Use cinematic-backdrop and cinematic-card-xl
+
+6. Add navigation entry in the Studio sidebar:
+   File: studio-flow/src/components/Sidebar.jsx
+   Add a link:
+     Sessions → /studio/sessions
+   Use the existing cinematic-sidebar-link class.
+
+7. Ensure all new pages and components import:
+     - createSession
+     - getSessionsForCreator
+     - getSessionById
+     - updateSession
+     - uploadSessionThumbnail
+     - ThumbnailPicker
+     - CreateSessionModal
+     - SessionTile
+
+8. Ensure all new components use the cinematic CSS classes defined in the design system:
+     cinematic-card
+     cinematic-card-xl
+     cinematic-input
+     cinematic-textarea
+     cinematic-button
+     cinematic-button-accent
+     cinematic-button-danger
+     cinematic-fade
+     cinematic-stagger
+     cinematic-hover
+     cinematic-backdrop
+     cinematic-title
+     cinematic-layout
+     cinematic-thumbnail
+     cinematic-dropzone
+
+Do not remove or modify any existing functionality. Only add the new routing, pages, and integration for the Session Creation system.
