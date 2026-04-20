@@ -1,0 +1,77 @@
+You are an AI Agent responsible for repairing a Vite + React project located at the workspace root. The workspace is a pnpm monorepo, but the actual application lives at the root and must be restored into a valid Vite project that can build successfully using `pnpm run build`.
+
+Perform the following actions exactly and in order:
+
+1. Validate that the root contains:
+   - package.json
+   - src/
+   - lib/
+   - scripts/
+   - tsconfig.json
+   - tsconfig.base.json
+
+2. Ensure the root package.json is valid JSON and contains the following exact structure:
+   {
+     "name": "workspace",
+     "version": "0.0.0",
+     "private": true,
+     "scripts": {
+       "dev": "vite",
+       "build": "vite build",
+       "preview": "vite preview",
+       "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+       "typecheck:libs": "tsc --build"
+     },
+     "dependencies": {
+       (insert all existing dependencies here exactly as they were)
+     },
+     "devDependencies": {
+       "@vitejs/plugin-react": "^4.2.0",
+       "vite": "^5.2.0",
+       "typescript": "^5.3.3"
+     }
+   }
+
+3. Remove any comments, trailing commas, or invalid JSON from package.json.
+
+4. Ensure Vite and @vitejs/plugin-react are installed at the workspace root:
+   - Run: pnpm add -D vite @vitejs/plugin-react -w
+
+5. Create a valid Vite entry HTML file at /workspace/index.html with the following exact content:
+   <!DOCTYPE html>
+   <html lang="en">
+     <head>
+       <meta charset="UTF-8" />
+       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+       <title>Studio Flow</title>
+     </head>
+     <body>
+       <div id="root"></div>
+       <script type="module" src="/src/main.tsx"></script>
+     </body>
+   </html>
+
+6. Create or overwrite /workspace/vite.config.ts with the following exact content:
+   import { defineConfig } from 'vite'
+   import react from '@vitejs/plugin-react'
+
+   export default defineConfig({
+     plugins: [react()],
+   })
+
+7. Verify that the entry file exists at:
+   /workspace/src/main.tsx
+   If it does not exist, search for the closest matching entry file (main.jsx, index.tsx, etc.) and update index.html accordingly.
+
+8. Run `pnpm install` to ensure all dependencies resolve.
+
+9. Run `pnpm run build` and confirm that:
+   - Vite runs successfully
+   - A dist/ folder is created at the workspace root
+   - dist/index.html exists
+   - dist/assets/ contains bundled JS/CSS
+
+10. Output a final summary including:
+   - Whether the build succeeded
+   - Any files created or modified
+   - Any missing dependencies or errors that require human attention
