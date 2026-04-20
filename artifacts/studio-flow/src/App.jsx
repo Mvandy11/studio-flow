@@ -8,6 +8,7 @@ import SessionPage from './pages/SessionPage';
 import Studio from './pages/Studio';
 import StudioSessions from './pages/StudioSessions';
 import SessionEditor from './pages/SessionEditor';
+import PremierSettings from './pages/PremierSettings';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/studio" element={<Studio />} />
           <Route path="/studio/sessions" element={<StudioSessions />} />
           <Route path="/studio/session/:id/edit" element={<SessionEditor />} />
+          <Route path="/premier/settings" element={<PremierSettings />} />
         </Routes>
       </Layout>
     </BrowserRouter>

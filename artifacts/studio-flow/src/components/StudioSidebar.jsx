@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function StudioSidebar({ current, onSelect }) {
   const links = [
     { key: 'overview', label: 'Overview' },
@@ -34,6 +36,16 @@ export default function StudioSidebar({ current, onSelect }) {
           {label}
         </button>
       ))}
+
+      <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <Link
+          to="/premier/settings"
+          className="cinematic-sidebar-link"
+          style={{ display: 'block', color: 'var(--accent-gold)', textDecoration: 'none' }}
+        >
+          ✦ Premier Payout Settings
+        </Link>
+      </div>
     </aside>
   );
 }
