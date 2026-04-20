@@ -409,3 +409,51 @@ body::after {
   gap: 0.75rem;
   margin-top: 1.5rem;
 }
+
+/* Settings section block */
+.cinematic-section {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Form label */
+.cinematic-label {
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+/* Subtitle within a section */
+.cinematic-subtitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  margin: 0 0 0.5rem;
+}
+
+/* Radio button group */
+.cinematic-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cinematic-radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.cinematic-radio-group label:hover {
+  opacity: 1;
+}
+
+.cinematic-radio-group input[type="radio"] {
+  accent-color: var(--accent-blue);
+}
