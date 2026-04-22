@@ -804,3 +804,233 @@ body::after {
   border-radius: 0 6px 6px 0;
   margin: 0;
 }
+
+/* ─────────────────────────────────────────────
+   Backstage Pass Section
+───────────────────────────────────────────── */
+.bps-section {
+  position: relative;
+  overflow: hidden;
+  padding: 6rem 1.5rem;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 18, 0) 0%,
+    rgba(16, 12, 32, 0.6) 40%,
+    rgba(10, 10, 18, 0) 100%
+  );
+}
+
+.bps-glow-orb {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(120px);
+  opacity: 0.12;
+}
+
+.bps-glow-orb--left {
+  top: -100px;
+  left: -150px;
+  background: radial-gradient(circle, #7c3aed, transparent 70%);
+}
+
+.bps-glow-orb--right {
+  bottom: -100px;
+  right: -150px;
+  background: radial-gradient(circle, #2563eb, transparent 70%);
+}
+
+.bps-inner {
+  position: relative;
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* ── Header ── */
+.bps-header {
+  text-align: center;
+}
+
+.bps-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-blue, #4f8ef7);
+  background: rgba(79, 142, 247, 0.1);
+  border: 1px solid rgba(79, 142, 247, 0.22);
+  border-radius: 99px;
+  padding: 0.25rem 0.85rem;
+  margin-bottom: 1.1rem;
+}
+
+.bps-title {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0 0 1rem;
+  background: linear-gradient(135deg, #e0e0ff 0%, #a78bfa 50%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bps-subheadline {
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
+  color: rgba(220, 220, 255, 0.72);
+  max-width: 580px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── Body copy ── */
+.bps-body-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  font-size: 0.97rem;
+  line-height: 1.75;
+  color: rgba(200, 200, 230, 0.78);
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* ── Use-case cards ── */
+.bps-use-cases {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.bps-use-case-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.bps-use-case-card:hover {
+  border-color: rgba(167, 139, 250, 0.3);
+  background: rgba(167, 139, 250, 0.06);
+  transform: translateY(-2px);
+}
+
+.bps-use-case-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.bps-use-case-role {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #e0e0ff;
+  margin: 0 0 0.25rem;
+}
+
+.bps-use-case-examples {
+  font-size: 0.8rem;
+  color: rgba(180, 180, 210, 0.65);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Subsections ── */
+.bps-subsection {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+}
+
+.bps-subsection-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e0e0ff;
+  margin: 0 0 0.75rem;
+}
+
+.bps-subsection-body {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: rgba(200, 200, 230, 0.72);
+  margin: 0;
+}
+
+/* ── Stage features list ── */
+.bps-stage-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.bps-stage-feature-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: rgba(200, 210, 255, 0.85);
+  background: rgba(79, 142, 247, 0.08);
+  border: 1px solid rgba(79, 142, 247, 0.18);
+  border-radius: 99px;
+  padding: 0.3rem 0.75rem;
+}
+
+/* ── CTA ── */
+.bps-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  text-align: center;
+}
+
+.bps-cta-btn {
+  font-size: 1rem;
+  padding: 0.9rem 2.5rem;
+  border-radius: 99px;
+  box-shadow: 0 0 32px rgba(79, 142, 247, 0.25);
+  transition: box-shadow 0.25s, transform 0.2s;
+}
+
+.bps-cta-btn:hover {
+  box-shadow: 0 0 48px rgba(79, 142, 247, 0.45);
+  transform: translateY(-2px);
+}
+
+.bps-cta-note {
+  font-size: 0.78rem;
+  color: rgba(180, 180, 210, 0.5);
+  margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .bps-section {
+    padding: 4rem 1.25rem;
+  }
+
+  .bps-subsection {
+    padding: 1.25rem 1.1rem;
+  }
+
+  .bps-use-cases {
+    grid-template-columns: 1fr;
+  }
+}
