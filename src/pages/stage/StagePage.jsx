@@ -1,105 +1,186 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useRealtimeChat } from '../../hooks/useRealtimeChat';
-import ChatBubble from '../../components/ChatBubble';
+import { supabase } from '../../lib/supabase';
+import {
+  fetchInitialMessages,
+  subscribeToMessages,
+  sendMessage,
+  createPresenceChannel,
+  createPinnedChannel,
+  pinMessage,
+  createReactionChannel,
+  sendReaction,
+} from '../../lib/stageRealtime';
+import StageHeader from '../../components/stage/StageHeader';
+import MessageList from '../../components/stage/MessageList';
+import MessageInput from '../../components/stage/MessageInput';
+import ReactionBar from '../../components/stage/ReactionBar';
 
 export default function StagePage() {
   const { stageRoomId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  const { messages, send } = useRealtimeChat(stageRoomId, user?.id);
-  const [text, setText] = useState('');
-  const chatEndRef = useRef(null);
+  const [event, setEvent] = useState(null);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const [messages, setMessages] = useState([]);
+  const [pinnedMessage, setPinnedMessage] = useState(null);
+  const [viewerCount, setViewerCount] = useState(0);
+  const [floatingReactions, setFloatingReactions] = useState([]);
+
+  const pinnedChannelRef = useRef(null);
+  const reactionChannelRef = useRef(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    async function loadEvent() {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, thumbnail_url, creator_id, ticket_price, is_paid_event')
+        .eq('stage_room_id', stageRoomId)
+        .single();
 
-  function handleSend() {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    send(trimmed);
-    setText('');
+      if (error || !data) {
+        setErrorMsg(error?.message ?? 'Event not found.');
+      } else {
+        setEvent(data);
+      }
+      setPageLoading(false);
+    }
+
+    loadEvent();
+  }, [stageRoomId]);
+
+  useEffect(() => {
+    if (!stageRoomId) return;
+
+    fetchInitialMessages(stageRoomId).then(setMessages).catch(console.error);
+
+    const ch = subscribeToMessages(stageRoomId, (msg) =>
+      setMessages((prev) => [...prev, msg])
+    );
+
+    return () => { supabase.removeChannel(ch); };
+  }, [stageRoomId]);
+
+  useEffect(() => {
+    if (!stageRoomId || authLoading) return;
+
+    const ch = createPresenceChannel(stageRoomId, user?.id ?? 'anon', setViewerCount);
+
+    return () => { supabase.removeChannel(ch); };
+  }, [stageRoomId, user, authLoading]);
+
+  useEffect(() => {
+    if (!stageRoomId) return;
+
+    const ch = createPinnedChannel(stageRoomId, setPinnedMessage);
+    pinnedChannelRef.current = ch;
+
+    return () => {
+      supabase.removeChannel(ch);
+      pinnedChannelRef.current = null;
+    };
+  }, [stageRoomId]);
+
+  useEffect(() => {
+    if (!stageRoomId) return;
+
+    const ch = createReactionChannel(stageRoomId, (emoji) => {
+      const id = `${Date.now()}-${Math.random()}`;
+      const left = 8 + Math.random() * 84;
+      setFloatingReactions((prev) => [...prev, { id, emoji, left }]);
+      setTimeout(() => {
+        setFloatingReactions((prev) => prev.filter((r) => r.id !== id));
+      }, 2400);
+    });
+    reactionChannelRef.current = ch;
+
+    return () => {
+      supabase.removeChannel(ch);
+      reactionChannelRef.current = null;
+    };
+  }, [stageRoomId]);
+
+  async function handleSend(text) {
+    if (!user) return;
+    await sendMessage(stageRoomId, user, text);
   }
 
-  function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  async function handleReact(emoji) {
+    if (reactionChannelRef.current) {
+      await sendReaction(reactionChannelRef.current, emoji);
     }
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <div className="cinematic-hero" style={{ paddingBottom: '1.5rem' }}>
-        <h1 className="cinematic-title">Live Stage</h1>
-        <p className="cinematic-subtitle" style={{ color: 'var(--color-muted)', fontSize: '0.85rem' }}>
-          Room: {stageRoomId}
+  async function handlePin(message) {
+    if (pinnedChannelRef.current) {
+      await pinMessage(pinnedChannelRef.current, message);
+    }
+  }
+
+  const isCreator = Boolean(user && event && user.id === event.creator_id);
+
+  if (pageLoading || authLoading) {
+    return (
+      <div className="cinematic-hero" style={{ textAlign: 'center' }}>
+        <div className="cinematic-spinner" />
+        <p className="cinematic-subtitle" style={{ marginTop: '1.25rem', color: 'var(--color-muted)' }}>
+          Loading stage…
         </p>
-        <button
-          className="cinematic-button"
-          style={{ marginTop: '0.75rem' }}
-          onClick={() => navigate(-1)}
-        >
-          ← Leave Stage
+      </div>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div className="cinematic-hero" style={{ textAlign: 'center' }}>
+        <h2 className="cinematic-title">Stage unavailable</h2>
+        <p style={{ color: 'var(--color-muted)', marginBottom: '1.5rem' }}>{errorMsg}</p>
+        <button className="cinematic-button" onClick={() => navigate(-1)}>
+          Go back
         </button>
       </div>
+    );
+  }
 
-      <div style={{ flex: 1, padding: '0 2rem 2rem' }}>
-        <div className="cinematic-section">
-          <h2 className="cinematic-label" style={{ marginBottom: '0.75rem' }}>
-            Live Chat
-          </h2>
+  return (
+    <div className="stage-layout">
+      <StageHeader
+        event={event}
+        viewerCount={viewerCount}
+        onLeave={() => navigate(-1)}
+      />
 
-          <div
-            className="cinematic-card cinematic-stagger"
-            style={{
-              height: '320px',
-              overflowY: 'auto',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-            }}
-          >
-            {messages.length === 0 && (
-              <p style={{ color: 'var(--color-muted)', fontSize: '0.85rem' }}>
-                No messages yet. Say hello!
-              </p>
-            )}
-            {messages.map((m) => (
-              <ChatBubble
-                key={m.id}
-                message={m.message}
-                isSelf={m.sender_id === user?.id}
-              />
-            ))}
-            <div ref={chatEndRef} />
-          </div>
+      <div className="stage-body">
+        <div className="stage-chat-panel">
+          <MessageList
+            messages={messages}
+            pinnedMessage={pinnedMessage}
+            currentUserId={user?.id}
+            creatorId={event?.creator_id}
+            isCreator={isCreator}
+            onPin={handlePin}
+          />
 
-          {user ? (
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-              <input
-                type="text"
-                className="cinematic-input"
-                placeholder="Type a message…"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                style={{ flex: 1 }}
-              />
-              <button className="cinematic-button-accent" onClick={handleSend}>
-                Send
-              </button>
-            </div>
-          ) : (
-            <p style={{ marginTop: '1rem', color: 'var(--color-muted)', fontSize: '0.85rem' }}>
-              Sign in to chat.
-            </p>
-          )}
+          <ReactionBar onReact={handleReact} />
+
+          <MessageInput onSend={handleSend} disabled={!user} />
         </div>
+      </div>
+
+      <div className="stage-reactions-overlay" aria-hidden="true">
+        {floatingReactions.map((r) => (
+          <span
+            key={r.id}
+            className="stage-floating-reaction"
+            style={{ left: `${r.left}%` }}
+          >
+            {r.emoji}
+          </span>
+        ))}
       </div>
     </div>
   );

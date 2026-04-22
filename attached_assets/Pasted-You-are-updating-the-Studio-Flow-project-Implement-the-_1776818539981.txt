@@ -1,0 +1,90 @@
+You are updating the Studio Flow project. Implement the full Step F “Live Studio Stage” feature. This is the real-time event room that ticket holders enter after passing the access check.
+
+GOAL:
+Create a cinematic, real-time chat experience for scheduled events. The Live Studio Stage must:
+1. Connect to the Supabase real-time chat room using stage_room_id.
+2. Display event metadata (title, creator, thumbnail).
+3. Show real-time messages.
+4. Allow sending messages.
+5. Show viewer count (live presence).
+6. Support reactions (emoji bursts).
+7. Support pinned messages (creator-only).
+8. Use Studio Flow’s cinematic UI style.
+
+FILES TO CREATE OR MODIFY:
+1. src/pages/stage/StagePage.jsx (main stage UI)
+2. src/components/stage/MessageList.jsx (new)
+3. src/components/stage/MessageInput.jsx (new)
+4. src/components/stage/ReactionBar.jsx (new)
+5. src/components/stage/ViewerCount.jsx (new)
+6. src/components/stage/StageHeader.jsx (new)
+7. src/lib/stageRealtime.js (new helper for Supabase realtime)
+
+REQUIREMENTS:
+
+A) StagePage.jsx:
+- Read stage_room_id from route params.
+- Fetch event metadata from events table.
+- Import stageRealtime helpers.
+- Subscribe to:
+  - messages channel
+  - presence channel (viewer count)
+  - pinned message updates
+- Render:
+  - <StageHeader />
+  - <ViewerCount />
+  - <MessageList />
+  - <ReactionBar />
+  - <MessageInput />
+- Maintain state for:
+  - messages
+  - pinnedMessage
+  - viewers
+  - loading/error states
+
+B) stageRealtime.js:
+Create helper functions:
+- subscribeToMessages(roomId, callback)
+- sendMessage(roomId, user, text)
+- subscribeToPresence(roomId, callback)
+- subscribeToPinned(roomId, callback)
+- pinMessage(roomId, messageId)
+
+Use Supabase real-time channels.
+
+C) MessageList.jsx:
+- Display messages with cinematic bubbles.
+- Highlight creator messages.
+- Show pinned message at the top if present.
+- Auto-scroll to bottom on new messages.
+
+D) MessageInput.jsx:
+- Text input + send button.
+- On submit → call sendMessage().
+- Disable input if event has ended.
+
+E) ReactionBar.jsx:
+- Show 4–6 emoji options.
+- On click → broadcast reaction event to realtime channel.
+- StagePage should animate reactions floating upward.
+
+F) ViewerCount.jsx:
+- Show live viewer count from presence channel.
+- Update in real time.
+
+G) StageHeader.jsx:
+- Show event title, creator avatar, thumbnail.
+- If user is the creator → show “Pin Message” button on each message.
+
+H) Routing:
+Ensure /stage/:stageRoomId route is active and loads StagePage.
+
+I) Code Style:
+- Use async/await.
+- Use your existing Supabase client.
+- Follow Studio Flow’s cinematic UI patterns.
+- Keep components modular and clean.
+
+J) DO NOT modify database schema or RLS. Only implement the client-side stage experience.
+
+After implementing, show me the diff of all changed files.
