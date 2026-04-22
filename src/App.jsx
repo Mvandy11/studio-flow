@@ -9,6 +9,8 @@ import Studio from './pages/Studio';
 import StudioSessions from './pages/StudioSessions';
 import SessionEditor from './pages/SessionEditor';
 import PremierSettings from './pages/PremierSettings';
+import EventPage from './pages/events/EventPage';
+import StagePage from './pages/stage/StagePage';
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
           <Route path="/studio/sessions" element={<StudioSessions />} />
           <Route path="/studio/session/:id/edit" element={<SessionEditor />} />
           <Route path="/premier/settings" element={<PremierSettings />} />
+          <Route path="/events/:id" element={<EventPage />} />
+          <Route path="/stage/:stageRoomId" element={<StagePage />} />
         </Routes>
       </Layout>
     </BrowserRouter>
