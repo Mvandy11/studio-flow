@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import EarningsCalculator from '../../components/events/EarningsCalculator';
+import BackstagePassToggle from '../../components/events/BackstagePassToggle';
 
 const MEMBERSHIP_COST = 15;
 
@@ -19,6 +20,8 @@ export default function CreateEventPage() {
     stage_room_id: '',
     starts_at: '',
   });
+  const [backstagePass, setBackstagePass] = useState(false);
+  const [seatLimit, setSeatLimit] = useState(50);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -30,10 +33,16 @@ export default function CreateEventPage() {
     form.is_paid_event &&
     Number(form.ticket_price) > 0;
 
+  const backstagePassEnabled = form.is_paid_event && Number(form.ticket_price) > 0;
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!user) { setErrorMsg('You must be signed in.'); return; }
     if (!form.title.trim()) { setErrorMsg('Title is required.'); return; }
+    if (backstagePass && backstagePassEnabled && seatLimit < 1) {
+      setErrorMsg('Seat limit must be at least 1.');
+      return;
+    }
 
     setSaving(true);
     setErrorMsg('');
@@ -49,6 +58,9 @@ export default function CreateEventPage() {
       stage_room_id: roomId,
       creator_id: user.id,
       starts_at: form.starts_at || null,
+      ...(backstagePass && backstagePassEnabled
+        ? { backstage_pass: true, seat_limit: seatLimit }
+        : { backstage_pass: false, seat_limit: null }),
     };
 
     const { data, error } = await supabase
@@ -128,7 +140,10 @@ export default function CreateEventPage() {
               type="checkbox"
               id="is_paid"
               checked={form.is_paid_event}
-              onChange={(e) => set('is_paid_event', e.target.checked)}
+              onChange={(e) => {
+                set('is_paid_event', e.target.checked);
+                if (!e.target.checked) setBackstagePass(false);
+              }}
               style={{ accentColor: 'var(--accent-blue)', width: '1rem', height: '1rem', cursor: 'pointer' }}
             />
             <label htmlFor="is_paid" className="cinematic-label" style={{ margin: 0, cursor: 'pointer' }}>
@@ -151,6 +166,14 @@ export default function CreateEventPage() {
               />
             </div>
           )}
+
+          <BackstagePassToggle
+            backstagePass={backstagePass}
+            setBackstagePass={setBackstagePass}
+            seatLimit={seatLimit}
+            setSeatLimit={setSeatLimit}
+            disabled={!backstagePassEnabled}
+          />
 
           {showCalculator && (
             <div className="cinematic-section" style={{ marginTop: '0.25rem' }}>
