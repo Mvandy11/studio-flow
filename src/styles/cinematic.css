@@ -693,3 +693,114 @@ body::after {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─────────────────────────────────────────────
+   Earnings Calculator
+───────────────────────────────────────────── */
+.earnings-calculator {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.earnings-calc-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.earnings-slider {
+  flex: 1;
+  min-width: 120px;
+  accent-color: var(--accent-blue, #4f8ef7);
+  cursor: pointer;
+  height: 4px;
+}
+
+.earnings-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.earnings-stat {
+  flex: 1;
+  min-width: 90px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.earnings-stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.earnings-stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-muted, #888);
+}
+
+.earnings-bar-track {
+  position: relative;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  overflow: visible;
+}
+
+.earnings-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.3s ease;
+  min-width: 4px;
+}
+
+.earnings-bar-goal {
+  position: absolute;
+  top: -5px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.earnings-bar-goal::before {
+  content: '';
+  width: 2px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 1px;
+}
+
+.earnings-bar-goal-label {
+  font-size: 0.65rem;
+  color: var(--color-muted, #888);
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+
+.earnings-motivation {
+  font-size: 0.83rem;
+  color: var(--color-muted, #aaa);
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid rgba(79, 142, 247, 0.4);
+  padding: 0.55rem 0.85rem;
+  border-radius: 0 6px 6px 0;
+  margin: 0;
+}
