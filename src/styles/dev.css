@@ -1,0 +1,2 @@
+/* Dev-mode only — Tailwind utilities without preflight reset (safe alongside cinematic.css) */
+@import "tailwindcss/utilities";
