@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
@@ -14,9 +14,6 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
-
-    // ⭐ Fix for Replit preview blocking
-    // Allows ANY *.replit.dev host so you never have to update this again.
     allowedHosts: [".replit.dev"],
   },
 });
