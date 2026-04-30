@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import aiRoutes from './routes/aiRoutes.js';
+import aiRoutes from './routes/ai/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

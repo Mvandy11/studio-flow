@@ -1,0 +1,77 @@
+File Tree
+Code
+
+
+Copy
+server/
+├── routes/ai/
+│   ├── index.js              ← updated: mounts /upscale and /outputs
+│   ├── upscale.js            ← POST /api/ai/upscale endpoint
+│   └── outputs.js            ← GET  /api/ai/outputs endpoint (library feed)
+├── services/
+│   └── upscaleService.js     ← Real-ESRGAN via Replicate + sharp
+└── utils/
+    └── supabaseUpload.js     ← Supabase Storage upload helper
+
+client/src/
+├── api/
+│   └── upscaleApi.js         ← fetch wrapper for the upscale endpoint
+├── hooks/
+│   └── useUpscale.js         ← state machine: file → upload → result
+├── pages/
+│   ├── UpscalePage.jsx       ← full tool page
+│   └── UpscalePage.module.css
+└── components/
+    ├── upscale/
+    │   ├── index.js
+    │   ├── BeforeAfterSlider.jsx      ← draggable comparison slider
+    │   ├── BeforeAfterSlider.module.css
+    │   ├── FileDropZone.jsx           ← drag-and-drop + click-to-browse
+    │   └── FileDropZone.module.css
+    └── library/
+        ├── index.js
+        ├── AiOutputCard.jsx           ← single grid card
+        ├── AiOutputCard.module.css
+        ├── AiOutputsGrid.jsx          ← grid + filter pills (All/Denoise/Upscale)
+        └── AiOutputsGrid.module.css
+How It Connects
+Backend
+Piece	Role
+POST /api/ai/upscale	Accepts multipart upload (PNG/JPEG/WebP, ≤ 10 MB) + scaleFactor (2× or 4×). Runs the image through Real-ESRGAN on Replicate, saves the result to library/ai-outputs/upscale/ in Supabase Storage, and returns the metadata record.
+GET /api/ai/outputs	Returns all AI output records (denoise + upscale) from the ai_outputs table, newest first. Supports ?tool=upscale filtering.
+upscaleService.js	Converts the buffer to a data-URI, calls Replicate's Real-ESRGAN model, downloads the result, and reads dimensions with sharp.
+supabaseUpload.js	Reusable utility — uploads any buffer to a Supabase Storage bucket and returns the public URL + generated UUID.
+
+
+Frontend
+Piece	Role
+UpscalePage	Three-phase UX: (1) drag-and-drop upload zone → (2) preview card with 2×/4× scale selector, Upscale button, spinner + cancel → (3) before/after slider with download button and metadata (filename, resolution, scale). Full error banner with retry.
+useUpscale hook	Manages the entire lifecycle: file selection → preview data-URL → AbortController-backed fetch → result/error. Exposes submit, cancel, and reset.
+BeforeAfterSlider	Pointer-event driven comparison slider. The "before" image is clipped to the left of the draggable divider; the "after" sits behind at full width. Accessible with role="slider" and keyboard support.
+FileDropZone	Drop zone with drag-over highlight, click-to-browse fallback, and inline validation (file type + 10 MB limit).
+AiOutputsGrid	Fetches GET /api/ai/outputs, renders filter pills (All / Denoise / Upscale), and lays out cards in a responsive auto-fill grid. Includes loading spinner, error, and empty states.
+AiOutputCard	Single card: generic image SVG icon, truncated filename, colored tool badge, formatted date, and resolution string.
+
+
+Wiring You'll Need
+React Router — add a route for the Upscale page:
+
+jsx
+
+
+Copy
+<Route path="/tools/upscale" element={<UpscalePage />} />
+Library page — drop <AiOutputsGrid /> into your existing AI Outputs tab content area.
+
+Environment variables — make sure these are set:
+
+Code
+
+
+Copy
+REPLICATE_API_TOKEN=...
+SUPABASE_URL=...
+SUPABASE_SERVICE_KEY=...
+SUPABASE_STORAGE_BUCKET=studio-assets
+Supabase table — create an ai_outputs table with columns: id (uuid), url, filename, tool, resolution, createdAt. The insert call is commented in upscale.js — just uncomment it once the table exists.
+
