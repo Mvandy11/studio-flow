@@ -37,6 +37,15 @@ export default function Navbar() {
         >
           Creator Academy
         </NavLink>
+        <NavLink
+          to="/tools"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--accent-gold)' : 'var(--text-soft)',
+            fontWeight: isActive ? 600 : 400,
+          })}
+        >
+          Tools
+        </NavLink>
 
         <a
           href="https://buy.stripe.com/00w7sNehf2FO4II3OBb7y01"

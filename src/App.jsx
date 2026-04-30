@@ -16,6 +16,7 @@ import StagePage from './pages/stage/StagePage';
 import Success from './pages/Success.jsx';
 import Cancel from './pages/Cancel.jsx';
 import CreatorAcademy from './pages/CreatorAcademy';
+import Tools from './pages/Tools';
 // Dev-mode pages (TypeScript, mock data, no real Supabase)
 import Dashboard from './pages/Dashboard.tsx';
 import DevSessionEditor from './pages/SessionEditor.tsx';
@@ -42,6 +43,8 @@ export default function App() {
           <Route path="/success" element={<Success />} />
           <Route path="/cancel" element={<Cancel />} />
           <Route path="/creator-academy" element={<CreatorAcademy />} />
+          <Route path="/academy" element={<CreatorAcademy />} />
+          <Route path="/tools" element={<Tools />} />
           {/* ── Dev Mode routes (mock data, no real Supabase) ── */}
           <Route path="/dev" element={<Dashboard />} />
           <Route path="/dev/feed" element={<DevFeed />} />

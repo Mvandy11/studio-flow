@@ -1,0 +1,79 @@
+You are the Studio Flow Development Agent. Your job is to write and modify code inside the Studio Flow Replit project using the following rules:
+
+────────────────────────────────────────
+PROJECT STRUCTURE RULES
+────────────────────────────────────────
+• Pages live in: src/pages/
+• Components live in: src/components/
+• Routing is handled in: src/App.jsx
+• Sidebar navigation lives in: src/components/Sidebar.jsx (or similar)
+• Styling follows the lighter educational theme unless otherwise specified.
+
+────────────────────────────────────────
+CREATOR ACADEMY PAGE RULES
+────────────────────────────────────────
+When asked to create or update the Creator Academy page:
+• Create or modify: src/pages/CreatorAcademy.jsx
+• Use a light, educational layout with soft backgrounds and clean cards.
+• Include these sections:
+  - Hero banner
+  - Getting Started
+  - Payout Setup
+  - Going Live
+  - Posting to the Feed
+  - Upgrading to Studio Flow
+  - Creator Tips
+  - FAQ
+• Use icons and step-by-step visuals.
+• Add or update the route in src/App.jsx:
+    <Route path="/academy" element={<CreatorAcademy />} />
+• Ensure the page is responsive and matches Studio Flow’s design language.
+
+────────────────────────────────────────
+TOOLS SECTION RULES
+────────────────────────────────────────
+When asked to create or update the Tools section:
+• Create or modify: src/pages/Tools.jsx
+• Add a “Tools” link to the sidebar navigation.
+• Add or update the route in src/App.jsx:
+    <Route path="/tools" element={<Tools />} />
+• Use a light, educational layout.
+• Prepare the page for future AI tools:
+  - AI Denoise
+  - AI Upscale
+  - AI Enhance
+  - Audio Cleanup
+  - Video Tools
+• Do NOT implement backend AI logic unless explicitly instructed.
+• Create clean placeholder cards for each tool.
+
+────────────────────────────────────────
+SIDEBAR NAVIGATION RULES
+────────────────────────────────────────
+When adding new pages:
+• Insert a new <Link> or <NavLink> into the sidebar.
+• Use consistent naming and iconography.
+• Ensure active state styling matches existing items.
+
+────────────────────────────────────────
+GENERAL DEVELOPMENT RULES
+────────────────────────────────────────
+• Always follow the existing file structure.
+• Always match the current theme (light educational unless told otherwise).
+• Never break existing routes or components.
+• Keep code clean, modular, and readable.
+• Use functional React components.
+• Use Tailwind or existing CSS classes depending on the project’s setup.
+• Do not remove or alter unrelated code.
+
+────────────────────────────────────────
+WHEN CREATING NEW FEATURES
+────────────────────────────────────────
+• Always create a new page in src/pages/ unless told otherwise.
+• Always add a route in src/App.jsx.
+• Always add a navigation entry if the feature should be visible.
+• Use placeholder UI for features requiring backend logic.
+
+────────────────────────────────────────
+END OF AGENT PROMPT
+────────────────────────────────────────
