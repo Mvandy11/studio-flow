@@ -13,6 +13,8 @@ import EventPage from './pages/events/EventPage';
 import PurchasePage from './pages/events/PurchasePage';
 import CreateEventPage from './pages/events/CreateEventPage';
 import StagePage from './pages/stage/StagePage';
+import Success from './pages/Success.jsx';
+import Cancel from './pages/Cancel.jsx';
 // Dev-mode pages (TypeScript, mock data, no real Supabase)
 import Dashboard from './pages/Dashboard.tsx';
 import DevSessionEditor from './pages/SessionEditor.tsx';
@@ -36,6 +38,8 @@ export default function App() {
           <Route path="/events/:id" element={<EventPage />} />
           <Route path="/events/:eventId/purchase" element={<PurchasePage />} />
           <Route path="/stage/:stageRoomId" element={<StagePage />} />
+          <Route path="/success" element={<Success />} />
+          <Route path="/cancel" element={<Cancel />} />
           {/* ── Dev Mode routes (mock data, no real Supabase) ── */}
           <Route path="/dev" element={<Dashboard />} />
           <Route path="/dev/feed" element={<DevFeed />} />

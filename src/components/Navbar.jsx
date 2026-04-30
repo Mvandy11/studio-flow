@@ -29,6 +29,15 @@ export default function Navbar() {
         <Link to="/profile" style={{ color: 'var(--text-soft)' }}>Profile</Link>
         <Link to="/studio" style={{ color: 'var(--text-soft)' }}>Studio</Link>
 
+        <a
+          href="https://buy.stripe.com/00w7sNehf2FO4II3OBb7y01"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="subscribe-button"
+        >
+          Subscribe – $15/month
+        </a>
+
         {user ? (
           <button
             onClick={logout}

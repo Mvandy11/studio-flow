@@ -1,1 +1,15 @@
 /* Component styles */
+
+.subscribe-button {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(90deg, #ffb347, #ffcc33);
+  color: #000;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.subscribe-button:hover {
+  opacity: 0.85;
+}
