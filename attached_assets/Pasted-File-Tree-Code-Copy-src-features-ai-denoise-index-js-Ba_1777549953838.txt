@@ -1,0 +1,480 @@
+File Tree
+Code
+
+
+Copy
+src/features/ai-denoise/
+├── index.js                          # Barrel export
+├── hooks/
+│   └── useDenoiseUpload.js           # Upload logic + XHR progress
+├── services/
+│   └── aiOutputsService.js           # Supabase Storage queries
+├── components/
+│   ├── DenoiseToolPage.jsx           # Full tool page
+│   ├── DenoiseToolPage.module.css
+│   ├── FileUploader.jsx              # Drag-and-drop uploader
+│   ├── FileUploader.module.css
+│   ├── AudioPlayerComparison.jsx     # Side-by-side players
+│   ├── AudioPlayerComparison.module.css
+│   ├── AIOutputsTab.jsx              # Library tab content
+│   ├── AIOutputsTab.module.css
+│   ├── AIOutputCard.jsx              # Grid card
+│   └── AIOutputCard.module.css
+└── examples/
+    ├── LibraryPageIntegration.jsx    # Copy-paste guide
+    └── routeSetup.jsx                # Route registration
+1 · hooks/useDenoiseUpload.js
+js
+
+
+Copy
+import { useState, useCallback } from 'react';
+
+const ALLOWED_TYPES = [
+  'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/aac',
+  'audio/mp4', 'audio/webm',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
+];
+const MAX_FILE_SIZE = 500 * 1024 * 1024;
+
+export function useDenoiseUpload() {
+  const [file, setFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const validate = useCallback((f) => {
+    if (!f) return 'No file selected.';
+    if (!ALLOWED_TYPES.includes(f.type))
+      return `Unsupported file type "${f.type}". Please upload an audio or video file.`;
+    if (f.size > MAX_FILE_SIZE)
+      return `File exceeds the 500 MB limit (${(f.size / 1024 / 1024).toFixed(1)} MB).`;
+    return null;
+  }, []);
+
+  const upload = useCallback(async (selectedFile) => {
+    const validationError = validate(selectedFile);
+    if (validationError) { setError(validationError); return; }
+
+    setFile(selectedFile);
+    setError(null);
+    setResult(null);
+    setIsUploading(true);
+    setProgress(0);
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const xhr = new XMLHttpRequest();
+      const response = await new Promise((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
+        });
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try { resolve(JSON.parse(xhr.responseText)); }
+            catch { reject(new Error('Invalid response from server.')); }
+          } else {
+            let message = `Server error (${xhr.status})`;
+            try { const body = JSON.parse(xhr.responseText); if (body.error) message = body.error; } catch {}
+            reject(new Error(message));
+          }
+        });
+        xhr.addEventListener('error', () => reject(new Error('Network error. Please check your connection.')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled.')));
+        xhr.open('POST', '/api/ai/denoise');
+        xhr.send(formData);
+      });
+
+      if (!response.originalFileUrl || !response.cleanedFileUrl)
+        throw new Error('Incomplete response: missing audio URLs.');
+
+      setResult({ originalFileUrl: response.originalFileUrl, cleanedFileUrl: response.cleanedFileUrl });
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred.');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [validate]);
+
+  const reset = useCallback(() => {
+    setFile(null); setIsUploading(false); setProgress(0); setError(null); setResult(null);
+  }, []);
+
+  return { file, isUploading, progress, error, result, upload, reset };
+}
+2 · services/aiOutputsService.js
+js
+
+
+Copy
+import { supabase } from '../../../lib/supabaseClient';
+
+const BUCKET = 'library';
+const DENOISE_PREFIX = 'ai-outputs/denoise/';
+
+export async function fetchDenoiseOutputs(userId, opts = {}) {
+  const { limit = 50, offset = 0, sortBy = 'created_at' } = opts;
+  const prefix = `${DENOISE_PREFIX}${userId}/`;
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .list(prefix, { limit, offset, sortBy: { column: sortBy, order: 'desc' } });
+
+  if (error) throw new Error(`Failed to load AI outputs: ${error.message}`);
+  if (!data || data.length === 0) return [];
+
+  return data
+    .filter((f) => f.name && !f.name.endsWith('/'))
+    .map((f) => {
+      const fullPath = `${prefix}${f.name}`;
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fullPath);
+      return {
+        id: f.id ?? f.name,
+        name: f.name.replace(/^\d+_/, ''),  // strip timestamp prefix
+        fullPath,
+        publicUrl: urlData?.publicUrl ?? '',
+        toolName: 'Denoise',
+        createdAt: f.created_at ?? f.updated_at ?? '',
+        size: f.metadata?.size ?? 0,
+      };
+    });
+}
+
+export async function deleteDenoiseOutput(fullPath) {
+  const { error } = await supabase.storage.from(BUCKET).remove([fullPath]);
+  if (error) throw new Error(`Delete failed: ${error.message}`);
+}
+3 · components/FileUploader.jsx
+jsx
+
+
+Copy
+import React, { useRef, useState, useCallback } from 'react';
+import styles from './FileUploader.module.css';
+
+export default function FileUploader({ onFileSelected, isUploading, progress, disabled }) {
+  const inputRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleFile = useCallback(
+    (f) => { if (f && !isUploading && !disabled) onFileSelected(f); },
+    [onFileSelected, isUploading, disabled],
+  );
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault(); setIsDragging(false); handleFile(e.dataTransfer?.files?.[0]);
+  }, [handleFile]);
+
+  const zoneClass = [
+    styles.dropzone,
+    isDragging ? styles.dragging : '',
+    isUploading ? styles.uploading : '',
+    disabled ? styles.disabled : '',
+  ].filter(Boolean).join(' ');
+
+  return (
+    <div className={zoneClass}
+      onDrop={handleDrop}
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={() => setIsDragging(false)}
+      onClick={() => !isUploading && !disabled && inputRef.current?.click()}
+      role="button" tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+      aria-label="Upload audio or video file"
+    >
+      <input ref={inputRef} type="file" accept="audio/*,video/*"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+        className={styles.hiddenInput} disabled={isUploading || disabled} />
+
+      {isUploading ? (
+        <div className={styles.progressWrapper}>
+          <div className={styles.progressBar}>
+            <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+          </div>
+          <span className={styles.progressLabel}>
+            {progress < 100 ? `Uploading… ${progress}%` : 'Processing…'}
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className={styles.icon} aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </div>
+          <p className={styles.label}>
+            Drag & drop an audio or video file here, or <span className={styles.browseLink}>browse</span>
+          </p>
+          <p className={styles.hint}>Supported: MP3, WAV, OGG, FLAC, AAC, MP4, WebM, MOV · Max 500 MB</p>
+        </>
+      )}
+    </div>
+  );
+}
+4 · components/AudioPlayerComparison.jsx
+jsx
+
+
+Copy
+import React from 'react';
+import styles from './AudioPlayerComparison.module.css';
+
+export default function AudioPlayerComparison({ originalUrl, cleanedUrl, fileName }) {
+  const handleDownload = async (url, suffix) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const anchor = document.createElement('a');
+      const ext = fileName?.split('.').pop() || 'wav';
+      const base = fileName?.replace(/\.[^.]+$/, '') || 'audio';
+      anchor.href = URL.createObjectURL(blob);
+      anchor.download = `${base}_${suffix}.${ext}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(anchor.href);
+    } catch { window.open(url, '_blank'); }
+  };
+
+  return (
+    <div className={styles.wrapper}>
+      {/* Original */}
+      <div className={styles.playerCard}>
+        <div className={styles.cardHeader}>
+          <span className={styles.badge}>Original</span>
+          <span className={styles.fileName} title={fileName}>{fileName}</span>
+        </div>
+        <audio controls src={originalUrl} className={styles.audio} preload="metadata" />
+        <button className={styles.downloadBtn}
+          onClick={() => handleDownload(originalUrl, 'original')}>
+          ⬇ Download Original
+        </button>
+      </div>
+
+      <div className={styles.divider} aria-hidden="true" />
+
+      {/* Cleaned */}
+      <div className={styles.playerCard}>
+        <div className={styles.cardHeader}>
+          <span className={`${styles.badge} ${styles.badgeCleaned}`}>Cleaned</span>
+          <span className={styles.fileName}>
+            {fileName} <span className={styles.tag}>denoised</span>
+          </span>
+        </div>
+        <audio controls src={cleanedUrl} className={styles.audio} preload="metadata" />
+        <button className={`${styles.downloadBtn} ${styles.downloadPrimary}`}
+          onClick={() => handleDownload(cleanedUrl, 'cleaned')}>
+          ⬇ Download Cleaned
+        </button>
+      </div>
+    </div>
+  );
+}
+5 · components/DenoiseToolPage.jsx
+jsx
+
+
+Copy
+import React from 'react';
+import FileUploader from './FileUploader';
+import AudioPlayerComparison from './AudioPlayerComparison';
+import { useDenoiseUpload } from '../hooks/useDenoiseUpload';
+import styles from './DenoiseToolPage.module.css';
+
+export default function DenoiseToolPage() {
+  const { file, isUploading, progress, error, result, upload, reset } = useDenoiseUpload();
+
+  return (
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.toolIcon} aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12h2l3-9 4 18 4-18 3 9h2" />
+            </svg>
+          </div>
+          <div>
+            <h1 className={styles.title}>AI Denoise</h1>
+            <p className={styles.subtitle}>Remove background noise from audio and video files using AI</p>
+          </div>
+        </div>
+      </header>
+
+      {!result && (
+        <section className={styles.uploadSection}>
+          <FileUploader onFileSelected={upload} isUploading={isUploading} progress={progress} />
+          {file && !isUploading && !error && (
+            <p className={styles.selectedFile}>
+              Selected: <strong>{file.name}</strong> ({(file.size / 1024 / 1024).toFixed(1)} MB)
+            </p>
+          )}
+        </section>
+      )}
+
+      {error && (
+        <div className={styles.errorBanner} role="alert">
+          <span>⚠</span> <span>{error}</span>
+          <button className={styles.errorDismiss} onClick={reset}>Try Again</button>
+        </div>
+      )}
+
+      {result && (
+        <section className={styles.resultSection}>
+          <div className={styles.savedIndicator}>✓ Saved to AI Outputs</div>
+          <AudioPlayerComparison
+            originalUrl={result.originalFileUrl}
+            cleanedUrl={result.cleanedFileUrl}
+            fileName={file?.name}
+          />
+          <button className={styles.newFileBtn} onClick={reset}>+ Denoise Another File</button>
+        </section>
+      )}
+    </div>
+  );
+}
+6 · components/AIOutputCard.jsx
+jsx
+
+
+Copy
+import React from 'react';
+import styles from './AIOutputCard.module.css';
+
+export default function AIOutputCard({ name, toolName, createdAt, size, publicUrl, onPlay, onDelete }) {
+  const formattedDate = createdAt
+    ? new Date(createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : '—';
+  const formattedSize = size > 1048576 ? `${(size / 1048576).toFixed(1)} MB`
+    : size > 1024 ? `${(size / 1024).toFixed(1)} KB` : '—';
+
+  return (
+    <div className={styles.card} onClick={() => onPlay?.(publicUrl)} role="button" tabIndex={0}>
+      <div className={styles.iconWrapper} aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+        </svg>
+      </div>
+      <div className={styles.meta}>
+        <span className={styles.fileName} title={name}>{name}</span>
+        <div className={styles.details}>
+          <span className={styles.toolBadge}>{toolName}</span>
+          <span>·</span><span>{formattedDate}</span><span>·</span><span>{formattedSize}</span>
+        </div>
+      </div>
+      <div className={styles.actions}>
+        <a href={publicUrl} download={name} className={styles.actionBtn}
+          onClick={(e) => e.stopPropagation()} title="Download">⬇</a>
+        {onDelete && (
+          <button className={`${styles.actionBtn} ${styles.deleteBtn}`}
+            onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete">🗑</button>
+        )}
+      </div>
+    </div>
+  );
+}
+7 · components/AIOutputsTab.jsx
+jsx
+
+
+Copy
+import React, { useEffect, useState, useCallback } from 'react';
+import AIOutputCard from './AIOutputCard';
+import { fetchDenoiseOutputs, deleteDenoiseOutput } from '../services/aiOutputsService';
+import styles from './AIOutputsTab.module.css';
+
+export default function AIOutputsTab({ userId, onPlay }) {
+  const [outputs, setOutputs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    if (!userId) return;
+    setIsLoading(true); setError(null);
+    try { setOutputs(await fetchDenoiseOutputs(userId)); }
+    catch (err) { setError(err.message); }
+    finally { setIsLoading(false); }
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = useCallback(async (fullPath, name) => {
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      await deleteDenoiseOutput(fullPath);
+      setOutputs((prev) => prev.filter((o) => o.fullPath !== fullPath));
+    } catch (err) { alert(`Failed to delete: ${err.message}`); }
+  }, []);
+
+  if (isLoading) return (
+    <div className={styles.grid}>
+      {Array.from({ length: 6 }).map((_, i) => <div key={i} className={styles.skeleton} />)}
+    </div>
+  );
+
+  if (error) return (
+    <div className={styles.emptyState}>
+      <p>Failed to load AI outputs.</p><p>{error}</p>
+      <button className={styles.retryBtn} onClick={load}>Retry</button>
+    </div>
+  );
+
+  if (outputs.length === 0) return (
+    <div className={styles.emptyState}>
+      <p className={styles.emptyText}>No AI outputs yet</p>
+      <p className={styles.emptyHint}>Files processed by AI tools will appear here automatically.</p>
+    </div>
+  );
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.toolbar}>
+        <span className={styles.count}>{outputs.length} file{outputs.length !== 1 ? 's' : ''}</span>
+        <button className={styles.refreshBtn} onClick={load} aria-label="Refresh list">↻</button>
+      </div>
+      <div className={styles.grid}>
+        {outputs.map((item) => (
+          <AIOutputCard key={item.id} {...item}
+            onPlay={onPlay} onDelete={() => handleDelete(item.fullPath, item.name)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+🔌 Integration (2 touch points)
+A. Route for the Denoise Tool page
+jsx
+
+
+Copy
+// In your router config
+import { DenoiseToolPage } from '@/features/ai-denoise';
+
+<Route path="/tools/denoise" element={<DenoiseToolPage />} />
+B. AI Outputs tab in your Library page
+jsx
+
+
+Copy
+import { AIOutputsTab } from '@/features/ai-denoise';
+
+// Add to your tab list:
+{ id: 'ai-outputs', label: 'AI Outputs' }
+
+// Render in the tab panel:
+{activeTab === 'ai-outputs' && (
+  <AIOutputsTab userId={user?.id} onPlay={handlePlayOutput} />
+)}
+Key Assumptions
+Item	Value
+Backend endpoint	POST /api/ai/denoise returns { originalFileUrl, cleanedFileUrl }
+Supabase bucket	library, files stored at ai-outputs/denoise/<userId>/
+Supabase client	Imported from src/lib/supabaseClient.js
+CSS variables	Uses --color-primary, --color-surface, --color-border, etc. (falls back to dark theme defaults)
+Max upload size	500 MB, validated client-side

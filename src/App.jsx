@@ -18,6 +18,7 @@ import Success from './pages/Success.jsx';
 import Cancel from './pages/Cancel.jsx';
 import CreatorAcademy from './pages/CreatorAcademy';
 import Tools from './pages/Tools';
+import { DenoiseToolPage } from './features/ai-denoise';
 // Dev-mode pages (TypeScript, mock data, no real Supabase)
 import Dashboard from './pages/Dashboard.tsx';
 import DevSessionEditor from './pages/SessionEditor.tsx';
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/creator-academy" element={<CreatorAcademy />} />
           <Route path="/academy" element={<CreatorAcademy />} />
           <Route path="/tools" element={<Tools />} />
+          <Route path="/tools/denoise" element={<DenoiseToolPage />} />
           {/* ── Dev Mode routes (mock data, no real Supabase) ── */}
           <Route path="/dev" element={<Dashboard />} />
           <Route path="/dev/feed" element={<DevFeed />} />

@@ -1,0 +1,126 @@
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toolIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text, #f1f5f9);
+  margin: 0 0 0.2rem;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #94a3b8);
+  margin: 0;
+}
+
+.uploadSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.selectedFile {
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #94a3b8);
+  margin: 0;
+}
+
+.selectedFile strong {
+  color: var(--color-text, #f1f5f9);
+}
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1.125rem;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+.errorDismiss {
+  margin-left: auto;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  border-radius: 6px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.errorDismiss:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.resultSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.savedIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+  font-size: 0.8rem;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.newFileBtn {
+  align-self: flex-start;
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  color: var(--color-text, #f1f5f9);
+  border-radius: 8px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.newFileBtn:hover {
+  background: var(--color-surface-hover, #273549);
+  border-color: var(--color-primary, #7c3aed);
+}

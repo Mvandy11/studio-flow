@@ -1,0 +1,58 @@
+import React from 'react';
+import FileUploader from './FileUploader';
+import AudioPlayerComparison from './AudioPlayerComparison';
+import { useDenoiseUpload } from '../hooks/useDenoiseUpload';
+import styles from './DenoiseToolPage.module.css';
+
+export default function DenoiseToolPage() {
+  const { file, isUploading, progress, error, result, upload, reset } = useDenoiseUpload();
+
+  return (
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.toolIcon} aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12h2l3-9 4 18 4-18 3 9h2" />
+            </svg>
+          </div>
+          <div>
+            <h1 className={styles.title}>AI Denoise</h1>
+            <p className={styles.subtitle}>Remove background noise from audio and video files using AI</p>
+          </div>
+        </div>
+      </header>
+
+      {!result && (
+        <section className={styles.uploadSection}>
+          <FileUploader onFileSelected={upload} isUploading={isUploading} progress={progress} />
+          {file && !isUploading && !error && (
+            <p className={styles.selectedFile}>
+              Selected: <strong>{file.name}</strong> ({(file.size / 1024 / 1024).toFixed(1)} MB)
+            </p>
+          )}
+        </section>
+      )}
+
+      {error && (
+        <div className={styles.errorBanner} role="alert">
+          <span>⚠</span> <span>{error}</span>
+          <button className={styles.errorDismiss} onClick={reset}>Try Again</button>
+        </div>
+      )}
+
+      {result && (
+        <section className={styles.resultSection}>
+          <div className={styles.savedIndicator}>✓ Saved to AI Outputs</div>
+          <AudioPlayerComparison
+            originalUrl={result.originalFileUrl}
+            cleanedUrl={result.cleanedFileUrl}
+            fileName={file?.name}
+          />
+          <button className={styles.newFileBtn} onClick={reset}>+ Denoise Another File</button>
+        </section>
+      )}
+    </div>
+  );
+}

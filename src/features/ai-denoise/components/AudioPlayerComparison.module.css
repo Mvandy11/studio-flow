@@ -1,0 +1,108 @@
+.wrapper {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  align-items: start;
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .wrapper {
+    grid-template-columns: 1fr;
+  }
+  .divider {
+    width: 100% !important;
+    height: 1px !important;
+  }
+}
+
+.playerCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.5rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--color-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.badgeCleaned {
+  background: rgba(124, 58, 237, 0.18);
+  color: #c4b5fd;
+}
+
+.fileName {
+  font-size: 0.85rem;
+  color: var(--color-text, #f1f5f9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.tag {
+  font-size: 0.72rem;
+  color: var(--color-primary, #7c3aed);
+  background: rgba(124, 58, 237, 0.12);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.3rem;
+}
+
+.audio {
+  width: 100%;
+  border-radius: 8px;
+  accent-color: var(--color-primary, #7c3aed);
+}
+
+.downloadBtn {
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  color: var(--color-text, #f1f5f9);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  align-self: flex-start;
+}
+
+.downloadBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--color-primary, #7c3aed);
+}
+
+.downloadPrimary {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(79, 70, 229, 0.2));
+  border-color: rgba(124, 58, 237, 0.5);
+  color: #c4b5fd;
+}
+
+.downloadPrimary:hover {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(79, 70, 229, 0.35));
+}
+
+.divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--color-border, #334155);
+}
