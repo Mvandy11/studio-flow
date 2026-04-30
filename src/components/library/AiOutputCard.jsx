@@ -1,60 +1,69 @@
-import React from 'react';
-import styles from './AiOutputCard.module.css';
+import { formatDistanceToNow } from 'date-fns';
 
-const TOOL_COLORS = {
-  denoise: { bg: 'rgba(124,58,237,0.15)', color: '#c4b5fd', label: 'Denoise' },
-  upscale: { bg: 'rgba(34,197,94,0.15)', color: '#86efac', label: 'Upscale' },
+const TOOL_BADGES = {
+  enhance: { label: 'Enhance', color: '#6366f1' },
+  denoise: { label: 'Denoise', color: '#0ea5e9' },
+  upscale: { label: 'Upscale', color: '#f59e0b' },
 };
 
-export default function AiOutputCard({ filename, tool, createdAt, resolution, size, url }) {
-  const badge = TOOL_COLORS[tool] ?? { bg: 'rgba(148,163,184,0.15)', color: '#94a3b8', label: tool };
-  const formattedDate = createdAt
-    ? new Date(createdAt).toLocaleDateString(undefined, {
-        month: 'short', day: 'numeric', year: 'numeric',
-      })
+export default function AiOutputCard({ item, onDelete }) {
+  const badge     = TOOL_BADGES[item.tool] || { label: item.tool, color: '#6b7280' };
+  const dateLabel = item.created_at
+    ? formatDistanceToNow(new Date(item.created_at), { addSuffix: true })
     : '—';
-  const formattedSize =
-    size > 1_048_576
-      ? `${(size / 1_048_576).toFixed(1)} MB`
-      : size > 1024
-      ? `${(size / 1024).toFixed(1)} KB`
-      : '—';
 
   return (
-    <div className={styles.card}>
-      <div className={styles.iconWrapper} aria-hidden="true">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
+    <div className="ai-card">
+      <div className="ai-card__thumb">
+        {item.public_url ? (
+          <img src={item.public_url} alt={item.filename} className="ai-card__img" loading="lazy" />
+        ) : (
+          <div className="ai-card__icon" aria-label="Image file">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+          </div>
+        )}
       </div>
-      <div className={styles.meta}>
-        <span className={styles.filename} title={filename}>{filename}</span>
-        <div className={styles.details}>
-          <span
-            className={styles.badge}
-            style={{ background: badge.bg, color: badge.color }}
-          >
+      <div className="ai-card__body">
+        <p className="ai-card__filename" title={item.filename}>{item.filename}</p>
+        <div className="ai-card__meta">
+          <span className="ai-card__badge" style={{ '--badge-color': badge.color }}>
             {badge.label}
           </span>
-          <span>·</span>
-          <span>{formattedDate}</span>
-          {resolution && <><span>·</span><span>{resolution}</span></>}
-          {size > 0 && <><span>·</span><span>{formattedSize}</span></>}
+          {item.resolution && (
+            <span className="ai-card__resolution">{item.resolution}</span>
+          )}
+          <span className="ai-card__date">{dateLabel}</span>
         </div>
       </div>
-      <a
-        href={url}
-        download={filename}
-        className={styles.downloadBtn}
-        onClick={(e) => e.stopPropagation()}
-        title="Download"
-        aria-label={`Download ${filename}`}
-      >
-        ⬇
-      </a>
+      <div className="ai-card__actions">
+        {item.public_url && (
+          <a href={item.public_url} download={item.filename}
+            className="ai-card__action" title="Download">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </a>
+        )}
+        {onDelete && (
+          <button className="ai-card__action ai-card__action--danger"
+            onClick={() => onDelete(item.id, item.storage_path)} title="Delete">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+              <path d="M10 11v6" /><path d="M14 11v6" />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
