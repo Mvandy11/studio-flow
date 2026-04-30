@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Navbar() {
@@ -28,6 +28,15 @@ export default function Navbar() {
         <Link to="/feed" style={{ color: 'var(--text-soft)' }}>Feed</Link>
         <Link to="/profile" style={{ color: 'var(--text-soft)' }}>Profile</Link>
         <Link to="/studio" style={{ color: 'var(--text-soft)' }}>Studio</Link>
+        <NavLink
+          to="/creator-academy"
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--accent-gold)' : 'var(--text-soft)',
+            fontWeight: isActive ? 600 : 400,
+          })}
+        >
+          Creator Academy
+        </NavLink>
 
         <a
           href="https://buy.stripe.com/00w7sNehf2FO4II3OBb7y01"
