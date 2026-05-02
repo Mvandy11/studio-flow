@@ -1,0 +1,399 @@
+/* ── Creator Portfolio / Profile Page ──────────────────────── */
+.portfolio-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+/* Cover */
+.portfolio-cover {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  background: linear-gradient(135deg, rgba(110,168,255,0.15), rgba(196,122,122,0.15));
+  border-radius: 0 0 20px 20px;
+  display: block;
+  margin-bottom: -60px;
+}
+
+/* Profile header */
+.portfolio-header {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.25rem;
+  padding: 0 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.portfolio-avatar {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 4px solid rgba(14, 14, 17, 1);
+  object-fit: cover;
+  background: linear-gradient(135deg, rgba(110,168,255,0.4), rgba(196,122,122,0.4));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.portfolio-identity {
+  flex: 1;
+  padding-bottom: 0.5rem;
+}
+
+.portfolio-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-soft, #c7c7d1);
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.02em;
+}
+
+.portfolio-bio {
+  font-size: 0.9rem;
+  color: rgba(200, 200, 215, 0.6);
+  margin: 0 0 0.6rem;
+  line-height: 1.5;
+  max-width: 520px;
+}
+
+.portfolio-social {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.portfolio-social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(200, 200, 215, 0.65);
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+.portfolio-social-link:hover {
+  border-color: rgba(110, 168, 255, 0.35);
+  color: var(--accent-blue, #6ea8ff);
+}
+
+/* Action buttons row */
+.portfolio-actions {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+}
+
+.portfolio-cta {
+  padding: 0.5rem 1.1rem;
+  border-radius: 9px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: opacity 0.2s, background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.portfolio-cta--primary {
+  background: linear-gradient(135deg, #f2c98f, #c47a7a);
+  color: #0e0e11;
+}
+.portfolio-cta--primary:hover { opacity: 0.88; }
+
+.portfolio-cta--secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-soft, #c7c7d1);
+}
+.portfolio-cta--secondary:hover { background: rgba(255, 255, 255, 0.09); }
+
+.portfolio-cta--gold {
+  background: rgba(242, 201, 143, 0.12);
+  border-color: rgba(242, 201, 143, 0.3);
+  color: var(--accent-gold, #f2c98f);
+}
+.portfolio-cta--gold:hover { background: rgba(242, 201, 143, 0.2); }
+
+/* Stats strip */
+.portfolio-stats {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.portfolio-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.portfolio-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-soft, #c7c7d1);
+}
+
+.portfolio-stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(200, 200, 215, 0.45);
+}
+
+/* Section */
+.portfolio-section {
+  margin-bottom: 2.5rem;
+}
+
+.portfolio-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-soft, #c7c7d1);
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Session gallery grid */
+.portfolio-sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.875rem;
+}
+
+.portfolio-session-card {
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: border-color 0.2s, transform 0.2s;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+}
+.portfolio-session-card:hover {
+  border-color: rgba(110, 168, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.portfolio-session-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.portfolio-session-body {
+  padding: 0.75rem;
+}
+
+.portfolio-session-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-soft, #c7c7d1);
+  margin: 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Shop / digital products */
+.portfolio-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.875rem;
+}
+
+.portfolio-product-card {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.portfolio-product-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-soft, #c7c7d1);
+  margin: 0;
+}
+
+.portfolio-product-price {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent-gold, #f2c98f);
+}
+
+/* Tip jar */
+.tip-jar {
+  background: rgba(242, 201, 143, 0.06);
+  border: 1px solid rgba(242, 201, 143, 0.2);
+  border-radius: 14px;
+  padding: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tip-jar__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-gold, #f2c98f);
+}
+
+.tip-jar__desc {
+  font-size: 0.85rem;
+  color: rgba(200, 200, 215, 0.55);
+}
+
+.tip-jar__amounts {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tip-jar__btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(242, 201, 143, 0.3);
+  background: rgba(242, 201, 143, 0.1);
+  color: var(--accent-gold, #f2c98f);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.tip-jar__btn:hover { background: rgba(242, 201, 143, 0.2); }
+
+/* Earnings Dashboard */
+.earnings-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.earnings-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.earnings-summary-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.earnings-summary-value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-soft, #c7c7d1);
+  line-height: 1;
+}
+
+.earnings-summary-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: rgba(200, 200, 215, 0.45);
+}
+
+.earnings-summary-card--gold .earnings-summary-value { color: var(--accent-gold, #f2c98f); }
+.earnings-summary-card--blue .earnings-summary-value { color: var(--accent-blue, #6ea8ff); }
+.earnings-summary-card--green .earnings-summary-value { color: #86efac; }
+
+.earnings-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-soft, #c7c7d1);
+  margin: 0 0 0.875rem;
+}
+
+.earnings-txn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.earnings-txn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.earnings-txn__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.earnings-txn__label {
+  flex: 1;
+  font-size: 0.88rem;
+  color: var(--text-soft, #c7c7d1);
+}
+
+.earnings-txn__amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #86efac;
+}
+
+.earnings-txn__date {
+  font-size: 0.78rem;
+  color: rgba(200, 200, 215, 0.4);
+}
+
+.earnings-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: rgba(200, 200, 215, 0.4);
+  font-size: 0.9rem;
+}

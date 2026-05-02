@@ -24,6 +24,33 @@ Cinematic creator platform — React + Vite frontend (workspace root) backed by 
 
 Vite proxy forwards `/api` → `http://localhost:3001`.
 
+---
+
+## Navigation & Layout
+
+Global shell layout in `src/components/Layout.jsx`:
+- **Left sidebar** (`AppSidebar.jsx`) — fixed 240px nav with all sections. Collapses on mobile (<900px).
+- **Top bar** (`Navbar.jsx`) — minimal: search, subscribe button, user auth. Hamburger on mobile.
+- **Mobile drawer** (`MobileDrawer.jsx`) — full nav on mobile including all new routes.
+- Layout CSS: `src/styles/app-layout.css`
+- Utility buttons (`.btn`, `.btn--primary`, etc.): `src/styles/components.css`
+
+---
+
+## Creator-Admin Role (Michael Vandeventer)
+
+Michael (obviouslyinspiredstudio@outlook.com) has permanent `creator_admin` role granting:
+- Full free access to all features and tools
+- Bypass of all paywalls and subscription tiers
+- Access to the Admin Dashboard (`/admin`)
+- Ability to create and manage contests
+
+- Role constants: `src/lib/roles.js` — `ROLES`, `isCreatorAdmin()`, `isCreatorOrAdmin()`
+- Hook: `src/hooks/useAuth.js` — returns `{ user, role, loading, login, signup, logout }`
+- Migration: `server/db/migrations/add_role_to_profiles.sql`
+
+---
+
 ## AI Tools Suite
 
 ### AI Denoise (`/tools/denoise`)
@@ -34,72 +61,140 @@ Vite proxy forwards `/api` → `http://localhost:3001`.
 ### AI Upscale (`/tools/upscale`)
 - Route: `server/routes/ai/upscale.js`
 - Service: `server/services/upscaleService.js`
-- Components: `src/components/upscale/` (FileDropZone, BeforeAfterSlider)
-- Hook: `src/hooks/useUpscale.js`
 - Uses: Replicate Real-ESRGAN (`REPLICATE_API_TOKEN` required)
 
 ### AI Enhance (`/tools/enhance`)
 - Route: `server/routes/ai/enhance.js`
-- Components: `src/components/enhance/` (ImageDropzone, BeforeAfterComparison, EnhanceToolbar)
-- Hook: `src/hooks/useEnhance.js`
-- Service: `src/services/enhanceApi.js`
-- Uses: OpenAI `gpt-image-1` via `/images/edit` (Replit AI integration)
-- Outputs auto-saved to Supabase `ai_outputs` table + `studio-flow-library` bucket
+- Uses: OpenAI `gpt-image-1` via `/images/edit`
+- Outputs auto-saved to Supabase `ai_outputs` table
 
-## Shared Library Grid
-
-All AI tools share a unified outputs library backed by the `ai_outputs` Supabase table.
-
-- Table migration: `server/db/migrations/create_ai_outputs_table.sql`
-- Grid component: `src/components/library/AiOutputsGrid.jsx`
-- Card component: `src/components/library/AiOutputCard.jsx`
+### Shared Library Grid
+- Table: `ai_outputs` (migration: `server/db/migrations/create_ai_outputs_table.sql`)
+- Grid: `src/components/library/AiOutputsGrid.jsx`
 - Hook: `src/hooks/useAiOutputs.js`
-- API service: `src/services/libraryApi.js`
-- Styles: `src/styles/library-ai-grid.css`
+
+---
+
+## Contest System
+
+Full contest engine at `/contests`.
+
+- **Server routes**: `server/routes/contests.js` (mounted at `/api/contests`)
+  - `GET  /api/contests` — list all contests (filterable by status)
+  - `GET  /api/contests/:id` — single contest + entries
+  - `POST /api/contests` — create contest (creator_admin only)
+  - `PATCH /api/contests/:id` — update contest (creator_admin only)
+  - `POST /api/contests/:id/entries` — submit entry (file upload + email)
+  - `POST /api/contests/:id/entries/:entryId/vote` — vote (anti-spam: unique per user/entry)
+  - `GET  /api/contests/:id/entries` — list entries
+
+- **Email notifications**: nodemailer sends to `obviouslyinspiredstudio@outlook.com` on entry submission. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` env vars. Fails silently if not configured.
+
+- **Frontend pages**:
+  - `src/pages/contests/ContestsPage.jsx` — listing with status filters
+  - `src/pages/contests/ContestDetailPage.jsx` — detail, submission form, voting, winners
+  - `src/pages/contests/CreateContestPage.jsx` — admin create form (creator_admin only)
+  - `src/components/contests/ContestCard.jsx` — card component
+
+- **DB migration**: `server/db/migrations/create_contests_tables.sql`
+  - Tables: `contests`, `contest_entries`, `contest_votes`, `free_tickets`
+
+- **Styles**: `src/styles/contests.css`
+
+---
+
+## Admin Dashboard (`/admin`)
+
+Protected route — redirects non-admin users to `/`.
+
+- `src/pages/AdminDashboard.jsx`
+- Tabs: Overview, Contests, Events, Submissions, Tickets, Moderation
+- Loads data directly from Supabase (contests, events, tickets, contest_entries)
+- Contest lifecycle management: Draft → Active → Voting → Completed → Archived
+- Styles: `src/styles/admin.css`
+
+---
+
+## Creator Portfolio (`/profile`, `/profile/:id`)
+
+Full public portfolio page for every creator.
+
+- `src/pages/CreatorProfile.jsx`
+- Sections: cover, avatar, bio, social links, action buttons (Hire Me, Book Session, Edit Profile)
+- Stats strip: sessions count, events count, followers
+- Session gallery (linked to `/session/:id`)
+- Upcoming events list
+- Shop section (placeholder products)
+- Tip Jar (with preset amounts)
+- Styles: `src/styles/portfolio.css`
+
+---
+
+## Earnings Dashboard (`/earnings`)
+
+- `src/pages/EarningsDashboard.jsx`
+- Summary cards: Total Earned, Ticket Sales, Product Sales, Tips
+- Transaction list (real ticket data from Supabase + mock tips)
+- Payout info linked to Premier Settings
+
+---
+
+## Ticketing with Free-Ticket Perk
+
+- `src/lib/createTicket.js` — `createTicket(supabase, eventId, userId)`
+- On every paid ticket purchase, automatically issues 1 free view-only ticket to `free_tickets` table
+- Free ticket is linked to the same event and marked `ticket_type: 'view_only'`
+
+---
+
+## Database Tables
+
+Run these migrations in order in your Supabase SQL editor:
+1. `server/db/migrations/add_role_to_profiles.sql` — adds `role` column to `profiles`
+2. `server/db/migrations/create_ai_outputs_table.sql` — shared AI outputs library
+3. `server/db/migrations/create_contests_tables.sql` — contests, entries, votes, free_tickets
+
+---
+
+## Routes
+
+| Path | Component |
+|------|-----------|
+| `/` | Home |
+| `/feed` | Feed |
+| `/profile` | CreatorProfile (own) |
+| `/profile/:id` | CreatorProfile (other creator) |
+| `/studio` | Studio |
+| `/studio/sessions` | StudioSessions |
+| `/tools` | Tools |
+| `/tools/denoise` | DenoiseToolPage |
+| `/tools/upscale` | UpscalePage |
+| `/tools/enhance` | EnhancePage |
+| `/contests` | ContestsPage |
+| `/contests/create` | CreateContestPage (admin) |
+| `/contests/:id` | ContestDetailPage |
+| `/creator-academy` | CreatorAcademy |
+| `/earnings` | EarningsDashboard |
+| `/admin` | AdminDashboard (admin) |
+| `/events/create` | CreateEventPage |
+| `/events/:id` | EventPage |
+| `/events/:eventId/purchase` | PurchasePage |
+| `/stage/:stageRoomId` | StagePage |
+
+---
 
 ## Environment Variables
 
 | Variable | Used By |
 |----------|---------|
-| `AI_INTEGRATIONS_OPENAI_BASE_URL` | server/services/openaiService.js, server/routes/ai/enhance.js |
-| `AI_INTEGRATIONS_OPENAI_API_KEY` | server/services/openaiService.js, server/routes/ai/enhance.js |
+| `AI_INTEGRATIONS_OPENAI_BASE_URL` | server AI routes |
+| `AI_INTEGRATIONS_OPENAI_API_KEY` | server AI routes |
 | `SUPABASE_URL` / `VITE_SUPABASE_URL` | frontend + server |
 | `SUPABASE_SERVICE_ROLE_KEY` | server (storage/DB writes) |
 | `VITE_SUPABASE_ANON_KEY` | frontend (read queries) |
 | `REPLICATE_API_TOKEN` | upscale tool |
 | `SUPABASE_STORAGE_BUCKET` | server (default: `studio-flow-library`) |
-| `VITE_SUPABASE_BUCKET` | frontend (default: `studio-flow-library`) |
-
-## Key File Paths
-
-```
-src/
-  App.jsx                          — Router (all tool routes wired here)
-  pages/EnhancePage.jsx
-  pages/UpscalePage.jsx
-  features/ai-denoise/             — Denoise feature module
-  components/enhance/              — Enhance UI components
-  components/upscale/              — Upscale UI components
-  components/library/              — Shared Library grid
-  hooks/useEnhance.js
-  hooks/useUpscale.js
-  hooks/useAiOutputs.js
-  services/enhanceApi.js
-  services/libraryApi.js
-  styles/enhance.css
-  styles/library-ai-grid.css
-server/
-  index.js                         — Express entry point
-  routes/ai/index.js               — Mounts all AI sub-routers
-  routes/ai/enhance.js             — POST /api/ai/enhance
-  routes/ai/upscale.js             — POST /api/ai/upscale
-  routes/ai/denoise.js             — POST /api/ai/denoise
-  routes/ai/outputs.js             — GET  /api/ai/outputs
-  services/openaiService.js        — Denoise pipeline
-  services/upscaleService.js       — Replicate upscale
-  db/migrations/                   — SQL migration files
-```
-
-## Database Setup
-
-Run `server/db/migrations/create_ai_outputs_table.sql` once in your Supabase SQL editor to create the `ai_outputs` table before using any AI tool that saves to the Library.
+| `SMTP_HOST` | contest email notifications (optional) |
+| `SMTP_PORT` | contest email notifications (optional) |
+| `SMTP_USER` | contest email notifications (optional) |
+| `SMTP_PASS` | contest email notifications (optional) |

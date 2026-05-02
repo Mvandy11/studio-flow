@@ -21,6 +21,12 @@ import Tools from './pages/Tools';
 import { DenoiseToolPage } from './features/ai-denoise';
 import UpscalePage from './pages/UpscalePage';
 import EnhancePage from './pages/EnhancePage';
+import ContestsPage from './pages/contests/ContestsPage';
+import ContestDetailPage from './pages/contests/ContestDetailPage';
+import CreateContestPage from './pages/contests/CreateContestPage';
+import AdminDashboard from './pages/AdminDashboard';
+import EarningsDashboard from './pages/EarningsDashboard';
+import CreatorProfile from './pages/CreatorProfile';
 // Dev-mode pages (TypeScript, mock data, no real Supabase)
 import Dashboard from './pages/Dashboard.tsx';
 import DevSessionEditor from './pages/SessionEditor.tsx';
@@ -32,26 +38,48 @@ export default function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
+          {/* ── Core ── */}
           <Route path="/" element={<Home />} />
           <Route path="/feed" element={<Feed />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<CreatorProfile />} />
+          <Route path="/profile/:id" element={<CreatorProfile />} />
           <Route path="/session/:id" element={<SessionPage />} />
+
+          {/* ── Studio ── */}
           <Route path="/studio" element={<Studio />} />
           <Route path="/studio/sessions" element={<StudioSessions />} />
           <Route path="/studio/session/:id/edit" element={<SessionEditor />} />
           <Route path="/premier/settings" element={<PremierSettings />} />
+
+          {/* ── Events ── */}
           <Route path="/events/create" element={<CreateEventPage />} />
           <Route path="/events/:id" element={<EventPage />} />
           <Route path="/events/:eventId/purchase" element={<PurchasePage />} />
           <Route path="/stage/:stageRoomId" element={<StagePage />} />
-          <Route path="/success" element={<Success />} />
-          <Route path="/cancel" element={<Cancel />} />
-          <Route path="/creator-academy" element={<CreatorAcademy />} />
-          <Route path="/academy" element={<CreatorAcademy />} />
+
+          {/* ── AI Tools ── */}
           <Route path="/tools" element={<Tools />} />
           <Route path="/tools/denoise" element={<DenoiseToolPage />} />
           <Route path="/tools/upscale" element={<UpscalePage />} />
           <Route path="/tools/enhance" element={<EnhancePage />} />
+
+          {/* ── Contests ── */}
+          <Route path="/contests" element={<ContestsPage />} />
+          <Route path="/contests/create" element={<CreateContestPage />} />
+          <Route path="/contests/:id" element={<ContestDetailPage />} />
+
+          {/* ── Academy ── */}
+          <Route path="/creator-academy" element={<CreatorAcademy />} />
+          <Route path="/academy" element={<CreatorAcademy />} />
+
+          {/* ── Account ── */}
+          <Route path="/earnings" element={<EarningsDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+
+          {/* ── Stripe callbacks ── */}
+          <Route path="/success" element={<Success />} />
+          <Route path="/cancel" element={<Cancel />} />
+
           {/* ── Dev Mode routes (mock data, no real Supabase) ── */}
           <Route path="/dev" element={<Dashboard />} />
           <Route path="/dev/feed" element={<DevFeed />} />

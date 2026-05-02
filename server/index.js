@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import aiRoutes from './routes/ai/index.js';
+import contestsRouter from './routes/contests.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -16,6 +17,7 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // ── Routes ──────────────────────────────────────────────────
 app.use('/api/ai', aiRoutes);
+app.use('/api/contests', contestsRouter);
 
 // ── Health check ────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {

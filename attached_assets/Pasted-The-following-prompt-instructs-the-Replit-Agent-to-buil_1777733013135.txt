@@ -1,0 +1,129 @@
+The following prompt instructs the Replit Agent to build Studio Flow, a single-tier membership creator platform with contests, ticketed events, education sessions, and an admin dashboard.
+
+Build a full-stack web application called Studio Flow — a creator platform by Obviously Inspired Studio. Use a modern dark theme (deep navy #0a1628, card backgrounds #111d33, accent gold #f5a623, electric blue #3b82f6). Clean modern fonts (Inter or system sans-serif). The app should have persistent data storage (use a database — SQLite, PostgreSQL, or Replit's built-in DB).
+
+Navigation Tabs
+Home, Contests, Events, Education, My Tickets, Creator Dashboard
+
+Authentication & Membership
+Studio Flow uses a SINGLE flat subscription model. There is one membership: "Studio Flow Member."
+Users can sign up and toggle their membership status.
+Any Studio Flow Member can submit contest entries, buy tickets, and vote. No tiered restrictions.
+Non-members see: "A Studio Flow subscription is required" with a "Subscribe" button.
+HOME TAB
+Hero banner: "Studio Flow — Where Creators Compete, Learn & Earn"
+Subtitle: "Enter contests, attend ticketed events, stream live education sessions, and win real payouts."
+Quick stats cards: Active Contests, Upcoming Events, Education Sessions, Total Members
+Featured contest carousel showing the 4 default contests
+"Become a Studio Flow Member" CTA button
+CONTESTS TAB (Full Contest Engine)
+Default contests:
+
+World's Funniest Video — Submit your funniest original video clip
+Hoop It Up: Best Trick Shot — Show your craziest basketball trick shot
+Best Dance Performance — Solo or crew, any style
+Best Instrumental Performance — Any instrument, any genre
+Each contest card displays:
+
+Contest name, emoji icon, description
+Status badge (Open / Voting / Closed / Archived)
+Entry fee / ticket price
+Current total ticket revenue
+Number of submissions
+Deadline countdown timer
+"Submit Entry" button (requires Studio Flow Member status)
+Submission Flow:
+
+Clicking "Submit Entry" opens a modal.
+Checks membership: if not a Studio Flow Member, shows "A Studio Flow subscription is required" with a Subscribe button.
+If member, shows submission form: Name, Email, Video/Content URL, Description.
+Form note: "Your submission will be emailed to [email protected]"
+On submit, generates a mailto link pre-filled to [email protected] with submission details in the body, and also stores the submission in the database.
+Each submission gets a vote counter (upvote button + vote count).
+Voting:
+
+Below each contest card, expandable "View Submissions" section.
+Each submission: submitter name, description, content URL link, vote button with live count.
+Users can vote once per submission (tracked per user in database).
+Winner Payout Logic (displayed on each contest card):
+
+"Prize Pool" section showing current ticket revenue.
+Payout rules:
+Revenue under $500 → 1 Winner gets 100%
+Revenue $500–$2,000 → 2 Winners split 60% / 40%
+Revenue over $2,000 → 3 Winners split 50% / 30% / 20%
+Show calculated dollar amounts based on current revenue.
+EVENTS TAB (Ticketed Events)
+Grid of event cards:
+
+Creator Showcase Night ($15)
+Beat Battle Live ($10)
+Comedy Open Mic ($5)
+Art & Design Expo ($20)
+Producer Workshop ($25)
+Freestyle Friday ($10)
+Each card: event name, date/time, description, ticket price, venue/location, "Buy Ticket" button.
+
+FREE TICKET PERK: Every purchased ticket automatically issues 1 free viewing ticket. Badge on each card: "Buy 1, Get 1 Free Viewing Ticket!" Buying a ticket stores both the paid ticket and a free viewing ticket in the user's ticket inventory. Any member can buy tickets — no tier restriction.
+
+EDUCATION TAB (Education & DIY Live Sessions)
+Three category sections with color-coded cards:
+
+Live Science Projects (green accent #22c55e):
+
+Kitchen Chemistry 101
+Build a Tesla Coil
+Raspberry Pi Robotics
+Educational Sessions (blue accent #3b82f6):
+
+Music Theory Masterclass
+Video Editing Bootcamp
+Content Monetization Strategy
+DIY Home Improvement (orange accent #f97316):
+
+Bathroom Renovation Basics
+Smart Home Setup Guide
+Deck Building Workshop
+Each card: title, instructor name, date/time, duration, ticket price, capacity, description, "Register" button. Registration adds to My Tickets with the free viewing ticket perk applied.
+
+MY TICKETS TAB
+Dashboard showing all purchased tickets and free viewing tickets.
+Two sections: "Purchased Tickets" and "Free Viewing Tickets"
+Each ticket: event/session name, type (Paid/Free), date, status (Upcoming/Used/Expired)
+Running totals: Total Purchased, Total Free Earned, Total Spent
+All ticket data stored per user in the database.
+CREATOR DASHBOARD TAB (Admin Panel)
+Gated behind admin login (password: "studio2026"). Show banner: "Creator Admin — Michael VanDyke"
+
+Dashboard sections:
+
+Overview Cards: Total Revenue, Active Contests, Total Submissions, Total Votes, Total Tickets Sold, Free Tickets Issued
+
+Contest Management:
+
+Table of all contests: Name, Status, Submissions, Votes, Revenue, Actions
+Actions: View Submissions, Change Status (Open/Voting/Closed/Archived), Approve Winners, Trigger Payout
+"Create New Contest" button → form: name, description, category, entry fee, deadline, prize rules
+New contests saved to database.
+Ticket Tracking:
+
+Table: Event, Buyer, Type (Paid/Free), Amount, Date
+Summary stats: Total Revenue, Tickets Sold, Free Tickets Issued
+Vote Totals:
+
+Per-contest vote leaderboard showing top submissions ranked by votes
+Bar chart visualization of votes per submission
+Winner Approval:
+
+For closed contests, show ranked submissions.
+Admin selects winners (1, 2, or 3 based on revenue tier).
+"Approve Winners" button marks winners.
+Payout Triggers:
+
+List of approved winners with calculated payout amounts.
+"Process Payout" button (shows confirmation with winner names and amounts).
+Payout history table.
+Archive:
+
+List of archived contests with final results, winner names, total revenue, payout amounts.
+Use smooth transitions, hover effects, responsive design, and a polished professional UI throughout.

@@ -1,5 +1,54 @@
 /* Component styles */
 
+/* ── Utility Buttons ────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 9px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: opacity 0.18s, background 0.18s, border-color 0.18s;
+  line-height: 1;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn--primary {
+  background: linear-gradient(135deg, #f2c98f, #c47a7a);
+  color: #0e0e11;
+  border-color: transparent;
+}
+.btn--primary:hover { opacity: 0.88; }
+
+.btn--secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-soft, #c7c7d1);
+}
+.btn--secondary:hover { background: rgba(255, 255, 255, 0.09); }
+
+.btn--accent {
+  background: rgba(110, 168, 255, 0.12);
+  border-color: rgba(110, 168, 255, 0.3);
+  color: var(--accent-blue, #6ea8ff);
+}
+.btn--accent:hover { background: rgba(110, 168, 255, 0.2); }
+
+.btn--danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+.btn--danger:hover { background: rgba(239, 68, 68, 0.18); }
+
+.btn--sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 7px; }
+.btn--lg { padding: 0.7rem 1.4rem; font-size: 1rem; border-radius: 11px; }
+
 .subscribe-button {
   padding: 0.5rem 1rem;
   background: linear-gradient(90deg, #ffb347, #ffcc33);

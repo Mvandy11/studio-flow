@@ -1,0 +1,211 @@
+/* ── Admin Dashboard ───────────────────────────────────────── */
+.admin-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.admin-tabs::-webkit-scrollbar { display: none; }
+
+.admin-tab {
+  padding: 0.85rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(200, 200, 215, 0.55);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.18s, border-color 0.18s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.admin-tab:hover { color: var(--text-soft, #c7c7d1); }
+.admin-tab--active {
+  color: var(--accent-gold, #f2c98f);
+  border-bottom-color: var(--accent-gold, #f2c98f);
+}
+
+.admin-panel {
+  padding: 1.5rem 0;
+}
+
+/* Stats row */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.admin-stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.admin-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-soft, #c7c7d1);
+  line-height: 1;
+}
+
+.admin-stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(200, 200, 215, 0.45);
+}
+
+.admin-stat-card--gold .admin-stat-value { color: var(--accent-gold, #f2c98f); }
+.admin-stat-card--blue .admin-stat-value { color: var(--accent-blue, #6ea8ff); }
+.admin-stat-card--green .admin-stat-value { color: #86efac; }
+
+/* Data table */
+.admin-table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(200, 200, 215, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: rgba(200, 200, 215, 0.85);
+  vertical-align: middle;
+}
+
+.admin-table tr:last-child td { border-bottom: none; }
+
+.admin-table tr:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Action buttons in table */
+.admin-action-btn {
+  padding: 0.28rem 0.65rem;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(200, 200, 215, 0.7);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.admin-action-btn:hover {
+  background: rgba(110, 168, 255, 0.12);
+  border-color: rgba(110, 168, 255, 0.35);
+  color: var(--accent-blue, #6ea8ff);
+}
+.admin-action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+/* Submission inbox */
+.admin-submission-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: border-color 0.2s;
+}
+.admin-submission-card:hover { border-color: rgba(110, 168, 255, 0.25); }
+
+.admin-submission-thumb {
+  width: 80px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+
+.admin-submission-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-submission-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-soft, #c7c7d1);
+  margin: 0 0 0.2rem;
+}
+
+.admin-submission-meta {
+  font-size: 0.78rem;
+  color: rgba(200, 200, 215, 0.5);
+}
+
+/* Section header with action */
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.admin-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-soft, #c7c7d1);
+  margin: 0;
+}
+
+/* Status badge */
+.admin-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+}
+.admin-badge--active { background: rgba(134,239,172,0.12); color: #86efac; border: 1px solid rgba(134,239,172,0.25); }
+.admin-badge--draft  { background: rgba(250,188,80,0.1);   color: #fabc50; border: 1px solid rgba(250,188,80,0.25); }
+.admin-badge--voting { background: rgba(110,168,255,0.12); color: #6ea8ff; border: 1px solid rgba(110,168,255,0.25); }
+.admin-badge--completed { background: rgba(255,255,255,0.06); color: rgba(200,200,215,0.5); border: 1px solid rgba(255,255,255,0.1); }
+
+/* Empty state */
+.admin-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: rgba(200, 200, 215, 0.4);
+  font-size: 0.9rem;
+}
