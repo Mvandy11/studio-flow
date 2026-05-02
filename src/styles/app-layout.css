@@ -211,6 +211,7 @@
 }
 
 /* ── Minimal Top Nav (replaces full Navbar) ────────────────── */
+/* Keep height in sync with --topnav-h in hub.css */
 .app-topnav {
   position: sticky;
   top: 0;
