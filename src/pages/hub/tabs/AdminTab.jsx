@@ -134,7 +134,7 @@ export default function AdminTab() {
       {/* Header */}
       <div className="admin-hub-header">
         <div>
-          <p className="admin-hub-header__title">🛡 Creator Admin — Michael VanDyke</p>
+          <p className="admin-hub-header__title">🛡 Creator Admin — Michael Vandeventer</p>
           <p className="admin-hub-header__sub">Studio Flow Platform Management</p>
         </div>
         <button className="hub-btn hub-btn--ghost" onClick={() => setAuthed(false)} style={{ fontSize:'0.8rem' }}>
