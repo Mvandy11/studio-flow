@@ -24,6 +24,7 @@ export default function Navbar({ onHamburger }) {
           <span className="nav-hamburger__bar" />
           <span className="nav-hamburger__bar" />
           <span className="nav-hamburger__bar" />
+          <span className="app-topnav__menu-label">Menu</span>
         </button>
 
         {/* Mobile logo — only shows when sidebar is hidden */}
