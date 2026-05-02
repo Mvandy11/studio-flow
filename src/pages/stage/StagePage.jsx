@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { isCreatorAdmin } from '../../lib/roles';
 import {
   fetchInitialMessages,
   subscribeToMessages,
@@ -20,18 +21,18 @@ import ReactionBar from '../../components/stage/ReactionBar';
 export default function StagePage() {
   const { stageRoomId } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
 
-  const [event, setEvent] = useState(null);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [event,            setEvent]            = useState(null);
+  const [pageLoading,      setPageLoading]      = useState(true);
+  const [errorMsg,         setErrorMsg]         = useState('');
 
-  const [messages, setMessages] = useState([]);
-  const [pinnedMessage, setPinnedMessage] = useState(null);
-  const [viewerCount, setViewerCount] = useState(0);
+  const [messages,         setMessages]         = useState([]);
+  const [pinnedMessage,    setPinnedMessage]    = useState(null);
+  const [viewerCount,      setViewerCount]      = useState(0);
   const [floatingReactions, setFloatingReactions] = useState([]);
 
-  const pinnedChannelRef = useRef(null);
+  const pinnedChannelRef   = useRef(null);
   const reactionChannelRef = useRef(null);
 
   useEffect(() => {
@@ -49,36 +50,30 @@ export default function StagePage() {
       }
       setPageLoading(false);
     }
-
     loadEvent();
   }, [stageRoomId]);
 
   useEffect(() => {
-    if (!stageRoomId) return;
-
-    fetchInitialMessages(stageRoomId).then(setMessages).catch(console.error);
-
     const ch = subscribeToMessages(stageRoomId, (msg) =>
       setMessages((prev) => [...prev, msg])
     );
-
-    return () => { supabase.removeChannel(ch); };
+    fetchInitialMessages(stageRoomId).then(setMessages);
+    return () => supabase.removeChannel(ch);
   }, [stageRoomId]);
 
   useEffect(() => {
-    if (!stageRoomId || authLoading) return;
-
-    const ch = createPresenceChannel(stageRoomId, user?.id ?? 'anon', setViewerCount);
-
-    return () => { supabase.removeChannel(ch); };
-  }, [stageRoomId, user, authLoading]);
+    if (!user) return;
+    const ch = createPresenceChannel(stageRoomId, user, (count) =>
+      setViewerCount(count)
+    );
+    return () => supabase.removeChannel(ch);
+  }, [stageRoomId, user]);
 
   useEffect(() => {
-    if (!stageRoomId) return;
-
-    const ch = createPinnedChannel(stageRoomId, setPinnedMessage);
+    const ch = createPinnedChannel(stageRoomId, (msg) =>
+      setPinnedMessage(msg)
+    );
     pinnedChannelRef.current = ch;
-
     return () => {
       supabase.removeChannel(ch);
       pinnedChannelRef.current = null;
@@ -86,15 +81,14 @@ export default function StagePage() {
   }, [stageRoomId]);
 
   useEffect(() => {
-    if (!stageRoomId) return;
-
     const ch = createReactionChannel(stageRoomId, (emoji) => {
-      const id = `${Date.now()}-${Math.random()}`;
-      const left = 8 + Math.random() * 84;
+      const id = Math.random().toString(36).slice(2);
+      const left = Math.random() * 80 + 10;
       setFloatingReactions((prev) => [...prev, { id, emoji, left }]);
-      setTimeout(() => {
-        setFloatingReactions((prev) => prev.filter((r) => r.id !== id));
-      }, 2400);
+      setTimeout(
+        () => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)),
+        2500
+      );
     });
     reactionChannelRef.current = ch;
 
@@ -121,7 +115,10 @@ export default function StagePage() {
     }
   }
 
-  const isCreator = Boolean(user && event && user.id === event.creator_id);
+  // creator_admin has full creator privileges on every stage
+  const isCreator = Boolean(
+    (user && event && user.id === event.creator_id) || isCreatorAdmin(role)
+  );
 
   if (pageLoading || authLoading) {
     return (

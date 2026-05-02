@@ -7,9 +7,9 @@ import { checkEventAccess } from '../../lib/checkEventAccess';
 export default function EventPage() {
   const { id: eventId } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
 
-  const [status, setStatus] = useState('checking'); // 'checking' | 'error'
+  const [status,   setStatus]   = useState('checking'); // 'checking' | 'error'
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
@@ -21,6 +21,7 @@ export default function EventPage() {
           supabase,
           eventId,
           user,
+          role,
         });
 
         if (allowed) {
@@ -35,7 +36,7 @@ export default function EventPage() {
     }
 
     run();
-  }, [eventId, user, authLoading, navigate]);
+  }, [eventId, user, role, authLoading, navigate]);
 
   if (status === 'error') {
     return (

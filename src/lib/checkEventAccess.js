@@ -1,14 +1,17 @@
+import { isCreatorAdmin } from './roles';
+
 /**
  * Checks whether the given user is allowed to enter an event's stage.
  *
  * Rules:
- *  - Free event  → always allowed
- *  - Paid event  → allowed only if a matching row exists in event_tickets
+ *  - creator_admin role  → always allowed (full free access, no charge)
+ *  - Free event          → always allowed
+ *  - Paid event          → allowed only if a matching row exists in event_tickets
  *
- * @param {{ supabase: object, eventId: string, user: object|null }} params
+ * @param {{ supabase: object, eventId: string, user: object|null, role?: string }} params
  * @returns {{ allowed: boolean, stageRoomId?: string }}
  */
-export async function checkEventAccess({ supabase, eventId, user }) {
+export async function checkEventAccess({ supabase, eventId, user, role }) {
   const { data: event, error: eventError } = await supabase
     .from('events')
     .select('id, is_paid_event, stage_room_id')
@@ -20,6 +23,11 @@ export async function checkEventAccess({ supabase, eventId, user }) {
   }
 
   const stageRoomId = event.stage_room_id;
+
+  // creator_admin bypasses all payment gates unconditionally
+  if (isCreatorAdmin(role)) {
+    return { allowed: true, stageRoomId };
+  }
 
   if (!event.is_paid_event) {
     return { allowed: true, stageRoomId };
