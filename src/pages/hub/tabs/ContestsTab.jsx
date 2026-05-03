@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { CONTESTS, calculatePayout, formatCountdown } from '../data.js';
 import { supabase } from '../../../lib/supabase.js';
 import { useAuth } from '../../../hooks/useAuth.js';
+import { buildStripeUrl, saveTicketIntent } from '../../../lib/stripeLinks.js';
 
 const ADMIN_EMAIL = 'obviouslyinspiredstudio@outlook.com';
 
@@ -199,25 +200,28 @@ function ContestCard({ contest, isMember }) {
     if (showSubs && hasVotingTkt) loadSubmissions();
   }, [showSubs, hasVotingTkt]);
 
-  async function handleBuyVotingTicket() {
-    if (!user) { alert('Log in to purchase a voting ticket.'); return; }
+  function handleBuyVotingTicket() {
+    if (!user) { alert('Log in to purchase a viewing + voting ticket.'); return; }
     if (!isMember) { alert('A Studio Flow membership is required.'); return; }
-    setBuyingTicket(true);
-    try {
-      const { error } = await supabase.from('hub_tickets').insert({
-        user_id:     user.id,
-        event_id:    contest.id,
-        event_title: contest.title,
-        ticket_type: 'voting',
-        amount:      contest.votingTicketPrice,
-        status:      'upcoming',
-      });
-      if (!error) {
-        setHasVotingTkt(true);
-        setVoteTicketCount((n) => n + 1);
-      }
-    } catch (_) {}
-    setBuyingTicket(false);
+
+    // Save intent — Success page will insert the ticket and free companion
+    saveTicketIntent({
+      userId:     user.id,
+      eventId:    contest.id,
+      eventTitle: contest.title,
+      ticketType: 'voting',          // paid ticket → unlocks view + vote
+      amount:     contest.votingTicketPrice,
+      category:   'contest',
+    });
+
+    // Build compact Stripe reference: "ct_{contestId}_{shortUserId}"
+    const ref = `ct_${contest.id}_${user.id.slice(0, 8)}`;
+
+    const stripeUrl = buildStripeUrl(contest.votingTicketPrice, {
+      email:             user.email,
+      clientReferenceId: ref,
+    });
+    window.location.href = stripeUrl;
   }
 
   async function handleVote(subId) {
