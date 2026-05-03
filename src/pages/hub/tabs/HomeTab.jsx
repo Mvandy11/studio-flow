@@ -13,9 +13,15 @@ export default function HomeTab({ isMember, onToggleMember, onTabChange, stats }
           Enter contests, attend ticketed events, stream live education sessions, and win real payouts.
         </p>
         {!isMember ? (
-          <button className="hub-hero__cta" onClick={onToggleMember}>
-            🌟 Become a Studio Flow Member
-          </button>
+          <a
+            className="hub-hero__cta"
+            href="https://buy.stripe.com/6oU8wRehfa8g0ssbh3b7y0f"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration:'none', display:'inline-block' }}
+          >
+            🌟 Start Free Trial — $75/year
+          </a>
         ) : (
           <div style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', padding:'0.65rem 1.25rem', borderRadius:'10px', background:'rgba(34,197,94,0.12)', border:'1px solid rgba(34,197,94,0.3)', color:'#22c55e', fontWeight:700, fontSize:'0.9rem' }}>
             ✓ Studio Flow Member

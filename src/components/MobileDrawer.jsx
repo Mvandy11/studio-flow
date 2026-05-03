@@ -96,13 +96,14 @@ export default function MobileDrawer({ open, onClose }) {
             <Link to="/" className="mob-drawer__login" onClick={onClose}>Log In</Link>
           )}
           <a
-            href="https://buy.stripe.com/00w7sNehf2FO4II3OBb7y01"
+            href="https://buy.stripe.com/6oU8wRehfa8g0ssbh3b7y0f"
             target="_blank"
             rel="noopener noreferrer"
             className="mob-drawer__subscribe"
             onClick={onClose}
+            title="30-day free trial included"
           >
-            Subscribe – $15/month
+            Join Studio Flow — $75/year
           </a>
         </div>
       </aside>

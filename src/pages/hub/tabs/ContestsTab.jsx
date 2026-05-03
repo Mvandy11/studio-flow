@@ -35,9 +35,21 @@ function SubmissionModal({ contest, isMember, onClose, onSubmitted }) {
           <h2 className="hub-modal__title">Members Only</h2>
           <div className="member-gate" style={{ margin: '1rem 0' }}>
             <p className="member-gate__text">
-              A Studio Flow subscription is required to submit entries. Entries are <strong style={{ color:'var(--hub-green)' }}>FREE</strong> for all members.
+              A Studio Flow membership is required to submit entries. Entries are <strong style={{ color:'var(--hub-green)' }}>FREE</strong> for all members.
             </p>
-            <button className="hub-btn hub-btn--gold" onClick={onClose}>Subscribe / Become a Member</button>
+            <a
+              className="hub-btn hub-btn--gold"
+              href="https://buy.stripe.com/6oU8wRehfa8g0ssbh3b7y0f"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration:'none', display:'inline-block' }}
+              onClick={onClose}
+            >
+              Start Free Trial — $75/year
+            </a>
+            <p style={{ fontSize:'0.72rem', color:'var(--hub-muted)', marginTop:'0.5rem' }}>
+              30-day free trial · $75/year after · No refunds.
+            </p>
           </div>
           <div className="hub-modal__actions">
             <button className="hub-btn hub-btn--ghost" onClick={onClose}>Close</button>
@@ -441,7 +453,7 @@ export default function ContestsTab({ isMember }) {
       {!isMember && (
         <div className="member-gate" style={{ marginBottom: '1.5rem' }}>
           <p className="member-gate__text">
-            A Studio Flow subscription is required to submit entries (free) and purchase voting tickets.
+            A Studio Flow membership is required to submit entries (free) and purchase voting tickets.
           </p>
         </div>
       )}

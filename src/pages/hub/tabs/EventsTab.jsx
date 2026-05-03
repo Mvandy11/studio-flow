@@ -120,6 +120,18 @@ export default function EventsTab({ isMember }) {
       {!isMember && (
         <div className="member-gate" style={{ marginBottom: '1.5rem' }}>
           <p className="member-gate__text">A Studio Flow membership is required to purchase tickets.</p>
+          <a
+            className="hub-btn hub-btn--gold"
+            href="https://buy.stripe.com/6oU8wRehfa8g0ssbh3b7y0f"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration:'none', display:'inline-block', marginTop:'0.75rem' }}
+          >
+            Start Free Trial — $75/year
+          </a>
+          <p style={{ fontSize:'0.72rem', color:'var(--hub-muted)', marginTop:'0.5rem' }}>
+            30-day free trial · $75/year after · No refunds.
+          </p>
         </div>
       )}
 
