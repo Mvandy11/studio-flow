@@ -1,14 +1,24 @@
 /**
  * Studio Flow — Stripe Payment Link registry.
- * Only two payment links exist globally. All tickets map to one of these.
  *
- *  $2 → standard event admission (casual events, free-form nights)
- *  $5 → premium events + all contest viewing/voting tickets
+ * Three globally-fixed links. All tickets and memberships route through these.
+ *
+ *  $2  → Standard event admission
+ *  $5  → Premium event admission
+ *  $20 → Contest ticket (view + vote)
+ *
+ * ⚠️  ACTION REQUIRED: Replace CONTEST_STRIPE_LINK below with your real
+ *     $20 Stripe Payment Link from the Stripe dashboard once created.
+ *     Current value is a placeholder pointing to the $5 link.
  */
 
+// TODO: Replace with actual $20 Stripe Payment Link
+const CONTEST_STRIPE_LINK = 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08';
+
 export const STRIPE_LINKS = {
-  2: 'https://buy.stripe.com/14A6oJgpna8g8YYbh3b7y0a',
-  5: 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08',
+  2:  'https://buy.stripe.com/14A6oJgpna8g8YYbh3b7y0a',
+  5:  'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08',
+  20: CONTEST_STRIPE_LINK,
 };
 
 /**
@@ -22,16 +32,11 @@ export function getStripeLink(price) {
 /**
  * Builds the full Stripe URL with optional pre-filled email and
  * a compact client_reference_id for audit purposes.
- *
- * @param {number}  price  - 2 or 5
- * @param {object}  opts
- * @param {string}  opts.email              - pre-fill buyer email
- * @param {string}  opts.clientReferenceId  - compact ID for Stripe audit log
  */
 export function buildStripeUrl(price, opts = {}) {
   const base = getStripeLink(price);
   const params = new URLSearchParams();
-  if (opts.email)             params.set('prefilled_email',    opts.email);
+  if (opts.email)             params.set('prefilled_email',     opts.email);
   if (opts.clientReferenceId) params.set('client_reference_id', opts.clientReferenceId);
   const qs = params.toString();
   return qs ? `${base}?${qs}` : base;
@@ -42,12 +47,13 @@ export function buildStripeUrl(price, opts = {}) {
  * Picked up by the Success page on return.
  *
  * @param {object} intent
- * @param {string} intent.userId       - Supabase auth user ID
- * @param {string} intent.eventId      - contest or event ID (e.g. 'contest-funny', 'ev-showcase')
- * @param {string} intent.eventTitle   - human-readable name
- * @param {string} intent.ticketType   - 'voting' | 'paid'
- * @param {number} intent.amount       - 2 or 5
- * @param {string} intent.category     - 'contest' | 'event'
+ * @param {string} intent.userId        - Supabase auth user ID
+ * @param {string} intent.eventId       - monthly contest ID or event ID
+ * @param {string} intent.eventTitle    - human-readable name
+ * @param {string} intent.ticketType    - 'contest' | 'paid'
+ * @param {number} intent.amount        - 2, 5, or 20
+ * @param {string} intent.category      - 'contest' | 'event'
+ * @param {boolean} intent.votingAllowed - whether this ticket grants voting
  */
 export function saveTicketIntent(intent) {
   localStorage.setItem(
@@ -58,7 +64,7 @@ export function saveTicketIntent(intent) {
 
 /**
  * Reads and removes the saved intent from localStorage.
- * Returns null if the intent is missing, malformed, or older than 2 hours.
+ * Returns null if missing, malformed, or older than 2 hours.
  */
 export function popTicketIntent() {
   try {
@@ -66,17 +72,14 @@ export function popTicketIntent() {
     if (!raw) return null;
     localStorage.removeItem('sf_ticket_intent');
     const intent = JSON.parse(raw);
-    if (Date.now() - intent.ts > 7_200_000) return null; // 2-hour expiry
+    if (Date.now() - intent.ts > 7_200_000) return null;
     return intent;
   } catch {
     return null;
   }
 }
 
-/**
- * Returns the Stripe price tier (2 or 5) for a given nominal event price.
- * Maps anything ≤ $2 to the $2 tier, everything else to the $5 tier.
- */
+/** Returns Stripe price tier for an event price (2 or 5). */
 export function priceTier(price) {
   return price <= 2 ? 2 : 5;
 }

@@ -31,25 +31,27 @@ export default function Success() {
 
     (async () => {
       try {
-        // 1. Insert paid ticket (view + attend/vote)
+        // 1. Insert paid/contest ticket (view + vote / view + attend)
         const { error: e1 } = await supabase.from('hub_tickets').insert({
-          user_id:     intent.userId,
-          event_id:    intent.eventId,
-          event_title: intent.eventTitle,
-          ticket_type: intent.ticketType,   // 'paid' or 'voting'
-          amount:      intent.amount,
-          status:      'upcoming',
+          user_id:       intent.userId,
+          event_id:      intent.eventId,
+          event_title:   intent.eventTitle,
+          ticket_type:   intent.ticketType,    // 'contest' | 'paid'
+          amount:        intent.amount,
+          voting_allowed: intent.votingAllowed ?? (intent.ticketType === 'contest'),
+          status:        'upcoming',
         });
         if (e1) throw e1;
 
         // 2. Issue free view-only companion ticket automatically
         await supabase.from('hub_tickets').insert({
-          user_id:     intent.userId,
-          event_id:    intent.eventId,
-          event_title: intent.eventTitle,
-          ticket_type: 'free',              // view-only, no voting
-          amount:      0,
-          status:      'upcoming',
+          user_id:        intent.userId,
+          event_id:       intent.eventId,
+          event_title:    intent.eventTitle,
+          ticket_type:    'free',   // view-only, no voting
+          amount:         0,
+          voting_allowed: false,
+          status:         'upcoming',
         });
 
         setStatus('done');

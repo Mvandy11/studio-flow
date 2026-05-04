@@ -1,0 +1,83 @@
+You are updating Studio Flow with new contest categories and ensuring all ticketing logic matches DreamPort’s contest system.
+
+────────────────────────────────────────
+CONTEST TICKETS (GLOBAL)
+────────────────────────────────────────
+All Studio Flow contests use:
+• $20 contest ticket
+• View + vote
+• No seat limits
+• Anyone can enter
+• Anyone can vote
+
+Ticket URL:
+(Use existing Studio Flow $20 ticket URL already wired into the system.)
+
+Ledger fields required:
+• ticket_type = "contest"
+• amount = 20
+• event_id
+• user_id
+• voting_allowed = yes
+
+Free companion tickets:
+• ticket_type = "free"
+• amount = 0
+• voting_allowed = no
+
+────────────────────────────────────────
+MONTHLY CONTESTS (RESET EVERY MONTH)
+────────────────────────────────────────
+Existing Studio Flow contests:
+• Best Photo
+• Best Video
+• Best AI Art
+• Best AI Character
+• Best AI Scene
+• Best AI Story
+• Best AI Animation
+• Best AI Music / Audio
+• Best Creator of the Month
+• Best Overall Submission
+• Best Short Film
+• Best AI Short Film
+• Best Cosplay
+• Best Transformation
+• Best Makeup / FX
+• Best Fan Edit
+• Best Highlight Reel
+• Best Comedy Clip
+• Best Viral Moment
+
+New Studio Flow monthly contests:
+• Best Catch (Football)
+• Best Dunk (Basketball)
+• Funniest Professional Sports Moment
+• Best Sports Highlight of the Month
+• Narrative Art / AI Episode (AI films, episodes, art series, cinematic scenes)
+
+Each month:
+• Generate new event_ids
+• Archive previous month
+• Reset submissions and voting
+
+────────────────────────────────────────
+BUTTON + URL REQUIREMENTS
+────────────────────────────────────────
+Update all Studio Flow UI buttons:
+• Contest ticket buttons → $20 ticket URL
+• No Special Event or Enterprise logic applies to Studio Flow.
+
+Ensure:
+• All new contest categories exist and reset monthly.
+• Ledger entries are correct.
+• No refunds are allowed.
+
+────────────────────────────────────────
+VALIDATION BEFORE COMPLETION
+────────────────────────────────────────
+Confirm:
+• All new Studio Flow contest categories exist.
+• Monthly reset logic works.
+• Ticketing and ledger logic are correct.
+• No Enterprise features appear in Studio Flow.
