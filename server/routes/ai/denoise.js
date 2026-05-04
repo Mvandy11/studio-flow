@@ -24,8 +24,14 @@ const ALLOWED_MIMETYPES = new Set([
 ]);
 const ALLOWED_EXTENSIONS = new Set(['.mp3', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.mov', '.webm']);
 
+// Use /tmp when running in a serverless environment (Netlify/Lambda),
+// fall back to the local uploads/ directory for local dev.
+const UPLOAD_DIR = process.env.LAMBDA_TASK_ROOT
+  ? '/tmp'
+  : path.join(__dirname, '..', '..', 'uploads');
+
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', '..', 'uploads'),
+  destination: UPLOAD_DIR,
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     cb(null, `upload-${Date.now()}${ext}`);
