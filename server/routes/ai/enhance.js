@@ -3,7 +3,16 @@ import multer from 'multer';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import sharp from 'sharp';
+
+// sharp is a native module — load dynamically so the route doesn't crash
+// in serverless environments where native binaries are unavailable.
+let sharpLib = null;
+try {
+  const mod = await import('sharp');
+  sharpLib = mod.default ?? mod;
+} catch {
+  // sharp unavailable — metadata extraction will be skipped
+}
 
 const router = express.Router();
 
@@ -69,9 +78,17 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     const enhancedBuffer = Buffer.from(b64, 'base64');
 
-    // ── Extract metadata with sharp ───────────────────────────
-    const metadata   = await sharp(enhancedBuffer).metadata();
-    const resolution = `${metadata.width}x${metadata.height}`;
+    // ── Extract metadata with sharp (graceful — null if unavailable) ──
+    let metadata   = { width: null, height: null, format: 'png' };
+    let resolution = 'unknown';
+    if (sharpLib) {
+      try {
+        metadata   = await sharpLib(enhancedBuffer).metadata();
+        resolution = `${metadata.width}x${metadata.height}`;
+      } catch {
+        // non-fatal — continue without metadata
+      }
+    }
 
     // ── Upload to Supabase Storage ────────────────────────────
     const id        = randomUUID();
