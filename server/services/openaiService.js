@@ -4,10 +4,9 @@ import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { applyNoiseReduction } from './ffmpegService.js';
 
-// ── OpenAI client (uses Replit AI Integrations env vars) ────
+// ── OpenAI client ────────────────────────────────────────────
 const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
