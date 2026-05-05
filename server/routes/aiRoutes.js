@@ -4,7 +4,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { handleDenoise } from '../controllers/denoiseController.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// import.meta.url is not available in CJS output — fall back to process.cwd()
+let __dirname;
+try {
+  __dirname = path.dirname(fileURLToPath(import.meta.url));
+} catch {
+  __dirname = process.cwd();
+}
 const router = Router();
 
 // ── Multer: accept audio and video uploads ──────────────────

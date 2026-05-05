@@ -1,12 +1,8 @@
 import fs from 'fs';
-import path from 'path';
 import os from 'os';
-import { fileURLToPath } from 'url';
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { applyNoiseReduction } from './ffmpegService.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── OpenAI client (uses Replit AI Integrations env vars) ────
 const openai = new OpenAI({

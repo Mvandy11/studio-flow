@@ -4,17 +4,20 @@ import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
-// sharp is a native module — load dynamically so the route doesn't crash
-// in serverless environments where native binaries are unavailable.
-let sharpLib = null;
-try {
-  const mod = await import('sharp');
-  sharpLib = mod.default ?? mod;
-} catch {
-  // sharp unavailable — metadata extraction will be skipped
-}
-
 const router = express.Router();
+
+// ── Lazy sharp loader (never at top-level — CJS safe) ────────
+let _sharp = null;
+async function getSharp() {
+  if (_sharp) return _sharp;
+  try {
+    const mod = await import('sharp');
+    _sharp = mod.default ?? mod;
+  } catch {
+    // sharp binary not available in this environment
+  }
+  return _sharp;
+}
 
 // ── OpenAI client (Replit AI Integrations) ──────────────────
 const openai = new OpenAI({
@@ -66,9 +69,9 @@ router.post('/', upload.single('image'), async (req, res) => {
         'and make fine details more defined. The result should look like a',
         'professionally retouched, high-resolution version of the original.',
       ].join(' '),
-      quality:         qualityLevel,
-      size:            outputSize,
-      input_fidelity:  'high',
+      quality:        qualityLevel,
+      size:           outputSize,
+      input_fidelity: 'high',
     });
 
     const b64 = response.data?.[0]?.b64_json;
@@ -78,12 +81,13 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     const enhancedBuffer = Buffer.from(b64, 'base64');
 
-    // ── Extract metadata with sharp (graceful — null if unavailable) ──
+    // ── Extract metadata with sharp (lazy, graceful) ──────────
     let metadata   = { width: null, height: null, format: 'png' };
     let resolution = 'unknown';
-    if (sharpLib) {
+    const sharp = await getSharp();
+    if (sharp) {
       try {
-        metadata   = await sharpLib(enhancedBuffer).metadata();
+        metadata   = await sharp(enhancedBuffer).metadata();
         resolution = `${metadata.width}x${metadata.height}`;
       } catch {
         // non-fatal — continue without metadata
@@ -91,8 +95,8 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
 
     // ── Upload to Supabase Storage ────────────────────────────
-    const id        = randomUUID();
-    const filename  = `enhanced_${Date.now()}_${id}.png`;
+    const id          = randomUUID();
+    const filename    = `enhanced_${Date.now()}_${id}.png`;
     const storagePath = `${ENHANCE_PATH}/${filename}`;
 
     const { error: uploadError } = await supabase.storage

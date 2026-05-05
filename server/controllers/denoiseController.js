@@ -1,16 +1,23 @@
 import fs from 'fs';
-import path from 'path';
 import { denoiseAudio } from '../services/openaiService.js';
 import { uploadToSupabase } from '../services/supabaseStorageService.js';
 
-// FFmpeg is not available in serverless environments (Netlify/Lambda).
-// Import it conditionally so the function doesn't crash on boot if ffmpeg
-// is missing — the route itself will return a clear 503 when called.
-let ffmpegService = null;
-try {
-  ffmpegService = await import('../services/ffmpegService.js');
-} catch {
-  // ffmpeg binary not available — video extraction will be disabled
+// ── Lazy ffmpeg loader (never at top-level — CJS safe) ───────
+// ffmpeg is not available in serverless environments (Netlify/Lambda).
+// The getter returns null gracefully so audio-only paths still work.
+let _ffmpegService = null;
+let _ffmpegLoaded  = false;
+
+async function getFfmpegService() {
+  if (_ffmpegLoaded) return _ffmpegService;
+  _ffmpegLoaded = true;
+  try {
+    _ffmpegService = await import('../services/ffmpegService.js');
+  } catch {
+    // ffmpeg binary not available — video extraction disabled
+    _ffmpegService = null;
+  }
+  return _ffmpegService;
 }
 
 /**
@@ -29,30 +36,32 @@ export async function handleDenoise(req, res) {
     return res.status(400).json({ error: 'No file uploaded. Include a file field named "file".' });
   }
 
-  let audioPath = uploadedPath;
+  let audioPath          = uploadedPath;
   let extractedAudioPath = null;
 
   try {
+    const ffmpeg = await getFfmpegService();
+
     // ── Step 1: If video, extract audio track (requires ffmpeg) ─
-    const isVideo = ffmpegService?.isVideoFile?.(uploadedPath) ?? false;
+    const isVideo = ffmpeg?.isVideoFile?.(uploadedPath) ?? false;
 
     if (isVideo) {
-      if (!ffmpegService) {
+      if (!ffmpeg) {
         return res.status(503).json({
           error: 'Video extraction is not available in this environment. Please upload an audio file (mp3, wav, ogg, flac, aac) directly.',
         });
       }
       console.log('[denoise] Video detected — extracting audio...');
       extractedAudioPath = uploadedPath.replace(/\.[^.]+$/, '-extracted.wav');
-      await ffmpegService.extractAudioFromVideo(uploadedPath, extractedAudioPath);
+      await ffmpeg.extractAudioFromVideo(uploadedPath, extractedAudioPath);
       audioPath = extractedAudioPath;
     }
 
     // ── Step 2: Get original file duration (best-effort) ────────
     let duration = 0;
-    if (ffmpegService?.getAudioDuration) {
+    if (ffmpeg?.getAudioDuration) {
       try {
-        duration = await ffmpegService.getAudioDuration(audioPath);
+        duration = await ffmpeg.getAudioDuration(audioPath);
       } catch {
         // non-fatal — proceed without duration
       }
@@ -71,7 +80,7 @@ export async function handleDenoise(req, res) {
     );
 
     // ── Step 5: Upload original to Supabase ──────────────────────
-    const originalBuffer = fs.readFileSync(audioPath);
+    const originalBuffer  = fs.readFileSync(audioPath);
     const originalFilename = `original-${Date.now()}.wav`;
     const { publicUrl: originalFileUrl } = await uploadToSupabase(
       originalBuffer,
@@ -83,9 +92,9 @@ export async function handleDenoise(req, res) {
       tool: 'denoise',
       originalFileUrl,
       cleanedFileUrl,
-      duration: Math.round(duration * 100) / 100,
-      fileSize: cleanedBuffer.length,
-      filename: cleanedFilename,
+      duration:    Math.round(duration * 100) / 100,
+      fileSize:    cleanedBuffer.length,
+      filename:    cleanedFilename,
       processedAt: new Date().toISOString(),
     });
   } catch (err) {
