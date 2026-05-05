@@ -16,6 +16,7 @@ import CreateEventPage from './pages/events/CreateEventPage';
 import StagePage from './pages/stage/StagePage';
 import Success from './pages/Success.jsx';
 import Cancel from './pages/Cancel.jsx';
+import PaymentSuccess from './pages/PaymentSuccess.jsx';
 import CreatorAcademy from './pages/CreatorAcademy';
 import Tools from './pages/Tools';
 import { DenoiseToolPage } from './features/ai-denoise';
@@ -79,6 +80,7 @@ export default function App() {
           {/* ── Stripe callbacks ── */}
           <Route path="/success" element={<Success />} />
           <Route path="/cancel" element={<Cancel />} />
+          <Route path="/payment/success" element={<PaymentSuccess />} />
 
           {/* ── Dev Mode routes (mock data, no real Supabase) ── */}
           <Route path="/dev" element={<Dashboard />} />

@@ -1,24 +1,15 @@
 /**
  * Studio Flow — Stripe Payment Link registry.
  *
- * Three globally-fixed links. All tickets and memberships route through these.
+ * Two globally-fixed links. All tickets route through these.
  *
  *  $2  → Standard event admission
- *  $5  → Premium event admission
- *  $20 → Contest ticket (view + vote)
- *
- * ⚠️  ACTION REQUIRED: Replace CONTEST_STRIPE_LINK below with your real
- *     $20 Stripe Payment Link from the Stripe dashboard once created.
- *     Current value is a placeholder pointing to the $5 link.
+ *  $5  → Premium event admission / contest ticket (view + vote)
  */
 
-// TODO: Replace with actual $20 Stripe Payment Link
-const CONTEST_STRIPE_LINK = 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08';
-
 export const STRIPE_LINKS = {
-  2:  'https://buy.stripe.com/14A6oJgpna8g8YYbh3b7y0a',
-  5:  'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08',
-  20: CONTEST_STRIPE_LINK,
+  2: 'https://buy.stripe.com/14A6oJgpna8g8YYbh3b7y0a',
+  5: 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08',
 };
 
 /**
@@ -44,15 +35,15 @@ export function buildStripeUrl(price, opts = {}) {
 
 /**
  * Saves ticket purchase intent to localStorage before the Stripe redirect.
- * Picked up by the Success page on return.
+ * Picked up by the PaymentSuccess page on return.
  *
  * @param {object} intent
- * @param {string} intent.userId        - Supabase auth user ID
- * @param {string} intent.eventId       - monthly contest ID or event ID
- * @param {string} intent.eventTitle    - human-readable name
- * @param {string} intent.ticketType    - 'contest' | 'paid'
- * @param {number} intent.amount        - 2, 5, or 20
- * @param {string} intent.category      - 'contest' | 'event'
+ * @param {string} intent.userId         - Supabase auth user ID
+ * @param {string} intent.eventId        - monthly contest ID or event UUID
+ * @param {string} intent.eventTitle     - human-readable name
+ * @param {string} intent.ticketType     - 'contest' | 'paid'
+ * @param {number} intent.amount         - 2 or 5
+ * @param {string} intent.category       - 'contest' | 'event'
  * @param {boolean} intent.votingAllowed - whether this ticket grants voting
  */
 export function saveTicketIntent(intent) {
@@ -79,7 +70,7 @@ export function popTicketIntent() {
   }
 }
 
-/** Returns Stripe price tier for an event price (2 or 5). */
+/** Returns Stripe price tier for a given price (2 or 5). */
 export function priceTier(price) {
   return price <= 2 ? 2 : 5;
 }

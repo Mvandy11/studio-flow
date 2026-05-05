@@ -6,6 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import aiRoutes from './routes/ai/index.js';
 import contestsRouter from './routes/contests.js';
+import payoutsRouter from './routes/payouts.js';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 // ── Routes ──────────────────────────────────────────────────────
 app.use('/api/ai', aiRoutes);
 app.use('/api/contests', contestsRouter);
+app.use('/api/payouts', payoutsRouter);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {

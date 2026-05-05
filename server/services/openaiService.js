@@ -4,10 +4,17 @@ import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { applyNoiseReduction } from './ffmpegService.js';
 
-// ── OpenAI client ────────────────────────────────────────────
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// ── Lazy OpenAI client (avoids crash on boot if key is missing) ──
+let _openai = null;
+function getOpenAI() {
+  if (!_openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set.');
+    }
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 /**
  * Denoises audio using a two-stage pipeline:
@@ -40,7 +47,7 @@ export async function denoiseAudio(inputAudioPath) {
     const audioBuffer = fs.readFileSync(preProcessedPath);
     const base64Audio = audioBuffer.toString('base64');
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-audio',
       modalities: ['text', 'audio'],
       audio: { voice: 'alloy', format: 'wav' },

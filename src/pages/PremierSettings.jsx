@@ -35,7 +35,10 @@ export default function PremierSettings() {
   // Load existing settings
   useEffect(() => {
     async function loadSettings() {
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('creator_settings')
@@ -104,6 +107,14 @@ export default function PremierSettings() {
   }
 
   if (loading) return <div className="cinematic-title">Loading...</div>;
+
+  if (!user) return (
+    <div className="cinematic-card-xl" style={{ padding: '2rem', textAlign: 'center' }}>
+      <p style={{ color: 'rgba(200,200,215,0.55)', marginBottom: '1rem' }}>
+        Please log in to manage your payout settings.
+      </p>
+    </div>
+  );
 
   return (
     <div className="cinematic-card-xl" style={{ padding: "2rem" }}>

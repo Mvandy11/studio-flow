@@ -203,7 +203,7 @@ const _monthDeadline = currentMonthDeadline();
 export const CONTESTS = _CONTEST_DEFS.map((def) => ({
   ...def,
   id:                monthlyContestId(def.slug),      // e.g. "best-photo-2026-05"
-  votingTicketPrice: 20,                               // $20 contest ticket (view + vote)
+  votingTicketPrice: 5,                                // $5 contest ticket (view + vote)
   deadline:          _monthDeadline,
   status:            'active',
 }));

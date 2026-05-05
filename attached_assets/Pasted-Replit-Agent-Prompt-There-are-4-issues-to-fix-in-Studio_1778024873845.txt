@@ -1,0 +1,155 @@
+Replit Agent Prompt:
+
+There are 4 issues to fix in Studio Flow. Handle them all in this session.
+
+FIX 1: Contest tickets should be $2 or $5, not $20
+File: src/lib/stripeLinks.js
+
+Remove the $20 tier entirely. Contest tickets should use either $2 or $5.
+
+Remove the CONTEST_STRIPE_LINK constant.
+
+Update STRIPE_LINKS to only have two tiers:
+
+2: 'https://buy.stripe.com/14A6oJgpna8g8YYbh3b7y0a'
+
+5: 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08'
+
+Update priceTier() to map prices ≤ 2 → 2, everything else → 5.
+
+Update the comments/docs to reflect only $2 and $5 tiers.
+
+Everywhere contest ticket prices are set (check the contests table seed data, any admin forms, and any hardcoded price={20} props):
+
+Change all contest ticket prices from $20 to either $2 or $5. Use $5 as the default contest ticket price.
+
+FIX 2: CheckoutButton must redirect to real Stripe Payment Links
+File: src/components/payments/CheckoutButton.jsx
+
+Currently the button is SIMULATED — it calls createTicket() directly without any payment.
+
+Change it to:
+
+Import buildStripeUrl and saveTicketIntent from ../../lib/stripeLinks
+
+When the user clicks "Buy Ticket", call saveTicketIntent() to save the purchase intent to localStorage (userId, eventId, event title, ticket type, amount, category, votingAllowed)
+
+Then redirect the user to the real Stripe Payment Link using buildStripeUrl(price, { email: user.email, clientReferenceId: eventId })
+
+Use window.location.href = stripeUrl to redirect
+
+Do NOT call createTicket() directly anymore — that should only happen on the success/return page after Stripe confirms payment
+
+Create or update a Success/Return page (e.g., src/pages/PaymentSuccess.jsx):
+
+This page should be the Stripe redirect return URL
+
+On mount, call popTicketIntent() from stripeLinks to retrieve the saved intent
+
+If valid intent exists, call createTicket() to record the ticket in the database
+
+Show a success message with a link back to the contest/event
+
+Add a route for this page at /payment/success
+
+In Stripe dashboard, set the success URL to https://ois-studio-flow.netlify.app/payment/success (and for dev, the Replit URL)
+
+FIX 3: Premier Payout Settings shows "Loading..." forever
+File: src/pages/PremierSettings.jsx
+
+Bug: Inside the useEffect, the loadSettings() function has if (!user) return; which exits before calling setLoading(false). So when a user is not logged in, the page shows "Loading..." forever.
+
+Fix: Add setLoading(false); before the return statement when !user.
+
+Also add a check after the loading state: if !user, show a "Please log in to manage your payout settings" message instead of the form.
+
+Supabase: Create the creator_settings table if it doesn't exist. Run this SQL in the Supabase SQL Editor (or add a migration):
+
+sql
+
+
+Copy
+CREATE TABLE IF NOT EXISTS creator_settings (
+  creator_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  payout_method TEXT DEFAULT 'studioflow-kofi',
+  sf_product_link TEXT,
+  sf_event_title TEXT,
+  sf_event_date TEXT,
+  sf_event_time TEXT,
+  sf_thumbnail TEXT,
+  kofi_page TEXT,
+  kofi_donation TEXT,
+  kofi_membership TEXT,
+  kofi_shop TEXT,
+  paypal TEXT,
+  cashapp TEXT,
+  stripe TEXT,
+  venmo TEXT,
+  custom_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE creator_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own settings" ON creator_settings
+  FOR SELECT USING (auth.uid() = creator_id);
+
+CREATE POLICY "Users can upsert own settings" ON creator_settings
+  FOR ALL USING (auth.uid() = creator_id);
+FIX 4: Stripe payout tracking for creators
+Build an earnings and payout system so creators who enter a payout method can receive payouts for their events:
+
+A) Create an earnings table in Supabase:
+
+sql
+
+
+Copy
+CREATE TABLE IF NOT EXISTS earnings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_id UUID,
+  contest_id UUID,
+  amount NUMERIC(10,2) NOT NULL,
+  source TEXT NOT NULL, -- 'ticket_sale', 'contest_prize', 'event_revenue'
+  status TEXT DEFAULT 'pending', -- 'pending', 'paid', 'failed'
+  payout_method TEXT, -- method used for payout
+  payout_reference TEXT, -- transaction ID or reference
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  paid_at TIMESTAMPTZ
+);
+
+ALTER TABLE earnings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own earnings" ON earnings
+  FOR SELECT USING (auth.uid() = creator_id);
+B) Create an Earnings Dashboard page at /earnings:
+
+Show total earnings, pending payouts, and paid payouts
+
+List individual earning entries with source, amount, status, and date
+
+Show a "Request Payout" button that marks pending earnings as ready for payout
+
+Pull the creator's payout method from creator_settings and display it
+
+If no payout method is set, show a link to /premier-settings to set one up
+
+C) Record earnings when tickets are sold:
+
+In the PaymentSuccess page (or the createTicket flow), after recording a ticket purchase, also insert an earnings record for the event/contest creator
+
+The creator's share should be 80% of the ticket price (platform keeps 20%)
+
+D) Add a server API endpoint POST /api/payouts/request that:
+
+Requires authentication
+
+Looks up the creator's pending earnings and their payout method from creator_settings
+
+Marks the earnings as status: 'requested'
+
+For now, this flags them for manual payout — we can automate with Stripe Connect later
+
+After making all changes, commit and push to main with the message: "feat: fix ticket prices, real Stripe checkout, payout system, premier settings loading fix"

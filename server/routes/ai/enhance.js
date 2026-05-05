@@ -19,10 +19,17 @@ async function getSharp() {
   return _sharp;
 }
 
-// ── OpenAI client ────────────────────────────────────────────
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// ── Lazy OpenAI client (avoids crash on boot if key is missing) ──
+let _openai = null;
+function getOpenAI() {
+  if (!_openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set.');
+    }
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 // ── Supabase client (service role for server-side writes) ────
 const supabase = createClient(
@@ -58,7 +65,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     // ── Call OpenAI Image Edit API ────────────────────────────
     const imageFile = new File([buffer], originalname, { type: mimetype });
 
-    const response = await openai.images.edit({
+    const response = await getOpenAI().images.edit({
       model:   'gpt-image-1',
       image:   [imageFile],
       prompt: [

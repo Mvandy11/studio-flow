@@ -1,20 +1,32 @@
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
-import { createTicket } from '../../lib/createTicket';
+import { buildStripeUrl, saveTicketIntent } from '../../lib/stripeLinks';
 
 /**
- * Simulated checkout button.
+ * Redirects to a real Stripe Payment Link.
+ * On return, /payment/success finalizes the ticket via createTicket().
+ *
  * Props:
- *   eventId  {string}   - event UUID
- *   price    {number}   - ticket price (display only for now)
- *   user     {object}   - Supabase user object
- *   onSuccess {function} - called after the ticket is created
+ *   eventId      {string}   - event UUID or contest ID
+ *   eventTitle   {string}   - human-readable event name
+ *   price        {number}   - 2 or 5
+ *   ticketType   {string}   - 'paid' | 'contest'
+ *   category     {string}   - 'event' | 'contest'
+ *   votingAllowed {boolean} - whether ticket grants voting rights
+ *   user         {object}   - Supabase user object
  */
-export default function CheckoutButton({ eventId, price, user, onSuccess }) {
-  const [state, setState] = useState('idle'); // 'idle' | 'processing' | 'error'
+export default function CheckoutButton({
+  eventId,
+  eventTitle = '',
+  price,
+  ticketType = 'paid',
+  category = 'event',
+  votingAllowed = false,
+  user,
+}) {
+  const [state,    setState]    = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  async function handleBuy() {
+  function handleBuy() {
     if (!user) {
       setErrorMsg('You must be signed in to purchase a ticket.');
       setState('error');
@@ -24,14 +36,22 @@ export default function CheckoutButton({ eventId, price, user, onSuccess }) {
     setState('processing');
     setErrorMsg('');
 
-    try {
-      await createTicket(supabase, eventId, user.id);
-      setState('idle');
-      onSuccess();
-    } catch (err) {
-      setErrorMsg(err.message);
-      setState('error');
-    }
+    saveTicketIntent({
+      userId:       user.id,
+      eventId,
+      eventTitle,
+      ticketType,
+      amount:       price,
+      category,
+      votingAllowed,
+    });
+
+    const stripeUrl = buildStripeUrl(price, {
+      email:             user.email,
+      clientReferenceId: eventId,
+    });
+
+    window.location.href = stripeUrl;
   }
 
   const isProcessing = state === 'processing';
@@ -44,16 +64,16 @@ export default function CheckoutButton({ eventId, price, user, onSuccess }) {
         disabled={isProcessing}
         style={{
           fontSize: '1.05rem',
-          padding: '0.85rem 2.5rem',
-          opacity: isProcessing ? 0.65 : 1,
-          cursor: isProcessing ? 'not-allowed' : 'pointer',
+          padding:  '0.85rem 2.5rem',
+          opacity:  isProcessing ? 0.65 : 1,
+          cursor:   isProcessing ? 'not-allowed' : 'pointer',
           minWidth: '200px',
         }}
       >
         {isProcessing ? (
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'center' }}>
             <span className="cinematic-spinner" style={{ width: '1rem', height: '1rem', borderWidth: '2px' }} />
-            Processing…
+            Redirecting to Stripe…
           </span>
         ) : (
           `Buy Ticket — $${Number(price).toFixed(2)}`

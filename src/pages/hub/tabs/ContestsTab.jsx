@@ -421,7 +421,7 @@ export default function ContestsTab({ isMember }) {
           </span>
         </div>
         <p style={{ color: 'var(--hub-muted)', fontSize: '0.9rem', margin: 0 }}>
-          {CONTESTS.length} contests · Enter free with membership · $20 contest ticket unlocks viewing + voting · No refunds.
+          {CONTESTS.length} contests · Enter free with membership · $5 contest ticket unlocks viewing + voting · No refunds.
         </p>
       </div>
 
@@ -429,7 +429,7 @@ export default function ContestsTab({ isMember }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '0.625rem', marginBottom: '1.25rem' }}>
         {[
           { icon: '✏',  label: 'Submit Entry',      detail: 'FREE for members',           color: 'var(--hub-green)' },
-          { icon: '🎟',  label: 'Contest Ticket',     detail: '$20 · view + vote',          color: 'var(--hub-gold)' },
+          { icon: '🎟',  label: 'Contest Ticket',     detail: '$5 · view + vote',           color: 'var(--hub-gold)' },
           { icon: '🎁',  label: 'Free Companion',     detail: 'View-only · auto-issued',    color: 'var(--hub-blue)' },
           { icon: '💰',  label: 'Prize Pool',         detail: 'Grows with ticket sales',    color: '#f97316' },
           { icon: '🔄',  label: 'Monthly Reset',      detail: 'New IDs every month',        color: '#a855f7' },
