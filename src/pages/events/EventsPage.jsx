@@ -75,7 +75,7 @@ export default function EventsPage() {
       {!loading && events.length > 0 && (
         <div className="contests-grid">
           {events.map((event) => {
-            const isStandard = Number(event.price) <= 2;
+            const isStandard = Number(event.price ?? event.ticket_price ?? 5) <= 2;
             const tierColor  = isStandard ? 'var(--accent-blue, #3b82f6)' : 'var(--accent-gold, #f2c98f)';
             const tierLabel  = isStandard ? 'Standard' : 'Premium';
 
@@ -131,10 +131,10 @@ export default function EventsPage() {
 
                 <div className="contest-card__footer" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, fontSize: '1rem', color: tierColor }}>
-                    ${Number(event.price || 0).toFixed(0)}
+                    ${Number(event.price ?? event.ticket_price ?? 0).toFixed(0)}
                   </span>
                   <a
-                    href={buildStripeUrl(event.price, 'event')}
+                    href={buildStripeUrl(event.price ?? event.ticket_price ?? 5, 'event')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn--primary"
