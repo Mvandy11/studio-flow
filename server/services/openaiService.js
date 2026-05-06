@@ -1,8 +1,8 @@
 import fs from 'fs';
 import os from 'os';
+import path from 'path';
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
-import { applyNoiseReduction } from './ffmpegService.js';
 
 // ── Lazy OpenAI client (avoids crash on boot if key is missing) ──
 let _openai = null;
@@ -16,17 +16,32 @@ function getOpenAI() {
   return _openai;
 }
 
+// ── Lazy ffmpegService loader ─────────────────────────────────
+// Never imported at the top level — fluent-ffmpeg requires a native binary
+// that is not available in Netlify Functions / Lambda environments.
+let _ffmpegService = null;
+let _ffmpegLoaded  = false;
+
+async function getFfmpegService() {
+  if (_ffmpegLoaded) return _ffmpegService;
+  _ffmpegLoaded = true;
+  try {
+    _ffmpegService = await import('./ffmpegService.js');
+  } catch {
+    _ffmpegService = null;
+  }
+  return _ffmpegService;
+}
+
 /**
  * Denoises audio using a two-stage pipeline:
  *
- * Stage 1 — ffmpeg pre-processing:
+ * Stage 1 — ffmpeg pre-processing (when available):
  *   Applies `anlmdn` + `afftdn` noise reduction filters to remove broadband
  *   noise, hiss, hum, and low-frequency rumble while preserving speech.
  *
  * Stage 2 — OpenAI `gpt-audio` speech-to-speech enhancement:
- *   Sends the pre-processed audio to OpenAI's gpt-audio model with a
- *   prompt to reproduce the speech clearly. This provides an additional
- *   AI-powered enhancement pass on top of the signal processing.
+ *   Sends the pre-processed audio to OpenAI's gpt-audio model.
  *   The resulting WAV is the final cleaned output.
  *
  * @param {string} inputAudioPath - Path to the input WAV file
@@ -35,16 +50,29 @@ function getOpenAI() {
 export async function denoiseAudio(inputAudioPath) {
   const tempDir = os.tmpdir();
   const preProcessedPath = path.join(tempDir, `pre-${uuidv4()}.wav`);
-  const finalOutputPath = path.join(tempDir, `denoised-${uuidv4()}.wav`);
+  const finalOutputPath  = path.join(tempDir, `denoised-${uuidv4()}.wav`);
+
+  let audioPath = inputAudioPath;
 
   try {
-    // ── Stage 1: ffmpeg noise reduction pre-pass ─────────────
-    console.log('[openai] Stage 1: ffmpeg noise reduction...');
-    await applyNoiseReduction(inputAudioPath, preProcessedPath);
+    // ── Stage 1: ffmpeg noise reduction pre-pass (graceful skip if unavailable) ──
+    const ffmpeg = await getFfmpegService();
+    if (ffmpeg?.applyNoiseReduction) {
+      try {
+        console.log('[openai] Stage 1: ffmpeg noise reduction...');
+        await ffmpeg.applyNoiseReduction(inputAudioPath, preProcessedPath);
+        audioPath = preProcessedPath;
+      } catch (ffmpegErr) {
+        console.warn('[openai] ffmpeg pre-pass unavailable, skipping:', ffmpegErr.message);
+        // Fall through — send original audio to OpenAI
+      }
+    } else {
+      console.log('[openai] ffmpeg not available — skipping Stage 1, sending audio directly to AI.');
+    }
 
     // ── Stage 2: OpenAI gpt-audio speech enhancement ─────────
     console.log('[openai] Stage 2: OpenAI gpt-audio enhancement...');
-    const audioBuffer = fs.readFileSync(preProcessedPath);
+    const audioBuffer = fs.readFileSync(audioPath);
     const base64Audio = audioBuffer.toString('base64');
 
     const response = await getOpenAI().chat.completions.create({
@@ -79,9 +107,9 @@ export async function denoiseAudio(inputAudioPath) {
       cleanedBuffer = Buffer.from(audioData, 'base64');
       console.log('[openai] AI enhancement successful.');
     } else {
-      // Fallback: use the ffmpeg-processed audio if AI response has no audio
-      console.warn('[openai] AI returned no audio — using ffmpeg-processed output.');
-      cleanedBuffer = fs.readFileSync(preProcessedPath);
+      // Fallback: use the pre-processed (or original) audio
+      console.warn('[openai] AI returned no audio — using pre-processed output.');
+      cleanedBuffer = fs.readFileSync(audioPath);
     }
 
     const cleanedFilename = `denoised-${uuidv4()}.wav`;
