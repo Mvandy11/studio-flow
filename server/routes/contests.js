@@ -76,14 +76,15 @@ async function getUserFromHeader(req) {
 // ── GET /api/contests ─────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const { status, limit = 50, offset = 0 } = req.query;
+    const { status, category, limit = 50, offset = 0 } = req.query;
     let query = supabase
       .from('contests')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
-    if (status) query = query.eq('status', status);
+    if (status)   query = query.eq('status', status);
+    if (category) query = query.eq('category', category);
 
     const { data, count, error } = await query;
     if (error) throw error;
@@ -137,7 +138,7 @@ router.post('/', async (req, res) => {
     const {
       title, description, thumbnail_url, entry_fee, prize_pool,
       winner_count, start_date, end_date,
-      submission_start, submission_end, voting_start, voting_end, status,
+      submission_start, submission_end, voting_start, voting_end, status, category,
     } = req.body;
 
     if (!title) return res.status(400).json({ error: 'Title is required.' });
@@ -154,6 +155,7 @@ router.post('/', async (req, res) => {
         submission_start, submission_end,
         voting_start, voting_end,
         status: status || 'draft',
+        category: category || 'general',
         created_by: user.id,
       })
       .select()

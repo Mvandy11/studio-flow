@@ -13,12 +13,24 @@ const STATUS_FILTERS = [
   { value: 'completed', label: 'Ended' },
 ];
 
+const CATEGORY_FILTERS = [
+  { value: '',          label: 'All Categories' },
+  { value: 'creative',  label: 'Creative' },
+  { value: 'music',     label: 'Music' },
+  { value: 'film',      label: 'Film' },
+  { value: 'comedy',    label: 'Comedy' },
+  { value: 'photo',     label: 'Photo' },
+  { value: 'design',    label: 'Design' },
+  { value: 'general',   label: 'General' },
+];
+
 export default function ContestsPage() {
   const { role } = useAuth();
-  const [contests, setContests] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
-  const [filter,   setFilter]   = useState('');
+  const [contests,  setContests]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState(null);
+  const [filter,    setFilter]    = useState('');
+  const [category,  setCategory]  = useState('');
 
   useEffect(() => {
     async function load() {
@@ -26,7 +38,8 @@ export default function ContestsPage() {
       setError(null);
       try {
         const params = new URLSearchParams({ limit: '50' });
-        if (filter) params.set('status', filter);
+        if (filter)   params.set('status', filter);
+        if (category) params.set('category', category);
         const res = await fetch(`/api/contests?${params}`);
         if (!res.ok) throw new Error('Failed to load contests.');
         const { data } = await res.json();
@@ -38,7 +51,7 @@ export default function ContestsPage() {
       }
     }
     load();
-  }, [filter]);
+  }, [filter, category]);
 
   return (
     <div className="page-container">
@@ -54,13 +67,26 @@ export default function ContestsPage() {
         )}
       </div>
 
-      {/* Filters */}
-      <div className="ai-grid__filters" style={{ marginBottom:'1.5rem' }}>
+      {/* Status Filters */}
+      <div className="ai-grid__filters" style={{ marginBottom:'0.75rem' }}>
         {STATUS_FILTERS.map((f) => (
           <button
             key={f.value}
             className={`ai-grid__filter${filter === f.value ? ' ai-grid__filter--active' : ''}`}
             onClick={() => setFilter(f.value)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Category Filters */}
+      <div className="ai-grid__filters" style={{ marginBottom:'1.5rem' }}>
+        {CATEGORY_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            className={`ai-grid__filter${category === f.value ? ' ai-grid__filter--active' : ''}`}
+            onClick={() => setCategory(f.value)}
           >
             {f.label}
           </button>

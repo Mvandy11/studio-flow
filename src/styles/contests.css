@@ -71,6 +71,18 @@
   color: var(--accent-gold, #f2c98f);
 }
 
+.contest-card__category {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
 .contest-card__status {
   font-size: 0.7rem;
   font-weight: 700;

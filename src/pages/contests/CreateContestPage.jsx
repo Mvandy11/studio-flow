@@ -5,6 +5,16 @@ import { isCreatorAdmin } from '../../lib/roles';
 import { supabase } from '../../lib/supabase';
 import '../../styles/contests.css';
 
+const CATEGORIES = [
+  { value: 'general',  label: 'General' },
+  { value: 'creative', label: 'Creative' },
+  { value: 'music',    label: 'Music' },
+  { value: 'film',     label: 'Film' },
+  { value: 'comedy',   label: 'Comedy' },
+  { value: 'photo',    label: 'Photo' },
+  { value: 'design',   label: 'Design' },
+];
+
 export default function CreateContestPage() {
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -17,6 +27,7 @@ export default function CreateContestPage() {
     entry_fee:        '0',
     winner_count:     '1',
     status:           'draft',
+    category:         'general',
     submission_start: '',
     submission_end:   '',
     voting_start:     '',
@@ -107,22 +118,11 @@ export default function CreateContestPage() {
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Prize Pool ($)</label>
-            <input className="form-input" type="number" min="0" value={form.prize_pool} onChange={set('prize_pool')} placeholder="0" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Entry Fee ($)</label>
-            <input className="form-input" type="number" min="0" value={form.entry_fee} onChange={set('entry_fee')} placeholder="0" />
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Number of Winners</label>
-            <select className="form-select" value={form.winner_count} onChange={set('winner_count')}>
-              <option value="1">1 Winner</option>
-              <option value="2">2 Winners</option>
-              <option value="3">3 Winners</option>
+            <label className="form-label">Category</label>
+            <select className="form-select" value={form.category} onChange={set('category')}>
+              {CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
             </select>
           </div>
           <div className="form-group">
@@ -135,6 +135,26 @@ export default function CreateContestPage() {
               <option value="archived">Archived</option>
             </select>
           </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Prize Pool ($)</label>
+            <input className="form-input" type="number" min="0" value={form.prize_pool} onChange={set('prize_pool')} placeholder="0" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Entry Fee ($)</label>
+            <input className="form-input" type="number" min="0" value={form.entry_fee} onChange={set('entry_fee')} placeholder="0" />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Number of Winners</label>
+          <select className="form-select" value={form.winner_count} onChange={set('winner_count')}>
+            <option value="1">1 Winner</option>
+            <option value="2">2 Winners</option>
+            <option value="3">3 Winners</option>
+          </select>
         </div>
 
         <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:'1.25rem' }}>

@@ -9,11 +9,25 @@ const STATUS_LABELS = {
   archived:  'Archived',
 };
 
+const CATEGORY_LABELS = {
+  general:   'General',
+  creative:  'Creative',
+  music:     'Music',
+  film:      'Film',
+  comedy:    'Comedy',
+  photo:     'Photo',
+  design:    'Design',
+};
+
 export default function ContestCard({ contest }) {
   const statusClass = `contest-card__status contest-card__status--${contest.status}`;
   const closingDate = contest.submission_end || contest.end_date;
   const closingLabel = closingDate
     ? formatDistanceToNow(new Date(closingDate), { addSuffix: true })
+    : null;
+
+  const categoryLabel = contest.category
+    ? (CATEGORY_LABELS[contest.category] ?? contest.category)
     : null;
 
   return (
@@ -41,6 +55,9 @@ export default function ContestCard({ contest }) {
         )}
         <div className="contest-card__meta">
           <span className={statusClass}>{STATUS_LABELS[contest.status] ?? contest.status}</span>
+          {categoryLabel && (
+            <span className="contest-card__category">{categoryLabel}</span>
+          )}
           {contest.prize_pool > 0 && (
             <span className="contest-card__prize">
               ${Number(contest.prize_pool).toLocaleString()} Prize
