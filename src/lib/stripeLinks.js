@@ -40,7 +40,9 @@ export function getStripeLink(price, type = 'contest') {
  * @param {string} [opts.clientReferenceId] - audit reference
  */
 export function buildStripeUrl(price, opts = {}) {
-  const { type = 'contest', email, clientReferenceId } = opts;
+  // Accept both buildStripeUrl(price, 'event') and buildStripeUrl(price, { type, email, ... })
+  const resolvedOpts = typeof opts === 'string' ? { type: opts } : opts;
+  const { type = 'contest', email, clientReferenceId } = resolvedOpts;
   const base = getStripeLink(price, type);
   const params = new URLSearchParams();
   if (email)             params.set('prefilled_email',     email);

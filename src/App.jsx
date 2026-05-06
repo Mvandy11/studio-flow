@@ -10,6 +10,7 @@ import Studio from './pages/Studio';
 import StudioSessions from './pages/StudioSessions';
 import SessionEditor from './pages/SessionEditor';
 import PremierSettings from './pages/PremierSettings';
+import EventsPage from './pages/events/EventsPage';
 import EventPage from './pages/events/EventPage';
 import PurchasePage from './pages/events/PurchasePage';
 import CreateEventPage from './pages/events/CreateEventPage';
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/premier/settings" element={<PremierSettings />} />
 
           {/* ── Events ── */}
+          <Route path="/events" element={<EventsPage />} />
           <Route path="/events/create" element={<CreateEventPage />} />
           <Route path="/events/:id" element={<EventPage />} />
           <Route path="/events/:eventId/purchase" element={<PurchasePage />} />

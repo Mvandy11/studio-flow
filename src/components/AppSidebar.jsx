@@ -21,6 +21,7 @@ const NAV_SECTIONS = [
   {
     label: 'Platform',
     items: [
+      { to: '/events',           icon: '🎟', label: 'Events' },
       { to: '/contests',         icon: '🏆', label: 'Contests' },
       { to: '/creator-academy',  icon: '🎓', label: 'Academy' },
     ],
