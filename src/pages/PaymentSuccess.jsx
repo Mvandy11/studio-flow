@@ -7,7 +7,7 @@ import { popTicketIntent } from '../lib/stripeLinks';
 /**
  * Stripe returns here after a successful payment.
  * Reads the saved intent from localStorage, creates the ticket, and
- * records an earnings entry for the event creator (80% share).
+ * records an earnings entry for the event creator (98% share, 2% platform processing fee).
  */
 export default function PaymentSuccess() {
   const [status,  setStatus]  = useState('loading'); // 'loading' | 'success' | 'no-intent' | 'error'

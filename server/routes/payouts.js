@@ -1,7 +1,7 @@
 /**
  * POST /api/payouts/record-earning
  *   Called by PaymentSuccess page after a ticket purchase.
- *   Looks up the event creator and records 80% of ticket price as earnings.
+ *   Looks up the event creator and records 98% of ticket price as earnings (platform keeps 2% processing fee).
  *
  * POST /api/payouts/request
  *   Marks a creator's pending earnings as 'requested' for manual payout.
@@ -46,7 +46,7 @@ router.post('/record-earning', async (req, res) => {
     return res.json({ recorded: false, reason: 'no_creator_found' });
   }
 
-  const creatorShare = Math.round(Number(amount) * 0.8 * 100) / 100;
+  const creatorShare = Math.round(Number(amount) * 0.98 * 100) / 100;
 
   // Fetch the creator's current payout method
   const { data: settings } = await supabase

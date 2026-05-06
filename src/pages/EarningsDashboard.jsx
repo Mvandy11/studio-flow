@@ -104,7 +104,7 @@ export default function EarningsDashboard() {
     <div className="earnings-page">
       <div className="page-header">
         <h1 className="page-title">◎ Earnings</h1>
-        <p className="page-subtitle">Your revenue summary. You keep 80% of every ticket sale.</p>
+        <p className="page-subtitle">Your revenue summary. You keep 98% of every ticket sale.</p>
       </div>
 
       {/* Summary Cards */}
