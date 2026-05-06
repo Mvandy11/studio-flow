@@ -1,34 +1,50 @@
 /**
  * Studio Flow — Stripe Payment Link registry.
  *
- * Two globally-fixed links. All tickets route through these.
- *
- *  $2  → Standard event admission
- *  $5  → Premium event admission / contest ticket (view + vote)
+ * Separate link sets for contest tickets and event viewing tickets.
  */
 
-export const STRIPE_LINKS = {
+// ── Contest Stripe Payment Links ──────────────────────────────
+export const CONTEST_LINKS = {
   2: 'https://buy.stripe.com/14A6oJgpna8g8YYbh3b7y0a',
   5: 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08',
 };
 
+// ── Event Viewing Stripe Payment Links ────────────────────────
+export const EVENT_LINKS = {
+  2: 'https://buy.stripe.com/eVq8wR3CBdks5MM70Nb7y0n',
+  5: 'https://buy.stripe.com/bJe8wR1utbck3EEacZb7y0m',
+};
+
+// ── Legacy alias (kept for any unupdated call sites) ──────────
+export const STRIPE_LINKS = CONTEST_LINKS;
+
 /**
- * Returns the correct Stripe payment link for the given price tier.
- * Falls back to the $5 link for any unexpected price.
+ * Returns the correct Stripe payment link for the given price tier and type.
+ * @param {number} price - 2 or 5
+ * @param {'contest'|'event'} [type='contest'] - which link set to use
  */
-export function getStripeLink(price) {
-  return STRIPE_LINKS[price] ?? STRIPE_LINKS[5];
+export function getStripeLink(price, type = 'contest') {
+  const links = type === 'event' ? EVENT_LINKS : CONTEST_LINKS;
+  return links[price] ?? links[5];
 }
 
 /**
- * Builds the full Stripe URL with optional pre-filled email and
- * a compact client_reference_id for audit purposes.
+ * Builds the full Stripe URL with optional pre-filled email,
+ * a compact client_reference_id, and type-aware link selection.
+ *
+ * @param {number} price - 2 or 5
+ * @param {object} [opts]
+ * @param {'contest'|'event'} [opts.type='contest'] - which link set to use
+ * @param {string} [opts.email] - pre-fill email in Stripe checkout
+ * @param {string} [opts.clientReferenceId] - audit reference
  */
 export function buildStripeUrl(price, opts = {}) {
-  const base = getStripeLink(price);
+  const { type = 'contest', email, clientReferenceId } = opts;
+  const base = getStripeLink(price, type);
   const params = new URLSearchParams();
-  if (opts.email)             params.set('prefilled_email',     opts.email);
-  if (opts.clientReferenceId) params.set('client_reference_id', opts.clientReferenceId);
+  if (email)             params.set('prefilled_email',     email);
+  if (clientReferenceId) params.set('client_reference_id', clientReferenceId);
   const qs = params.toString();
   return qs ? `${base}?${qs}` : base;
 }

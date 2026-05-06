@@ -213,6 +213,7 @@ function ContestCard({ contest, isMember }) {
 
     const ref = `ct_${contest.slug || contest.id}_${user.id.slice(0, 8)}`;
     window.location.href = buildStripeUrl(contest.votingTicketPrice, {
+      type:              'contest',
       email:             user.email,
       clientReferenceId: ref,
     });

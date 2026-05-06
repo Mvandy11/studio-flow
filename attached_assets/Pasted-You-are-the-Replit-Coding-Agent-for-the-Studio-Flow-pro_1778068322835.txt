@@ -1,0 +1,86 @@
+You are the Replit Coding Agent for the Studio Flow project.  
+Your job is to apply the following fixes safely and cleanly:
+
+===========================================================
+FIX 1 — Resolve API Crash (fluent-ffmpeg import)
+===========================================================
+- Remove or comment out all imports of `fluent-ffmpeg` from Netlify functions.
+- Ensure no serverless function attempts to load ffmpeg.
+- Confirm all API routes build and run without ffmpeg.
+
+===========================================================
+FIX 2 — Add Member‑Created Events (with $2 / $5 viewing tickets)
+===========================================================
+Update src/lib/stripeLinks.js to separate contest and event links:
+
+// Contest Stripe Payment Links
+export const CONTEST_LINKS = {
+  2: 'https://buy.stripe.com/14A6oJgpna8g8YYbh3b7y0a',
+  5: 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08'
+};
+
+// Event Viewing Stripe Payment Links
+export const EVENT_LINKS = {
+  2: 'https://buy.stripe.com/eVq8wR3CBdks5MM70Nb7y0n',
+  5: 'https://buy.stripe.com/bJe8wR1utbck3EEacZb7y0m'
+};
+
+Modify buildStripeUrl() to accept a new parameter:
+  buildStripeUrl(price, type)
+
+Logic:
+- If type === 'contest', use CONTEST_LINKS[price]
+- If type === 'event', use EVENT_LINKS[price]
+
+Update all call sites:
+- Contest checkout → type: 'contest'
+- Event viewing checkout → type: 'event'
+
+===========================================================
+FIX 3 — Create Contest Support Tables in Supabase
+===========================================================
+Run these SQL statements (safe to re-run due to IF NOT EXISTS):
+
+CREATE TABLE IF NOT EXISTS contest_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contest_id UUID REFERENCES contests(id) ON DELETE CASCADE,
+  user_id UUID,
+  title TEXT NOT NULL,
+  description TEXT,
+  file_url TEXT,
+  storage_path TEXT,
+  submitter_email TEXT,
+  vote_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE contest_entries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read entries" ON contest_entries FOR SELECT USING (true);
+CREATE POLICY "Auth insert entries" ON contest_entries FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS contest_votes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contest_id UUID REFERENCES contests(id) ON DELETE CASCADE,
+  entry_id UUID REFERENCES contest_entries(id) ON DELETE CASCADE,
+  user_id UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(entry_id, user_id)
+);
+
+ALTER TABLE contest_votes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth insert votes" ON contest_votes FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+===========================================================
+AFTER APPLYING FIXES
+===========================================================
+- Ensure contests load correctly.
+- Ensure new events appear under the Events section.
+- Ensure contest submissions and voting work.
+- Ensure event viewing tickets use EVENT_LINKS.
+- Ensure contest tickets use CONTEST_LINKS.
+
+===========================================================
+COMMIT MESSAGE
+===========================================================
+fix: resolve API crash, member-created events, contest support tables
+

@@ -47,6 +47,7 @@ export default function CheckoutButton({
     });
 
     const stripeUrl = buildStripeUrl(price, {
+      type:              category,   // 'contest' | 'event'
       email:             user.email,
       clientReferenceId: eventId,
     });

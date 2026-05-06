@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { EVENTS } from '../data.js';
 import { supabase } from '../../../lib/supabase.js';
 import { useAuth } from '../../../hooks/useAuth.js';
-import { buildStripeUrl, saveTicketIntent, STRIPE_LINKS } from '../../../lib/stripeLinks.js';
+import { buildStripeUrl, saveTicketIntent, EVENT_LINKS } from '../../../lib/stripeLinks.js';
 
 export default function EventsTab({ isMember }) {
   const { user } = useAuth();
@@ -54,7 +54,8 @@ export default function EventsTab({ isMember }) {
 
     // Redirect to the correct Stripe payment link
     const stripeUrl = buildStripeUrl(event.price, {
-      email:            user.email,
+      type:              'event',
+      email:             user.email,
       clientReferenceId: ref,
     });
     window.location.href = stripeUrl;
@@ -86,8 +87,8 @@ export default function EventsTab({ isMember }) {
       {/* Stripe links legend */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {[
-          { price: 2, label: 'Standard Admission', color: 'var(--hub-blue)', link: STRIPE_LINKS[2] },
-          { price: 5, label: 'Premium Admission',  color: 'var(--hub-gold)', link: STRIPE_LINKS[5] },
+          { price: 2, label: 'Standard Admission', color: 'var(--hub-blue)', link: EVENT_LINKS[2] },
+          { price: 5, label: 'Premium Admission',  color: 'var(--hub-gold)', link: EVENT_LINKS[5] },
         ].map(({ price, label, color }) => (
           <div key={price} style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
