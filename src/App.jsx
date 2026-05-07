@@ -29,6 +29,7 @@ import CreateContestPage from './pages/contests/CreateContestPage';
 import AdminDashboard from './pages/AdminDashboard';
 import EarningsDashboard from './pages/EarningsDashboard';
 import CreatorProfile from './pages/CreatorProfile';
+import AnnouncementsPage from './pages/AnnouncementsPage';
 // Dev-mode pages (TypeScript, mock data, no real Supabase)
 import Dashboard from './pages/Dashboard.tsx';
 import DevSessionEditor from './pages/SessionEditor.tsx';
@@ -74,6 +75,9 @@ export default function App() {
           {/* ── Academy ── */}
           <Route path="/creator-academy" element={<CreatorAcademy />} />
           <Route path="/academy" element={<CreatorAcademy />} />
+
+          {/* ── Community ── */}
+          <Route path="/announcements" element={<AnnouncementsPage />} />
 
           {/* ── Account ── */}
           <Route path="/earnings" element={<EarningsDashboard />} />

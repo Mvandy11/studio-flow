@@ -58,7 +58,7 @@ export default function ContestsPage() {
       <div className="page-header" style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1rem', flexWrap:'wrap' }}>
         <div>
           <h1 className="page-title">🏆 Contests</h1>
-          <p className="page-subtitle">Submit your work, vote for your favorites, and win prizes.</p>
+          <p className="page-subtitle">Submit your work, like your favorites, and win prizes. Winners are selected by the admin based on likes and quality.</p>
         </div>
         {isCreatorAdmin(role) && (
           <Link to="/contests/create" className="btn btn--primary" style={{ textDecoration:'none' }}>
@@ -67,7 +67,6 @@ export default function ContestsPage() {
         )}
       </div>
 
-      {/* Status Filters */}
       <div className="ai-grid__filters" style={{ marginBottom:'0.75rem' }}>
         {STATUS_FILTERS.map((f) => (
           <button
@@ -80,7 +79,6 @@ export default function ContestsPage() {
         ))}
       </div>
 
-      {/* Category Filters */}
       <div className="ai-grid__filters" style={{ marginBottom:'1.5rem' }}>
         {CATEGORY_FILTERS.map((f) => (
           <button

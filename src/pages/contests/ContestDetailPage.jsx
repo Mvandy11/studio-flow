@@ -2,44 +2,34 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import '../../styles/contests.css';
 import '../../styles/portfolio.css';
-
-function statusWindow(contest) {
-  const now = new Date();
-  const subStart = contest.submission_start ? new Date(contest.submission_start) : null;
-  const subEnd   = contest.submission_end   ? new Date(contest.submission_end)   : null;
-  const voteStart = contest.voting_start   ? new Date(contest.voting_start)      : null;
-  const voteEnd   = contest.voting_end     ? new Date(contest.voting_end)        : null;
-
-  const canSubmit = (!subStart || now >= subStart) && (!subEnd || now <= subEnd);
-  const canVote   = (!voteStart || now >= voteStart) && (!voteEnd || now <= voteEnd);
-  return { canSubmit, canVote };
-}
 
 export default function ContestDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [contest,  setContest]  = useState(null);
-  const [entries,  setEntries]  = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
+  const [contest,   setContest]   = useState(null);
+  const [entries,   setEntries]   = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState(null);
 
   // submission form
-  const [subTitle, setSubTitle] = useState('');
-  const [subDesc,  setSubDesc]  = useState('');
-  const [subFile,  setSubFile]  = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [subError,   setSubError]   = useState(null);
-  const [subSuccess, setSubSuccess] = useState(false);
+  const [subTitle,    setSubTitle]    = useState('');
+  const [subDesc,     setSubDesc]     = useState('');
+  const [subFile,     setSubFile]     = useState(null);
+  const [submitting,  setSubmitting]  = useState(false);
+  const [subError,    setSubError]    = useState(null);
+  const [subSuccess,  setSubSuccess]  = useState(false);
   const fileRef = useRef(null);
 
-  // voting state
-  const [votedEntries, setVotedEntries] = useState(new Set());
-  const [voting, setVoting] = useState(null);
+  // likes state: { [entryId]: count }
+  const [likeCounts,  setLikeCounts]  = useState({});
+  // set of entry IDs the current user has liked
+  const [likedEntries, setLikedEntries] = useState(new Set());
+  const [liking, setLiking] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -49,6 +39,7 @@ export default function ContestDetailPage() {
       if (!res.ok) throw new Error('Contest not found.');
       const { contest: c, entries: e } = await res.json();
       setContest(c);
+      // Sort entries by like count descending (will be updated after likes load)
       setEntries(e);
     } catch (err) {
       setError(err.message);
@@ -59,22 +50,45 @@ export default function ContestDetailPage() {
 
   useEffect(() => { load(); }, [id]);
 
-  // Check which entries the user already voted for
+  // Load like counts for all entries
   useEffect(() => {
-    if (!user || entries.length === 0) return;
+    if (entries.length === 0) return;
+    const ids = entries.map((e) => e.id);
+
+    // Fetch all likes for these entries in one query
     supabase
-      .from('contest_votes')
+      .from('likes')
       .select('entry_id')
-      .eq('contest_id', id)
-      .eq('user_id', user.id)
+      .in('entry_id', ids)
       .then(({ data }) => {
-        if (data) setVotedEntries(new Set(data.map((v) => v.entry_id)));
+        if (!data) return;
+        const counts = {};
+        for (const row of data) {
+          counts[row.entry_id] = (counts[row.entry_id] || 0) + 1;
+        }
+        setLikeCounts(counts);
+        // Re-sort entries by like count
+        setEntries((prev) =>
+          [...prev].sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))
+        );
       });
-  }, [user, entries, id]);
+
+    // Fetch which entries the current user liked
+    if (user) {
+      supabase
+        .from('likes')
+        .select('entry_id')
+        .in('entry_id', ids)
+        .eq('user_id', user.id)
+        .then(({ data }) => {
+          if (data) setLikedEntries(new Set(data.map((r) => r.entry_id)));
+        });
+    }
+  }, [entries.length, user]);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!user) { setSubError('You must be logged in to submit.'); return; }
+    if (!user)          { setSubError('You must be logged in to submit.'); return; }
     if (!subTitle.trim()) { setSubError('Please enter a title.'); return; }
 
     setSubmitting(true);
@@ -105,27 +119,42 @@ export default function ContestDetailPage() {
     }
   }
 
-  async function handleVote(entryId) {
-    if (!user) { alert('You must be logged in to vote.'); return; }
-    setVoting(entryId);
+  async function handleLike(entryId) {
+    if (!user) { alert('You must be logged in to like an entry.'); return; }
+    setLiking(entryId);
+    const isLiked = likedEntries.has(entryId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`/api/contests/${id}/entries/${entryId}/vote`, {
-        method: 'POST',
+      const res = await fetch('/api/likes', {
+        method: isLiked ? 'DELETE' : 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry_id: entryId }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Vote failed.');
-      setVotedEntries((prev) => new Set([...prev, entryId]));
+      if (!res.ok) throw new Error('Action failed.');
+
+      setLikedEntries((prev) => {
+        const next = new Set(prev);
+        if (isLiked) next.delete(entryId); else next.add(entryId);
+        return next;
+      });
+      setLikeCounts((prev) => ({
+        ...prev,
+        [entryId]: Math.max(0, (prev[entryId] || 0) + (isLiked ? -1 : 1)),
+      }));
+      // Re-sort entries by updated like count
       setEntries((prev) =>
-        prev.map((e) => e.id === entryId ? { ...e, vote_count: (e.vote_count || 0) + 1 } : e)
+        [...prev].sort((a, b) => {
+          const ca = (likeCounts[b.id] || 0) + (b.id === entryId && !isLiked ? 1 : b.id === entryId && isLiked ? -1 : 0);
+          const cb = (likeCounts[a.id] || 0) + (a.id === entryId && !isLiked ? 1 : a.id === entryId && isLiked ? -1 : 0);
+          return ca - cb;
+        })
       );
     } catch (err) {
       alert(err.message);
     } finally {
-      setVoting(null);
+      setLiking(null);
     }
   }
 
@@ -142,17 +171,15 @@ export default function ContestDetailPage() {
     </div>
   );
 
-  const { canSubmit, canVote } = statusWindow(contest);
+  const canSubmit = contest.status === 'active' || contest.status === 'draft';
   const isCompleted = contest.status === 'completed';
 
   return (
     <div className="page-container">
-      {/* Hero image */}
       {contest.thumbnail_url && (
         <img src={contest.thumbnail_url} alt={contest.title} className="contest-detail__hero" />
       )}
 
-      {/* Title + meta */}
       <h1 className="page-title">{contest.title}</h1>
 
       <div className="contest-detail__meta-row">
@@ -257,48 +284,60 @@ export default function ContestDetailPage() {
         </div>
       )}
 
-      {/* ── Entries ── */}
+      {/* ── Entries (sorted by likes) ── */}
       {entries.length > 0 && (
         <div className="portfolio-section">
           <h2 className="portfolio-section-title">
             {isCompleted ? '🥇 Results' : `Entries (${entries.length})`}
           </h2>
+          {!isCompleted && (
+            <p style={{ fontSize:'0.82rem', color:'rgba(200,200,215,0.5)', marginBottom:'1rem' }}>
+              Sorted by most liked. Winners are selected by the admin based on likes and quality.
+            </p>
+          )}
           <div className="contest-entries-grid">
-            {entries.map((entry) => (
-              <div key={entry.id} className="contest-entry-card">
-                {entry.file_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(entry.file_url) && (
-                  <img src={entry.file_url} alt={entry.title} className="contest-entry-card__thumb" loading="lazy" />
-                )}
-                {entry.file_url && /\.(mp4|mov|webm)$/i.test(entry.file_url) && (
-                  <video src={entry.file_url} className="contest-entry-card__thumb" controls preload="metadata" />
-                )}
-                <div className="contest-entry-card__body">
-                  <h3 className="contest-entry-card__title">{entry.title}</h3>
-                  {entry.description && (
-                    <p className="contest-entry-card__desc">{entry.description}</p>
+            {entries.map((entry) => {
+              const count   = likeCounts[entry.id] || 0;
+              const isLiked = likedEntries.has(entry.id);
+              return (
+                <div key={entry.id} className="contest-entry-card">
+                  {entry.file_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(entry.file_url) && (
+                    <img src={entry.file_url} alt={entry.title} className="contest-entry-card__thumb" loading="lazy" />
                   )}
-                  {entry.is_winner && (
-                    <span className="contest-winner-badge">
-                      {entry.winner_rank === 1 ? '🥇' : entry.winner_rank === 2 ? '🥈' : '🥉'} Winner
+                  {entry.file_url && /\.(mp4|mov|webm)$/i.test(entry.file_url) && (
+                    <video src={entry.file_url} className="contest-entry-card__thumb" controls preload="metadata" />
+                  )}
+                  <div className="contest-entry-card__body">
+                    <h3 className="contest-entry-card__title">{entry.title}</h3>
+                    {entry.description && (
+                      <p className="contest-entry-card__desc">{entry.description}</p>
+                    )}
+                    {entry.is_winner && (
+                      <span className="contest-winner-badge">
+                        {entry.winner_rank === 1 ? '🥇' : entry.winner_rank === 2 ? '🥈' : '🥉'} Winner
+                      </span>
+                    )}
+                  </div>
+                  <div className="contest-entry-card__footer">
+                    <span className="contest-vote-count" style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
+                      ❤️ {count} {count === 1 ? 'like' : 'likes'}
                     </span>
-                  )}
-                </div>
-                <div className="contest-entry-card__footer">
-                  <span className="contest-vote-count">
-                    {entry.vote_count || 0} vote{entry.vote_count !== 1 ? 's' : ''}
-                  </span>
-                  {canVote && (
                     <button
-                      className="contest-vote-btn"
-                      onClick={() => handleVote(entry.id)}
-                      disabled={votedEntries.has(entry.id) || voting === entry.id}
+                      className={`contest-vote-btn${isLiked ? ' contest-vote-btn--voted' : ''}`}
+                      onClick={() => handleLike(entry.id)}
+                      disabled={liking === entry.id}
+                      style={{
+                        background: isLiked ? 'rgba(239,68,68,0.15)' : undefined,
+                        borderColor: isLiked ? 'rgba(239,68,68,0.4)' : undefined,
+                        color: isLiked ? '#fca5a5' : undefined,
+                      }}
                     >
-                      {votedEntries.has(entry.id) ? '✓ Voted' : voting === entry.id ? '…' : '▲ Vote'}
+                      {liking === entry.id ? '…' : isLiked ? '♥ Liked' : '♡ Like'}
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

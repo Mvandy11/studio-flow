@@ -195,21 +195,9 @@ export default function Tools() {
 
       {/* ── Bottom CTA ── */}
       <section className="tools-cta">
-        <h2 className="tools-cta__title">Want early access?</h2>
+        <h2 className="tools-cta__title">More tools coming soon</h2>
         <p className="tools-cta__text">
-          Join Studio Flow and be the first to unlock AI tools as they launch.
-          Start with a free 30-day trial — $75/year after.
-        </p>
-        <a
-          href="https://buy.stripe.com/6oU8wRehfa8g0ssbh3b7y0f"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="tools-cta__btn"
-        >
-          Start Free Trial — $75/year
-        </a>
-        <p style={{ marginTop:'0.75rem', fontSize:'0.75rem', color:'var(--text-soft, #8b9fc5)', opacity:0.7 }}>
-          No refunds are provided for this product under any circumstances.
+          Join Studio Flow to be the first to unlock new AI tools as they launch.
         </p>
       </section>
     </div>

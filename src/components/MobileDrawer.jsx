@@ -10,7 +10,9 @@ const NAV_LINKS = [
   { to: '/tools/denoise',   label: 'AI Denoise',      icon: '♫' },
   { to: '/tools/upscale',   label: 'AI Upscale',      icon: '⤢' },
   { to: '/tools/enhance',   label: 'AI Enhance',      icon: '✦' },
+  { to: '/events',          label: 'Events',          icon: '🎟' },
   { to: '/contests',        label: 'Contests',        icon: '🏆' },
+  { to: '/announcements',   label: 'Announcements',   icon: '📢' },
   { to: '/creator-academy', label: 'Academy',         icon: '🎓' },
   { to: '/earnings',        label: 'Earnings',        icon: '◎' },
   { to: '/profile',         label: 'Profile',         icon: '◉' },
@@ -74,7 +76,7 @@ export default function MobileDrawer({ open, onClose }) {
                 `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
               }
               onClick={onClose}
-              style={{ color:'var(--accent-gold)' }}
+              style={{ color: 'var(--accent-gold)' }}
             >
               <span className="mob-drawer__link-icon">🛡</span>
               Admin
@@ -95,16 +97,6 @@ export default function MobileDrawer({ open, onClose }) {
           ) : (
             <Link to="/" className="mob-drawer__login" onClick={onClose}>Log In</Link>
           )}
-          <a
-            href="https://buy.stripe.com/6oU8wRehfa8g0ssbh3b7y0f"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mob-drawer__subscribe"
-            onClick={onClose}
-            title="30-day free trial included"
-          >
-            Join Studio Flow — $75/year
-          </a>
         </div>
       </aside>
     </>

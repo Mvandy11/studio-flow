@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
 
 const STATUS_LABELS = {
   draft:     'Draft',
@@ -20,12 +19,7 @@ const CATEGORY_LABELS = {
 };
 
 export default function ContestCard({ contest }) {
-  const statusClass = `contest-card__status contest-card__status--${contest.status}`;
-  const closingDate = contest.submission_end || contest.end_date;
-  const closingLabel = closingDate
-    ? formatDistanceToNow(new Date(closingDate), { addSuffix: true })
-    : null;
-
+  const statusClass   = `contest-card__status contest-card__status--${contest.status}`;
   const categoryLabel = contest.category
     ? (CATEGORY_LABELS[contest.category] ?? contest.category)
     : null;
@@ -66,12 +60,9 @@ export default function ContestCard({ contest }) {
         </div>
       </div>
 
-      {closingLabel && (
-        <div className="contest-card__footer">
-          <span>Closes {closingLabel}</span>
-          <span>→</span>
-        </div>
-      )}
+      <div className="contest-card__footer">
+        <span>View entries →</span>
+      </div>
     </Link>
   );
 }

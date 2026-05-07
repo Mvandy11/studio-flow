@@ -198,14 +198,10 @@ const _CONTEST_DEFS = [
 ];
 
 /* Generate this month's live contest objects */
-const _monthDeadline = currentMonthDeadline();
-
 export const CONTESTS = _CONTEST_DEFS.map((def) => ({
   ...def,
-  id:                monthlyContestId(def.slug),      // e.g. "best-photo-2026-05"
-  votingTicketPrice: 5,                                // $5 contest ticket (view + vote)
-  deadline:          _monthDeadline,
-  status:            'active',
+  id:      monthlyContestId(def.slug),  // e.g. "best-photo-2026-05"
+  status:  'active',
 }));
 
 /* Category labels for filtering */

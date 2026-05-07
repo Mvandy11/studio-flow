@@ -1,58 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { createTicket } from '../lib/createTicket';
 import { popTicketIntent } from '../lib/stripeLinks';
 
 /**
  * Stripe returns here after a successful payment.
- * Reads the saved intent from localStorage, creates the ticket, and
- * records an earnings entry for the event creator (98% share, 2% platform processing fee).
+ * Reads the saved intent from localStorage and shows confirmation.
  */
 export default function PaymentSuccess() {
-  const [status,  setStatus]  = useState('loading'); // 'loading' | 'success' | 'no-intent' | 'error'
-  const [intent,  setIntent]  = useState(null);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [status,   setStatus]   = useState('loading');
+  const [intent,   setIntent]   = useState(null);
 
   useEffect(() => {
-    async function finalize() {
-      const saved = popTicketIntent();
-      if (!saved) {
-        setStatus('no-intent');
-        return;
-      }
-
-      setIntent(saved);
-
-      try {
-        // 1. Create the ticket in the database
-        await createTicket(supabase, saved.eventId, saved.userId);
-
-        // 2. Record earnings for the event/contest creator (best-effort)
-        try {
-          await fetch('/api/payouts/record-earning', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
-              eventId:    saved.category === 'event'   ? saved.eventId : null,
-              contestId:  saved.category === 'contest' ? saved.eventId : null,
-              amount:     saved.amount,
-              ticketType: saved.ticketType,
-              buyerUserId: saved.userId,
-            }),
-          });
-        } catch {
-          // non-fatal — earnings recording can be retried later
-        }
-
-        setStatus('success');
-      } catch (err) {
-        setErrorMsg(err.message);
-        setStatus('error');
-      }
+    const saved = popTicketIntent();
+    if (!saved) {
+      setStatus('no-intent');
+      return;
     }
-
-    finalize();
+    setIntent(saved);
+    setStatus('success');
   }, []);
 
   const backHref = intent?.category === 'contest' ? '/contests' : '/events/' + (intent?.eventId || '');
@@ -72,24 +37,9 @@ export default function PaymentSuccess() {
         <div style={card}>
           <h1 style={title}>Payment Received</h1>
           <p style={muted}>
-            Your payment was processed by Stripe. If your ticket doesn't appear shortly, please
+            Your payment was processed by Stripe. If your access doesn't appear shortly, please
             contact support.
           </p>
-          <Link to="/" style={linkStyle}>Go to Home</Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === 'error') {
-    return (
-      <div style={page}>
-        <div style={card}>
-          <h1 style={{ ...title, color: '#f87171' }}>Something went wrong</h1>
-          <p style={muted}>
-            Your Stripe payment succeeded but we couldn't record your ticket: {errorMsg}
-          </p>
-          <p style={muted}>Please contact support with your receipt email.</p>
           <Link to="/" style={linkStyle}>Go to Home</Link>
         </div>
       </div>
@@ -102,11 +52,10 @@ export default function PaymentSuccess() {
         <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🎟</div>
         <h1 style={title}>You're in!</h1>
         <p style={{ ...muted, fontSize: '1rem', marginBottom: '0.25rem' }}>
-          <strong style={{ color: '#fff' }}>{intent?.eventTitle || 'Your ticket'}</strong>
+          <strong style={{ color: '#fff' }}>{intent?.eventTitle || 'Your access'}</strong>
         </p>
         <p style={muted}>
-          Your ticket has been confirmed and added to your account.
-          {intent?.votingAllowed && ' You can now vote in this contest.'}
+          Your payment has been confirmed and your access is active.
         </p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem', flexWrap: 'wrap' }}>
           <Link to={backHref} style={linkStyle}>

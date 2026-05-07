@@ -46,16 +46,6 @@ export default function Navbar({ onHamburger }) {
 
         {/* Right actions */}
         <div className="app-topnav__right">
-          <a
-            href="https://buy.stripe.com/6oU8wRehfa8g0ssbh3b7y0f"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="app-topnav__subscribe"
-            title="30-day free trial · $75/year after"
-          >
-            Join Free — $75/yr
-          </a>
-
           {user ? (
             <button
               onClick={logout}

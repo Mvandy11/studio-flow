@@ -1,0 +1,364 @@
+You are a Replit coding agent. Perform ALL tasks below EXACTLY as written.
+Do not modify artifacts/mockup-sandbox.
+This update RESETS Studio Flow’s payment system, replaces voting with likes, and adds an admin-only Announcements section.
+
+========================================
+TASK 0 — SCOPE
+========================================
+Only modify files in the Studio Flow app (frontend + backend).
+Do NOT touch unrelated projects.
+
+========================================
+TASK 1 — REMOVE ALL OLD PAYMENT UI
+========================================
+
+Search the codebase for ALL of the following and REMOVE or REPLACE UI:
+
+- "ticket"
+- "Ticket"
+- "tickets"
+- "$2"
+- "$5"
+- "$75"
+- "$99"
+- "$3000"
+- "view-only"
+- "vote access"
+- "membership tier"
+- "yearly membership"
+- "event ticket"
+- "purchase ticket"
+- "buy ticket"
+- "Stripe payment link"
+- "ticket ledger"
+
+For each match in React/JSX/TSX:
+
+1. Remove:
+   - Ticket purchase buttons
+   - Ticket pricing tables
+   - Membership tier cards
+   - Event purchase buttons
+   - Any text describing ticket-based access
+   - Any UI that differentiates “view-only” vs “vote” based on payment
+
+2. Keep:
+   - Contest listing
+   - Video listing
+   - Creator profiles
+   - Navigation structure
+
+Ensure the main navigation/menu still works and has no dead links.
+
+========================================
+TASK 2 — REMOVE ALL OLD PAYMENT BACKEND LOGIC
+========================================
+
+Search backend/server code for:
+
+- "ticket_ledger"
+- "ticket"
+- "membership_tier"
+- "event_purchase"
+- "stripe_link"
+- "ticket_type"
+- "event_ticket"
+- "contest_votes" (old ticket-based)
+- "view-only"
+- "vote access"
+
+For each match:
+
+1. Remove:
+   - Ticket validation logic
+   - Ticket ledger writes/reads
+   - Membership tier checks
+   - Event purchase checks
+   - Stripe link maps for tickets/events
+   - Any logic that restricts voting or viewing based on payment
+
+2. Keep:
+   - User auth
+   - Contest creation
+   - Video upload
+   - Creator payout methods (for future use)
+   - Contest submission logic (not tied to tickets)
+
+Ensure the backend still builds and runs without references to removed tables or fields.
+
+========================================
+TASK 3 — DELETE OLD PAYMENT TABLES (MIGRATIONS)
+========================================
+
+Locate the database migration system (Supabase/Prisma/SQL migrations).
+
+Create a new migration that DROPS the following tables if they exist:
+
+- ticket_ledger
+- contest_votes
+- contest_entries (ONLY if it was ticket-based; keep if it’s purely submission metadata)
+- event_purchases
+- membership_tiers
+- stripe_links
+- ticket_types
+- event_tickets
+
+Use IF EXISTS semantics where supported to avoid migration failures.
+
+Do NOT drop:
+
+- contests
+- contest_submissions (if present)
+- videos
+- users
+- profiles
+- creator_payout_methods
+- creator_payout_schedules
+
+========================================
+TASK 4 — ADD NEW LIKES TABLE
+========================================
+
+Create a new migration to ADD table: likes
+
+Schema:
+
+- id: primary key (uuid or serial)
+- user_id: references users.id (on delete cascade)
+- video_id: references videos.id (on delete cascade)
+- created_at: timestamp with time zone, default now()
+
+Add a UNIQUE constraint on (user_id, video_id) so each user can like a video only once.
+
+========================================
+TASK 5 — IMPLEMENT LIKES BACKEND API
+========================================
+
+Create or modify backend routes/controllers for likes:
+
+Endpoints (REST or RPC-style, consistent with existing API):
+
+1) POST /api/likes
+   Body:
+   - video_id
+
+   Behavior:
+   - Require authenticated user.
+   - Insert into likes (user_id, video_id).
+   - If conflict on (user_id, video_id), do nothing (idempotent).
+
+2) DELETE /api/likes
+   Body:
+   - video_id
+
+   Behavior:
+   - Require authenticated user.
+   - Delete from likes where user_id = current user AND video_id = given video_id.
+
+3) GET /api/likes/count?video_id=...
+   Behavior:
+   - Return total like count for that video.
+
+4) GET /api/likes/user?video_id=...
+   Behavior:
+   - Return whether the current user has liked this video (true/false).
+
+Ensure error handling is consistent with existing API patterns.
+
+========================================
+TASK 6 — ADD LIKE BUTTON TO VIDEO CARDS
+========================================
+
+Locate the component that renders contest videos / video cards.
+Example names (adjust to actual): VideoCard, ContestVideoCard, VideoTile, etc.
+
+For each video card:
+
+1. Add a Like button with:
+   - Icon (heart or thumbs-up)
+   - Like count
+   - Filled state when user has liked
+   - Outline state when user has not liked
+
+2. On click:
+   - If not liked → call POST /api/likes
+   - If liked → call DELETE /api/likes
+   - Optimistically update UI
+
+3. Fetch:
+   - Initial like count
+   - Whether current user has liked
+
+Ensure the Like button is NOT tied to any payment or ticket logic.
+
+========================================
+TASK 7 — UPDATE CONTEST PAGES TO USE LIKES
+========================================
+
+Locate contest listing / contest detail pages.
+
+1. Remove:
+   - Any logic that uses old contest_votes table
+   - Any logic that uses ticket-based voting
+   - Any references to “tickets” in contest context
+
+2. Replace ranking logic:
+   - For each video in a contest, fetch like count.
+   - Sort videos by like count (descending) for “Most liked” or “Top videos” views.
+
+3. Do NOT:
+   - Implement automatic winner selection.
+   - Implement automatic payout logic.
+
+The UI should clearly show which videos have the most likes, but winner selection remains manual (admin).
+
+========================================
+TASK 8 — REMOVE CONTEST CLOCK / COUNTDOWN
+========================================
+
+Search for:
+
+- "countdown"
+- "timer"
+- "contest ends in"
+- "time remaining"
+- "ends at"
+
+In contest-related components:
+
+1. Remove:
+   - Countdown timers
+   - Contest end timers
+   - Auto-close logic based on time
+
+2. Keep:
+   - Contest metadata (title, description, etc.)
+
+The contest pages should no longer show any time-based closing or countdown.
+
+========================================
+TASK 9 — ADD ADMIN-ONLY ANNOUNCEMENTS TABLE
+========================================
+
+Create a new migration to ADD table: announcements
+
+Schema:
+
+- id: primary key (uuid or serial)
+- title: text
+- body: text
+- created_at: timestamp with time zone, default now()
+- created_by: references users.id (admin user)
+- pinned: boolean, default false
+
+No public write access. Only admin will create announcements.
+
+========================================
+TASK 10 — ADD ADMIN-ONLY ANNOUNCEMENTS API
+========================================
+
+Create backend endpoints:
+
+1) GET /api/announcements
+   Behavior:
+   - Return list of announcements ordered by created_at DESC.
+   - Include pinned first if pinned is true.
+
+2) POST /api/announcements
+   Body:
+   - title
+   - body
+   - pinned (optional)
+
+   Behavior:
+   - Require admin user (check existing admin flag/role).
+   - Insert new announcement.
+
+3) PATCH /api/announcements/:id
+   Body:
+   - title? (optional)
+   - body? (optional)
+   - pinned? (optional)
+
+   Behavior:
+   - Require admin user.
+   - Update fields.
+
+4) DELETE /api/announcements/:id
+   Behavior:
+   - Require admin user.
+   - Delete announcement.
+
+Use the existing auth/role system to determine admin.
+
+========================================
+TASK 11 — ADD ANNOUNCEMENTS SECTION TO UI
+========================================
+
+1. Navigation:
+   - Add a new menu item: "Announcements"
+   - Route: /announcements
+
+2. Public Announcements Page (/announcements):
+   - List announcements:
+     - Title
+     - Created date
+     - Body (truncated with "Read more" or full, depending on design)
+   - Show pinned announcements at top (if any).
+
+3. Admin Announcements Management:
+   - If current user is admin:
+     - Show "New Announcement" button.
+     - Show edit/delete controls on each announcement.
+   - New Announcement form:
+     - Fields: title, body, pinned (checkbox)
+   - Edit Announcement form:
+     - Same fields, pre-filled.
+
+This section will be used for:
+- Winner announcements
+- Reward pool updates
+- Contest summaries
+- Creator highlights
+- Monthly updates
+
+========================================
+TASK 12 — CLEAN UP TEXT REFERENCES
+========================================
+
+Search for and update/remove any text that:
+
+- Mentions tickets as required for voting or viewing.
+- Mentions specific old prices ($2, $5, $75, $99, $3000).
+- Mentions “ticket ledger”, “ticket-based voting”, “view-only access”.
+
+Replace with neutral language:
+
+- Voting is based on likes.
+- Winners are determined by admin based on likes and reward pool.
+- No mention of ticket purchases.
+
+Do NOT add new subscription or donation text yet (those will be added later with new Stripe links).
+
+========================================
+TASK 13 — VERIFY BUILD AND BASIC FLOWS
+========================================
+
+1. Run backend tests/build (if available).
+2. Run frontend build:
+
+   pnpm run build
+   (or the existing Studio Flow build command)
+
+3. Manually verify (locally if possible):
+   - Contests load.
+   - Videos display.
+   - Like button appears on videos.
+   - Likes can be toggled (logged-in user).
+   - Announcements page loads.
+   - Admin can create/edit/delete announcements.
+   - No UI references to tickets, old prices, or countdown clocks.
+
+========================================
+END OF TASKS
+========================================

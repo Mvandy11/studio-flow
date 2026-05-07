@@ -1,6 +1,6 @@
 import { CONTESTS, EVENTS, EDUCATION_CATEGORIES } from '../data.js';
 
-export default function HomeTab({ isMember, onToggleMember, onTabChange, stats }) {
+export default function HomeTab({ onTabChange, stats }) {
   const featured = CONTESTS.slice(0, 4);
 
   return (
@@ -8,25 +8,10 @@ export default function HomeTab({ isMember, onToggleMember, onTabChange, stats }
       {/* Hero */}
       <div className="hub-hero">
         <div className="hub-hero__eyebrow">Obviously Inspired Studio</div>
-        <h1 className="hub-hero__title">Studio Flow — Where Creators Compete, Learn & Earn</h1>
+        <h1 className="hub-hero__title">Studio Flow — Where Creators Compete, Learn &amp; Earn</h1>
         <p className="hub-hero__subtitle">
-          Enter contests, attend ticketed events, stream live education sessions, and win real payouts.
+          Enter contests, attend events, stream live education sessions, and win real payouts. Entry is free — winners selected by admin based on likes and quality.
         </p>
-        {!isMember ? (
-          <a
-            className="hub-hero__cta"
-            href="https://buy.stripe.com/6oU8wRehfa8g0ssbh3b7y0f"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textDecoration:'none', display:'inline-block' }}
-          >
-            🌟 Start Free Trial — $75/year
-          </a>
-        ) : (
-          <div style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', padding:'0.65rem 1.25rem', borderRadius:'10px', background:'rgba(34,197,94,0.12)', border:'1px solid rgba(34,197,94,0.3)', color:'#22c55e', fontWeight:700, fontSize:'0.9rem' }}>
-            ✓ Studio Flow Member
-          </div>
-        )}
       </div>
 
       {/* Stats */}
@@ -50,16 +35,16 @@ export default function HomeTab({ isMember, onToggleMember, onTabChange, stats }
       </div>
 
       {/* Featured Contests */}
-      <div style={{ marginBottom:'2rem' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.25rem' }}>
-          <h2 className="hub-section-title" style={{ margin:0 }}>🏆 Featured Contests</h2>
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <h2 className="hub-section-title" style={{ margin: 0 }}>🏆 Featured Contests</h2>
           <button className="hub-btn hub-btn--ghost" onClick={() => onTabChange('Contests')}>
             View All →
           </button>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
           {featured.map((c) => (
-            <div key={c.id} className="contest-card-hub" style={{ cursor:'pointer' }} onClick={() => onTabChange('Contests')}>
+            <div key={c.id} className="contest-card-hub" style={{ cursor: 'pointer' }} onClick={() => onTabChange('Contests')}>
               <div className="contest-card-hub__header">
                 <span className="contest-card-hub__emoji">{c.emoji}</span>
                 <div className="contest-card-hub__meta">
@@ -71,8 +56,8 @@ export default function HomeTab({ isMember, onToggleMember, onTabChange, stats }
                 <span className={`hub-badge hub-badge--${c.status === 'active' ? 'open' : c.status}`}>
                   {c.status === 'active' ? 'Open' : c.status}
                 </span>
-                <span style={{ marginLeft:'auto', fontSize:'0.82rem', color:'var(--hub-gold)', fontWeight:600 }}>
-                  Enter →
+                <span style={{ marginLeft: 'auto', fontSize: '0.82rem', color: 'var(--hub-gold)', fontWeight: 600 }}>
+                  Enter Free →
                 </span>
               </div>
             </div>
@@ -81,21 +66,33 @@ export default function HomeTab({ isMember, onToggleMember, onTabChange, stats }
       </div>
 
       {/* Quick links */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:'1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
         {[
-          { icon:'🎟', label:'Browse Events', tab:'Events', color:'var(--hub-blue)' },
-          { icon:'📚', label:'Education Sessions', tab:'Education', color:'var(--hub-green)' },
-          { icon:'🎫', label:'My Tickets', tab:'My Tickets', color:'var(--hub-gold)' },
+          { icon: '🎟', label: 'Browse Events',       tab: 'Events',    color: 'var(--hub-blue)'  },
+          { icon: '📚', label: 'Education Sessions',  tab: 'Education', color: 'var(--hub-green)' },
+          { icon: '📢', label: 'Announcements',       tab: null,        color: 'var(--hub-gold)', href: '/announcements' },
         ].map((item) => (
-          <button
-            key={item.tab}
-            className="hub-card"
-            style={{ padding:'1.5rem', textAlign:'center', cursor:'pointer', border:'none', display:'flex', flexDirection:'column', alignItems:'center', gap:'0.5rem', background:'var(--hub-card)', width:'100%' }}
-            onClick={() => onTabChange(item.tab)}
-          >
-            <span style={{ fontSize:'2rem' }}>{item.icon}</span>
-            <span style={{ fontSize:'0.9rem', fontWeight:600, color: item.color }}>{item.label}</span>
-          </button>
+          item.href ? (
+            <a
+              key={item.label}
+              href={item.href}
+              className="hub-card"
+              style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', background: 'var(--hub-card)', textDecoration: 'none', width: '100%' }}
+            >
+              <span style={{ fontSize: '2rem' }}>{item.icon}</span>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: item.color }}>{item.label}</span>
+            </a>
+          ) : (
+            <button
+              key={item.tab}
+              className="hub-card"
+              style={{ padding: '1.5rem', textAlign: 'center', cursor: 'pointer', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', background: 'var(--hub-card)', width: '100%' }}
+              onClick={() => onTabChange(item.tab)}
+            >
+              <span style={{ fontSize: '2rem' }}>{item.icon}</span>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: item.color }}>{item.label}</span>
+            </button>
+          )
         ))}
       </div>
     </div>
