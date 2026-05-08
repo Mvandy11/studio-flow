@@ -1,0 +1,224 @@
+You are a Replit coding agent. Perform ALL tasks below EXACTLY as written.
+Do not modify artifacts/mockup-sandbox.
+This update rebuilds the Events and Education pages into a Custom Event Request system and adds backend + SQL support.
+
+========================================
+TASK 1 — CLEAR EVENTS & EDUCATION PAGES
+========================================
+
+Locate:
+src/pages/Events.jsx
+src/pages/Education.jsx
+
+Remove ALL existing UI including:
+- Event listings
+- Class listings
+- Ticketed events
+- Pricing tables
+- Old event cards
+- Old class cards
+- Any references to ticketing or event purchases
+
+Replace each page with a clean layout containing ONLY:
+- Page title
+- A Custom Event Request form (see Task 2)
+
+Ensure navigation and routing remain unchanged.
+
+========================================
+TASK 2 — ADD CUSTOM EVENT REQUEST FORM
+========================================
+
+On BOTH pages (Events & Education), add a form with fields:
+
+1. Title of Slot (text input)
+2. Event Type (dropdown or radio):
+   - "Locked / Ticketed Event"
+   - "Open Event with Donation Option"
+3. Amount Charging (number input)
+   - Required ONLY if Locked/Ticketed is selected
+4. Description (textarea, optional)
+5. Submit button
+
+Form behavior:
+- Validate required fields
+- On submit → call POST /api/custom-events/request
+- Show success message: "Your request has been sent to Studio Flow."
+
+========================================
+TASK 3 — ADD BACKEND ENDPOINT FOR REQUESTS
+========================================
+
+Create backend route:
+POST /api/custom-events/request
+
+Request body:
+- title
+- event_type
+- price (nullable)
+- description (nullable)
+
+Backend behavior:
+1. Require authenticated user.
+2. Insert a new row into custom_event_requests table.
+3. Send an email to:
+   obviouslyinspiredstudio@outlook.com
+   containing:
+   - User name
+   - User email
+   - Title
+   - Event type
+   - Price
+   - Description
+   - User ID
+   - Timestamp
+4. Return success JSON.
+
+Use existing email utility if available; otherwise create a simple mailer consistent with project patterns.
+
+========================================
+TASK 4 — ADD SQL TABLE: custom_event_requests
+========================================
+
+Create a new migration with:
+
+CREATE TABLE custom_event_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  event_type text NOT NULL,
+  price numeric,
+  description text,
+  status text DEFAULT 'pending',
+  created_at timestamptz DEFAULT now(),
+  processed_at timestamptz
+);
+
+========================================
+TASK 5 — ADD SQL TABLE: event_slots
+========================================
+
+Create a new migration with:
+
+CREATE TABLE event_slots (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  request_id uuid REFERENCES custom_event_requests(id) ON DELETE SET NULL,
+  title text NOT NULL,
+  password text NOT NULL,
+  video_id uuid REFERENCES videos(id),
+  created_at timestamptz DEFAULT now()
+);
+
+Purpose:
+- Admin manually creates a slot after approving a request.
+- Only the assigned user can upload to this slot using the password.
+
+========================================
+TASK 6 — ADD BACKEND ENDPOINT FOR ADMIN SLOT CREATION
+========================================
+
+Create route:
+POST /api/custom-events/create-slot
+
+Body:
+- request_id
+- user_id
+- title
+- password
+
+Behavior:
+- Require admin user.
+- Insert into event_slots.
+- Return slot info.
+
+This endpoint is NOT exposed in UI yet.
+
+========================================
+TASK 7 — ADD PASSWORD-PROTECTED UPLOAD LOGIC
+========================================
+
+Locate video upload endpoint.
+
+Add optional support for:
+- event_slot_id
+- password
+
+Behavior:
+1. If event_slot_id is provided:
+   - Validate password matches event_slots.password
+   - Validate user_id matches event_slots.user_id
+2. If validation fails → return 403.
+3. If validation passes:
+   - Upload video normally
+   - Update event_slots.video_id with the new video ID
+
+Do NOT modify normal contest uploads.
+
+========================================
+TASK 8 — UPDATE UI FOR PASSWORD-PROTECTED UPLOAD
+========================================
+
+Add a new page:
+src/pages/EventSlotUpload.jsx
+
+Fields:
+- Password
+- File upload
+- Submit
+
+Flow:
+- User enters password
+- User uploads video
+- Calls upload endpoint with event_slot_id + password
+
+Add route:
+"/event-slot/:slotId"
+
+========================================
+TASK 9 — ADD SUCCESS & ERROR STATES
+========================================
+
+For Events & Education request forms:
+- Show success message on submit
+- Show error message on failure
+- Disable submit button while sending
+
+For EventSlotUpload:
+- Show "Upload successful" message
+- Show "Incorrect password" if validation fails
+
+========================================
+TASK 10 — CLEAN UP TEXT REFERENCES
+========================================
+
+Remove any remaining references to:
+- Events as pre-built features
+- Classes as pre-built features
+- Ticketed events
+- Ticket purchases
+- Event pricing tables
+
+Replace with:
+"Studio Flow uses a custom event request system. Creators can request their own event slot using the form above."
+
+========================================
+TASK 11 — VERIFY BUILD
+========================================
+
+Run:
+pnpm run build
+(or the existing Studio Flow build command)
+
+Ensure:
+- Events page loads with the new form
+- Education page loads with the new form
+- Requests submit successfully
+- Emails send correctly
+- SQL migrations run cleanly
+- EventSlotUpload page works
+- No references to old event/class systems remain
+
+========================================
+END OF TASKS
+========================================

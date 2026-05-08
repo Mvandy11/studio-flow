@@ -9,6 +9,7 @@ import contestsRouter from './routes/contests.js';
 import payoutsRouter from './routes/payouts.js';
 import likesRouter from './routes/likes.js';
 import announcementsRouter from './routes/announcements.js';
+import customEventsRouter from './routes/customEvents.js';
 
 const app = express();
 
@@ -21,8 +22,9 @@ app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 app.use('/api/ai',            aiRoutes);
 app.use('/api/contests',      contestsRouter);
 app.use('/api/payouts',       payoutsRouter);
-app.use('/api/likes',         likesRouter);
-app.use('/api/announcements', announcementsRouter);
+app.use('/api/likes',          likesRouter);
+app.use('/api/announcements',  announcementsRouter);
+app.use('/api/custom-events',  customEventsRouter);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {

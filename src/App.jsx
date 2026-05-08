@@ -30,6 +30,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import EarningsDashboard from './pages/EarningsDashboard';
 import CreatorProfile from './pages/CreatorProfile';
 import AnnouncementsPage from './pages/AnnouncementsPage';
+import EducationPage from './pages/Education';
+import EventSlotUpload from './pages/EventSlotUpload';
 // Dev-mode pages (TypeScript, mock data, no real Supabase)
 import Dashboard from './pages/Dashboard.tsx';
 import DevSessionEditor from './pages/SessionEditor.tsx';
@@ -78,6 +80,8 @@ export default function App() {
 
           {/* ── Community ── */}
           <Route path="/announcements" element={<AnnouncementsPage />} />
+          <Route path="/education"     element={<EducationPage />} />
+          <Route path="/event-slot/:slotId" element={<EventSlotUpload />} />
 
           {/* ── Account ── */}
           <Route path="/earnings" element={<EarningsDashboard />} />
