@@ -1,33 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { supabase } from '../../lib/supabase.js';
-import { CONTESTS, EVENTS, EDUCATION_CATEGORIES } from './data.js';
-import HomeTab      from './tabs/HomeTab.jsx';
-import ContestsTab  from './tabs/ContestsTab.jsx';
-import EventsTab    from './tabs/EventsTab.jsx';
-import EducationTab from './tabs/EducationTab.jsx';
-import AdminTab     from './tabs/AdminTab.jsx';
+import { CONTESTS, EVENTS } from './data.js';
+import HomeTab       from './tabs/HomeTab.jsx';
+import ContestsTab   from './tabs/ContestsTab.jsx';
+import EventsTab     from './tabs/EventsTab.jsx';
+import SubmissionsTab from './tabs/SubmissionsTab.jsx';
+import AdminTab      from './tabs/AdminTab.jsx';
 import '../../styles/hub.css';
 
-const TABS = ['Home', 'Contests', 'Events', 'Education', 'Creator Dashboard'];
+const TABS = ['Home', 'Contests', 'Events', 'Submissions', 'Creator Dashboard'];
 
 const TAB_ICONS = {
   'Home':               '🏠',
   'Contests':           '🏆',
   'Events':             '🎟',
-  'Education':          '📚',
+  'Submissions':        '📬',
   'Creator Dashboard':  '🛡',
 };
 
 export default function StudioFlowHub() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('Home');
   const [stats,     setStats]     = useState({
-    activeContests:    CONTESTS.filter((c) => c.status === 'active').length,
-    upcomingEvents:    EVENTS.length,
-    educationSessions: EDUCATION_CATEGORIES.reduce((s, cat) => s + cat.sessions.length, 0),
-    totalMembers:      0,
+    activeContests: CONTESTS.filter((c) => c.status === 'active').length,
+    upcomingEvents: EVENTS.length,
+    totalMembers:   0,
   });
 
   useEffect(() => {
@@ -67,14 +66,10 @@ export default function StudioFlowHub() {
         )}
       </nav>
 
-      {activeTab === 'Home' && (
-        <HomeTab onTabChange={setActiveTab} stats={stats} />
-      )}
-      {activeTab === 'Contests' && <ContestsTab />}
-      {activeTab === 'Events'   && <EventsTab />}
-      {activeTab === 'Education' && (
-        <EducationTab />
-      )}
+      {activeTab === 'Home'             && <HomeTab onTabChange={setActiveTab} stats={stats} />}
+      {activeTab === 'Contests'         && <ContestsTab />}
+      {activeTab === 'Events'           && <EventsTab />}
+      {activeTab === 'Submissions'      && <SubmissionsTab />}
       {activeTab === 'Creator Dashboard' && <AdminTab />}
     </div>
   );

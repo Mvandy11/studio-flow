@@ -1,17 +1,20 @@
-import { CONTESTS, EVENTS, EDUCATION_CATEGORIES } from '../data.js';
+import { useNavigate } from 'react-router-dom';
+import { CONTESTS } from '../data.js';
+import { categories } from '../../../data/categories.js';
 import DonationButton from '../../../components/DonationButton.jsx';
 
 export default function HomeTab({ onTabChange, stats }) {
-  const featured = CONTESTS.slice(0, 4);
+  const navigate  = useNavigate();
+  const featured  = CONTESTS.slice(0, 4);
 
   return (
     <div className="hub-content">
       {/* Hero */}
       <div className="hub-hero">
         <div className="hub-hero__eyebrow">Obviously Inspired Studio</div>
-        <h1 className="hub-hero__title">Studio Flow — Where Creators Compete, Learn &amp; Earn</h1>
+        <h1 className="hub-hero__title">Studio Flow — Where Creators Compete &amp; Earn</h1>
         <p className="hub-hero__subtitle">
-          Enter contests, attend events, stream live education sessions, and win real payouts. Entry is free — winners selected by admin based on likes and quality.
+          Enter contests, attend events, submit your work, and request custom event builds. Entry is free — winners selected by admin based on likes and quality.
         </p>
       </div>
 
@@ -24,10 +27,6 @@ export default function HomeTab({ onTabChange, stats }) {
         <div className="hub-stat">
           <div className="hub-stat__value">{stats.upcomingEvents}</div>
           <div className="hub-stat__label">Upcoming Events</div>
-        </div>
-        <div className="hub-stat">
-          <div className="hub-stat__value">{stats.educationSessions}</div>
-          <div className="hub-stat__label">Education Sessions</div>
         </div>
         <div className="hub-stat">
           <div className="hub-stat__value">{stats.totalMembers}</div>
@@ -75,35 +74,20 @@ export default function HomeTab({ onTabChange, stats }) {
         <DonationButton compact />
       </div>
 
-      {/* Quick links */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        {[
-          { icon: '🎟', label: 'Browse Events',       tab: 'Events',    color: 'var(--hub-blue)'  },
-          { icon: '📚', label: 'Education Sessions',  tab: 'Education', color: 'var(--hub-green)' },
-          { icon: '📢', label: 'Announcements',       tab: null,        color: 'var(--hub-gold)', href: '/announcements' },
-          { icon: '🌟', label: 'Subscription',        tab: null,        color: 'var(--hub-gold)', href: '/subscription' },
-        ].map((item) => (
-          item.href ? (
-            <a
-              key={item.label}
-              href={item.href}
-              className="hub-card"
-              style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', background: 'var(--hub-card)', textDecoration: 'none', width: '100%' }}
-            >
-              <span style={{ fontSize: '2rem' }}>{item.icon}</span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: item.color }}>{item.label}</span>
-            </a>
-          ) : (
-            <button
-              key={item.tab}
-              className="hub-card"
-              style={{ padding: '1.5rem', textAlign: 'center', cursor: 'pointer', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', background: 'var(--hub-card)', width: '100%' }}
-              onClick={() => onTabChange(item.tab)}
-            >
-              <span style={{ fontSize: '2rem' }}>{item.icon}</span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: item.color }}>{item.label}</span>
-            </button>
-          )
+      {/* Category cards — synced with dropdown/sidebar navigation */}
+      <h2 className="hub-section-title" style={{ marginBottom: '1rem' }}>📂 Browse Categories</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            className="hub-card"
+            style={{ padding: '1.5rem', textAlign: 'left', cursor: 'pointer', border: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--hub-card)', width: '100%', borderRadius: '14px' }}
+            onClick={() => navigate(cat.route)}
+          >
+            <span style={{ fontSize: '2rem' }}>{cat.icon}</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: cat.color }}>{cat.title}</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--hub-muted)', lineHeight: 1.4 }}>{cat.description}</span>
+          </button>
         ))}
       </div>
     </div>

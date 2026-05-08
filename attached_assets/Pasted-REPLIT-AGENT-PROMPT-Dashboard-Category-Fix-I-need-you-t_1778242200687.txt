@@ -1,0 +1,135 @@
+REPLIT AGENT PROMPT (Dashboard Category Fix):
+
+I need you to update the frontend dashboard so that the category list matches the updated dropdown menu. The dropdown categories are correct, but the dashboard still shows outdated categories like “Education” and “DIY Event Creator.” Follow these steps exactly:
+
+1. Locate the dashboard component
+Find the main dashboard UI file. It will be one of the following:
+
+src/pages/Dashboard.jsx
+
+src/components/Dashboard.jsx
+
+src/pages/Home.jsx
+
+or whichever file renders the category cards on the main dashboard.
+
+Identify the section where the category cards or tiles are defined.
+
+2. Remove outdated categories
+Delete or comment out any dashboard cards or sections labeled:
+
+“Education”
+
+“DIY Event Creator”
+
+Any old category blocks that no longer exist in the dropdown
+
+These should not appear anywhere on the dashboard.
+
+3. Replace with updated categories
+The dashboard must now reflect the same categories used in the dropdown. Use this exact list:
+
+Updated Dashboard Categories
+Custom Event Build Request  
+(This replaces Education, DIY, and any old event creator categories)
+
+Contests  
+(Creative category)
+
+Submissions  
+(Unified inbox)
+
+Events  
+(If applicable, depending on your routing)
+
+Each category should have:
+
+A card or tile
+
+A title
+
+A short description
+
+A button or link that routes to the correct page
+
+4. Sync dashboard routing with dropdown routing
+Ensure each dashboard card uses the same route as the dropdown:
+
+Correct Routes
+Custom Event Build Request → /custom-event-request
+
+Contests → /contests
+
+Submissions → /submissions
+
+Events (if used) → /events
+
+Remove any routes pointing to old pages like:
+
+/education
+
+/diy-event-creator
+
+/old-event-builder
+
+5. Ensure the dashboard uses the same category source as the dropdown
+If the dropdown categories are stored in:
+
+src/data/categories.js
+
+or a shared config file
+
+Then import that same file into the dashboard and map over it to generate the cards dynamically.
+
+If no shared file exists, create one:
+
+Create file: src/data/categories.js
+
+With:
+
+js
+export const categories = [
+  {
+    id: "custom-event",
+    title: "Custom Event Build Request",
+    description: "Request a custom event built specifically for your needs.",
+    route: "/custom-event-request"
+  },
+  {
+    id: "contests",
+    title: "Contests",
+    description: "Enter creative contests and compete for prizes.",
+    route: "/contests"
+  },
+  {
+    id: "submissions",
+    title: "Submissions",
+    description: "View and manage all your submissions.",
+    route: "/submissions"
+  }
+];
+Then update the dashboard to:
+
+jsx
+import { categories } from "../data/categories";
+
+{categories.map(cat => (
+  <CategoryCard
+    key={cat.id}
+    title={cat.title}
+    description={cat.description}
+    route={cat.route}
+  />
+))}
+6. Confirm UI updates
+After updating:
+
+The dropdown and dashboard must show the same categories
+
+No old categories should appear
+
+All routes must match
+
+The dashboard must reflect the new architecture
+
+END PROMPT
