@@ -8,14 +8,6 @@ export const categories = [
     color:       'var(--hub-blue)',
   },
   {
-    id:          'contests',
-    icon:        '🏆',
-    title:       'Contests',
-    description: 'Enter creative contests and compete for prizes. Entry is always free.',
-    route:       '/contests',
-    color:       'var(--hub-gold)',
-  },
-  {
     id:          'submissions',
     icon:        '📬',
     title:       'Submissions',
