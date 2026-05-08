@@ -21,10 +21,9 @@ const NAV_SECTIONS = [
   {
     label: 'Platform',
     items: [
-      { to: '/events',         icon: '🎟', label: 'Events' },
+      { to: '/custom-event-request', icon: '🎬', label: 'Custom Events' },
       { to: '/contests',             icon: '🏆', label: 'Contests' },
       { to: '/submissions',          icon: '📬', label: 'Submissions' },
-      { to: '/custom-event-request', icon: '🎬', label: 'Custom Event' },
       { to: '/announcements',        icon: '📢', label: 'Announcements' },
       { to: '/creator-academy',      icon: '🎓', label: 'Academy' },
       { to: '/subscription',         icon: '🌟', label: 'Subscription' },

@@ -1,9 +1,9 @@
 export const categories = [
   {
-    id:          'custom-event',
+    id:          'custom-events',
     icon:        '🎬',
-    title:       'Custom Event Build Request',
-    description: 'Request a custom event built specifically for your creative vision.',
+    title:       'Custom Events',
+    description: 'Request educational, DIY, or member-created events built for your vision.',
     route:       '/custom-event-request',
     color:       'var(--hub-blue)',
   },

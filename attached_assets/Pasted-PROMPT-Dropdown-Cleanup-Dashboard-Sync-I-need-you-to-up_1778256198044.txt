@@ -1,0 +1,112 @@
+PROMPT (Dropdown Cleanup + Dashboard Sync):
+
+I need you to update the frontend navigation so the dropdown menu uses a single unified category called “Custom Events”. Remove the old “Events” option entirely. Custom Events should now represent all event types including educational, DIY, and any member‑created event.
+
+Follow these steps exactly:
+
+1. Update dropdown categories
+Find the dropdown menu component (Navbar, Sidebar, or Header).
+
+Replace the category list with:
+
+js
+export const categories = [
+  {
+    id: "custom-events",
+    title: "Custom Events",
+    route: "/custom-event-request"
+  },
+  {
+    id: "contests",
+    title: "Contests",
+    route: "/contests"
+  },
+  {
+    id: "submissions",
+    title: "Submissions",
+    route: "/submissions"
+  }
+];
+Remove any existing category named:
+
+“Events”
+
+“Education”
+
+“DIY”
+
+“DIY Event Creator”
+
+2. Ensure dropdown uses this shared category list
+If the dropdown currently hardcodes items, replace them with:
+
+jsx
+{categories.map(cat => (
+  <DropdownItem key={cat.id} to={cat.route}>
+    {cat.title}
+  </DropdownItem>
+))}
+3. Update the dashboard to match
+Find the dashboard component (Dashboard.jsx or Home.jsx).
+
+Remove any dashboard cards for:
+
+Events
+
+Education
+
+DIY
+
+Old event creator
+
+Any outdated category
+
+Then import the same shared category list:
+
+js
+import { categories } from "../data/categories";
+Render dashboard cards dynamically:
+
+jsx
+{categories.map(cat => (
+  <CategoryCard
+    key={cat.id}
+    title={cat.title}
+    route={cat.route}
+  />
+))}
+This ensures the dashboard always matches the dropdown.
+
+4. Remove old routes
+Delete or disable any routes pointing to:
+
+/events
+
+/education
+
+/diy-event-creator
+
+/old-event-builder
+
+Only keep:
+
+/custom-event-request
+
+/contests
+
+/submissions
+
+5. Confirm UI behavior
+After changes:
+
+Dropdown shows: Custom Events, Contests, Submissions
+
+Dashboard shows the same three
+
+No duplicate “Events” category
+
+No old Education/DIY categories
+
+Custom Events is the single unified event entry
+
+END PROMPT
