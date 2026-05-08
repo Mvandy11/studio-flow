@@ -72,6 +72,41 @@ const icons = {
       <polygon points="10 8 16 12 10 16 10 8"/>
     </svg>
   ),
+  heart: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="ca-icon">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+  ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="ca-icon">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+  gift: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="ca-icon">
+      <polyline points="20 12 20 22 4 22 4 12"/>
+      <rect x="2" y="7" width="20" height="5"/>
+      <line x1="12" y1="22" x2="12" y2="7"/>
+      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+    </svg>
+  ),
+  upload: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="ca-icon">
+      <polyline points="16 16 12 12 8 16"/>
+      <line x1="12" y1="12" x2="12" y2="21"/>
+      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+    </svg>
+  ),
+  send: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="ca-icon">
+      <line x1="22" y1="2" x2="11" y2="13"/>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    </svg>
+  ),
   check: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="ca-icon ca-icon--sm">
       <polyline points="20 6 9 17 4 12"/>
@@ -95,13 +130,14 @@ const sections = [
     description:
       'Learn how to configure your Studio Flow dashboard, connect your accounts, and personalise your workspace so everything is ready before you create your first piece of content.',
     steps: [
-      'Create your Studio Flow account & choose a plan',
-      'Connect social accounts and content platforms',
-      'Customise your dashboard layout & notification preferences',
+      'Create your Studio Flow account and complete your profile',
+      'Connect your social accounts and content platforms',
+      'Customise your dashboard layout and notification preferences',
       'Explore the asset library and template gallery',
+      'Browse active contests and announcements to find your first opportunity',
     ],
     tips: [
-      'Start with the free tier to explore features before upgrading.',
+      'Complete your profile bio and avatar — creators with full profiles get more engagement.',
       'Pin your most-used tools to the sidebar for one-click access.',
       'Enable dark mode in Settings → Appearance for late-night sessions.',
     ],
@@ -136,7 +172,7 @@ const sections = [
     description:
       'Great audio separates amateurs from professionals. Learn microphone technique, noise reduction, mixing, and mastering — whether you are producing podcasts, voiceovers, or music beds.',
     steps: [
-      "Choose the right microphone and recording environment",
+      'Choose the right microphone and recording environment',
       "Record with Studio Flow's multi-track audio engine",
       'Clean up background noise with the AI Denoise filter',
       'Mix levels, EQ, and compression for a polished sound',
@@ -164,7 +200,7 @@ const sections = [
       'Audit existing content for alignment with your new brand',
     ],
     tips: [
-      'Limit your palette to 3-5 colors so assets feel cohesive at a glance.',
+      'Limit your palette to 3–5 colors so assets feel cohesive at a glance.',
       'Save branded intro/outro templates to maintain recognition across videos.',
       'Revisit your brand guidelines every quarter as your style evolves.',
     ],
@@ -181,7 +217,7 @@ const sections = [
       'Identify your ideal audience persona',
       'Optimise titles, thumbnails, and descriptions for search',
       'Develop a consistent posting schedule with the Content Calendar',
-      'Engage with comments and DMs through the Inbox Hub',
+      'Engage with comments and messages through the Inbox Hub',
       'Collaborate with creators using the Collab Board',
     ],
     tips: [
@@ -194,21 +230,22 @@ const sections = [
     id: 'monetization',
     icon: icons.dollarSign,
     color: '#8b5cf6',
-    title: 'Monetization Strategies',
-    tagline: 'Earn sustainably from your creative work',
+    title: 'Monetization on Studio Flow',
+    tagline: 'Multiple earning paths built for creators',
     description:
-      "Explore ad revenue, sponsorships, memberships, digital products, and affiliate marketing. Learn how to price your work, pitch to brands, and track income streams inside Studio Flow's Revenue Dashboard.",
+      'Studio Flow offers multiple ways for creators to earn: Monthly Reward Pool funded by member subscriptions and donations, Custom Events where creators earn 98% of revenue, direct Donations from viewers, and Contest Performance where likes help determine winners and influence payouts. This section explains how each earning path works and how to maximize your opportunities.',
     steps: [
-      'Enable platform monetization (ads, tips, subscriptions)',
-      "Build a media kit with Studio Flow's Sponsor Toolkit",
-      'Launch a membership tier or paid community',
-      'Create and sell digital products (presets, templates, courses)',
-      'Track all revenue streams in the unified Revenue Dashboard',
+      'Complete your profile so Studio Flow can verify your creator identity',
+      'Submit your payout method to Studio Flow administration',
+      'Enter active contests and collect likes on your submissions',
+      'Request a custom event slot for performances, classes, or workshops',
+      'Promote your event or contest entry to grow engagement',
+      'Receive your payout after each contest or event cycle',
     ],
     tips: [
-      'Diversify income — never rely on a single revenue source.',
-      'Disclose sponsorships clearly; transparency builds trust and loyalty.',
-      'Set quarterly revenue goals and review them in Analytics.',
+      'Diversify your earning streams — likes, events, and donations compound over time.',
+      'The more consistently you post, the more likely you are to be featured.',
+      'Submit your payout details early so there are no delays when rewards are issued.',
     ],
   },
   {
@@ -232,24 +269,142 @@ const sections = [
       'Use the "Compare Periods" view to spot growth trends at a glance.',
     ],
   },
+  {
+    id: 'custom-event-guide',
+    icon: icons.calendar,
+    color: '#f97316',
+    title: 'Custom Event Guide',
+    tagline: 'Request your own event slot and earn 98% of revenue',
+    description:
+      'Creators can request their own custom event slot for performances, classes, workshops, or special experiences. Once approved, you receive a private posting slot, upload credentials, and a custom payment link — with a 98/2 payout split in your favor. Only you can post to your event slot.',
+    steps: [
+      'Go to the Events or Education page',
+      'Fill out the Custom Event Request form',
+      'Choose your event title and description',
+      'Select Locked/Ticketed or Open with Donation',
+      'Set your price if the event is locked',
+      'Wait for Studio Flow review and approval',
+      'Receive your private posting slot, upload password, and custom payment link',
+    ],
+    tips: [
+      'Open events with a donation option often attract larger audiences.',
+      'Write a compelling description — it is your main sales tool.',
+      'Promote your event link on your social channels well before the date.',
+    ],
+  },
+  {
+    id: 'reward-pool',
+    icon: icons.gift,
+    color: '#22c55e',
+    title: 'Reward Pool Explained',
+    tagline: 'How Studio Flow funds and distributes creator rewards',
+    description:
+      'The Studio Flow Reward Pool is funded by $10 from every member subscription and 100% of all donations received on the platform. The pool is distributed across active contests each month. Winners are selected manually based on like counts, engagement, creativity, and impact. Payout amounts vary depending on the size of the pool each month.',
+    steps: [
+      'Enter an active contest by submitting your content',
+      'Share your entry and encourage your audience to like it',
+      'Collect likes throughout the contest period',
+      'Studio Flow reviews top entries at the end of the period',
+      'Winners are selected based on likes, engagement, and creativity',
+      'Payouts are issued via your submitted payout method',
+    ],
+    tips: [
+      'Quality matters as much as quantity — a smaller but highly creative entry can win.',
+      'Engage genuinely with other entries; community spirit is noticed.',
+      'Check the Announcements page for reward pool updates each month.',
+    ],
+  },
+  {
+    id: 'how-likes-work',
+    icon: icons.heart,
+    color: '#f43f5e',
+    title: 'How Likes Work',
+    tagline: 'Simple, fair, and open to everyone',
+    description:
+      'Likes are the new voting system on Studio Flow. Every video has a Like button, users can like any video they enjoy, and each user can like a video once. Videos with the most likes rise to the top and help determine contest winners. Likes replace the old ticket-based voting system and make participation simple and fair.',
+    steps: [
+      'Browse contest entries or videos on the platform',
+      'Click the ❤ Like button on any video you enjoy',
+      'Your like is recorded — one like per video per account',
+      'Like counts update in real time on each entry',
+      'At the end of a contest, like counts factor into winner selection',
+    ],
+    tips: [
+      'You can like as many different videos as you want — just one like per video.',
+      'Likes are public — creators can see their total like count.',
+      'Encourage your audience to like your entries to boost your standing.',
+    ],
+  },
+  {
+    id: 'posting-event-slot',
+    icon: icons.upload,
+    color: '#a78bfa',
+    title: 'Posting to Your Event Slot',
+    tagline: 'Secure, creator-controlled content uploads',
+    description:
+      'When your custom event request is approved, Studio Flow creates a private posting slot for you. You will receive a unique upload password, a direct link to your event slot, and instructions for uploading your video. Only you can upload content to your event slot — ensuring your event remains secure and creator-controlled.',
+    steps: [
+      'Receive your approval email from Studio Flow',
+      'Note your unique upload password and event slot link',
+      'Prepare your video in the recommended format',
+      'Navigate to your event slot and enter your upload password',
+      'Upload your video and add your title and description',
+      'Confirm the upload and share your event link with your audience',
+    ],
+    tips: [
+      'Upload at least 24 hours before your event goes live to allow processing time.',
+      'Keep your upload password private — it is specific to your slot.',
+      'Contact Studio Flow support immediately if you have any upload issues.',
+    ],
+  },
+  {
+    id: 'payout-method',
+    icon: icons.send,
+    color: '#fbbf24',
+    title: 'Submitting Your Payout Method',
+    tagline: 'How to receive your earnings from Studio Flow',
+    description:
+      'To receive payouts from Studio Flow — including contest rewards, custom event earnings, and donations — creators must submit their payout method information directly to Studio Flow administration. This manual verification process ensures secure payouts and accurate creator identity.',
+    steps: [
+      'Prepare your full name, Studio Flow username, and preferred payout method',
+      'Choose your payout account: PayPal, Cash App, Venmo, Wise, or bank transfer',
+      'Gather your payout account details and any required tax information',
+      'Send all information to: obviouslyinspiredstudio@outlook.com',
+      'Wait for confirmation from Studio Flow administration',
+      'Your payout method will be on file for all future earnings',
+    ],
+    tips: [
+      'Submit your payout details before your first contest ends to avoid delays.',
+      'Double-check your account details — incorrect information can delay payouts.',
+      'If your payout method changes, email Studio Flow right away to update your file.',
+    ],
+  },
 ];
 
 const faqs = [
   {
-    q: 'Is Creator Academy included with my Studio Flow plan?',
-    a: 'Yes — every learning module is available on all plans, including the free tier. Premium plans unlock bonus masterclass videos and downloadable workbooks.',
+    q: 'Is Creator Academy free to access?',
+    a: 'Yes — every learning module is available to all Studio Flow users at no cost. Simply sign in and start learning.',
   },
   {
-    q: 'How long does it take to complete all seven sections?',
-    a: 'Each section takes roughly 30-45 minutes to read through. You can complete the full academy in about 4-5 hours, though we recommend spacing it over a week so you can apply each lesson.',
+    q: 'How does the like-based voting system work?',
+    a: 'Each user can like any contest entry once. Likes accumulate throughout the contest period and are a key factor in winner selection alongside engagement, creativity, and impact.',
   },
   {
-    q: 'Can I earn a certificate?',
-    a: 'Absolutely. Complete all seven sections and pass the short quiz at the end of each to earn a verified Creator Academy Certificate you can share on your profile and social media.',
+    q: 'How do I receive my contest or event earnings?',
+    a: 'Submit your preferred payout method (PayPal, Cash App, Venmo, Wise, or bank transfer) to obviouslyinspiredstudio@outlook.com. Studio Flow manually verifies and issues all payouts.',
   },
   {
-    q: 'Will new sections be added?',
-    a: 'We release new modules and update existing ones every quarter based on platform changes and community feedback. Star the sections you would like to see next!',
+    q: 'What is the payout split for custom events?',
+    a: 'Creators keep 98% of all revenue generated by their custom event. Studio Flow retains a 2% platform processing fee.',
+  },
+  {
+    q: 'How is the monthly Reward Pool funded?',
+    a: '$10 from every member subscription and 100% of all donations go directly into the Reward Pool, which is distributed to contest winners each month.',
+  },
+  {
+    q: 'Will new modules be added to the Academy?',
+    a: 'Yes — new modules are released as Studio Flow grows. Check the Announcements page for the latest Academy updates.',
   },
 ];
 
@@ -362,7 +517,9 @@ export default function CreatorAcademy() {
           <span className="ca-hero__eyebrow">Studio Flow Presents</span>
           <h1 className="ca-hero__title">Creator Academy</h1>
           <p className="ca-hero__subtitle">
-            Everything you need to plan, create, grow, and monetize — in one guided learning path.
+            Welcome to the Creator Academy — your guide to building, growing, and thriving on Studio Flow.
+            This space teaches you how to create powerful content, build your brand, understand the new
+            Studio Flow creator economy, and participate in contests using our like-based voting system.
           </p>
           <div className="ca-hero__actions">
             <a href="#getting-started" className="ca-btn ca-btn--primary">

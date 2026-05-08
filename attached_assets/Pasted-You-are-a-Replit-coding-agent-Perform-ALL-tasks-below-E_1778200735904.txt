@@ -1,0 +1,220 @@
+You are a Replit coding agent. Perform ALL tasks below EXACTLY as written.
+Do not modify artifacts/mockup-sandbox.
+This update refreshes the Creator Academy page with new modules and updated content aligned with the new Studio Flow economy, including payout instructions.
+
+========================================
+TASK 1 — LOCATE CREATOR ACADEMY PAGE
+========================================
+
+Find the file:
+src/pages/CreatorAcademy.jsx
+(or the equivalent path in the Studio Flow project)
+
+This is the ONLY file whose content will be updated.
+
+Do NOT modify:
+- Routing
+- Navigation
+- Sidebar
+- Global styles
+- Other pages
+
+========================================
+TASK 2 — REMOVE OUTDATED REFERENCES
+========================================
+
+Inside CreatorAcademy.jsx:
+
+Remove or rewrite any text referencing:
+- Tickets
+- Ticket-based voting
+- Paid event access
+- Membership tiers
+- Event purchases
+- Class purchases
+- Countdown timers
+- Ticket gating
+- Old pricing ($2, $5, $75, $99, $3000)
+
+Ensure NO mention of:
+- Ticketed voting
+- Ticketed classes
+- Ticketed events
+- Ticket-based contest entry
+
+========================================
+TASK 3 — UPDATE INTRO SECTION
+========================================
+
+Replace the existing intro with:
+
+"Welcome to the Creator Academy — your guide to building, growing, and thriving on Studio Flow. This space teaches you how to create powerful content, build your brand, understand the new Studio Flow creator economy, and participate in contests using our like-based voting system."
+
+========================================
+TASK 4 — UPDATE EXISTING MODULES FOR CLARITY
+========================================
+
+Keep the existing modules (Getting Started, Content Creation, Audio, Branding, Growth, etc.) but:
+
+- Remove any references to events/classes as pre-built features.
+- Remove any references to ticket-based access.
+- Ensure all language is neutral and creator-friendly.
+
+Do NOT remove the sections themselves — only update text.
+
+========================================
+TASK 5 — ADD NEW MODULE: MONETIZATION ON STUDIO FLOW
+========================================
+
+Add a new module titled:
+"Monetization on Studio Flow"
+
+Content:
+
+"Studio Flow offers multiple ways for creators to earn:
+
+• Monthly Reward Pool — funded by member subscriptions and donations  
+• Custom Events — creators can request their own event slot and earn 98% of revenue  
+• Donations — viewers can support creators directly  
+• Contest Performance — likes help determine winners and influence payouts  
+
+This section explains how each earning path works and how to maximize your opportunities."
+
+========================================
+TASK 6 — ADD NEW MODULE: CUSTOM EVENT GUIDE
+========================================
+
+Add a new module titled:
+"Custom Event Guide"
+
+Content:
+
+"Creators can request their own custom event slot for performances, classes, workshops, or special experiences.
+
+To request an event:
+1. Go to the Events or Education page  
+2. Fill out the Custom Event Request form  
+3. Choose your event title  
+4. Select Locked/Ticketed or Open with Donation  
+5. Set your price (if locked)  
+6. Add a description  
+
+Your request is reviewed by Studio Flow. Once approved, you receive:
+• A private posting slot  
+• A password to upload your video  
+• A custom payment link (if locked)  
+• A 98/2 payout split (98% to you)  
+
+Only you can post to your event slot."
+
+========================================
+TASK 7 — ADD NEW MODULE: REWARD POOL EXPLAINED
+========================================
+
+Add a new module titled:
+"Reward Pool Explained"
+
+Content:
+
+"The Studio Flow Reward Pool is funded by:
+• $10 from every member subscription  
+• 100% of all donations  
+
+The pool is distributed across active contests. Winners are selected manually based on:
+• Like counts  
+• Engagement  
+• Creativity  
+• Impact  
+
+Payout amounts vary depending on the size of the pool each month."
+
+========================================
+TASK 8 — ADD NEW MODULE: HOW LIKES WORK
+========================================
+
+Add a new module titled:
+"How Likes Work"
+
+Content:
+
+"Likes are the new voting system on Studio Flow.
+
+• Every video has a Like button  
+• Users can like any video they enjoy  
+• Each user can like a video once  
+• Videos with the most likes rise to the top  
+• Likes help determine contest winners  
+
+Likes replace the old ticket-based voting system and make participation simple and fair."
+
+========================================
+TASK 9 — ADD NEW MODULE: POSTING TO YOUR EVENT SLOT
+========================================
+
+Add a new module titled:
+"Posting to Your Event Slot"
+
+Content:
+
+"When your custom event request is approved, Studio Flow creates a private posting slot for you.
+
+You will receive:
+• A unique upload password  
+• A direct link to your event slot  
+• Instructions for uploading your video  
+
+Only you can upload content to your event slot. This ensures your event remains secure and creator-controlled."
+
+========================================
+TASK 10 — ADD NEW MODULE: SUBMITTING YOUR PAYOUT METHOD
+========================================
+
+Add a new module titled:
+"Submitting Your Payout Method"
+
+Content:
+
+"To receive payouts from Studio Flow — including contest rewards, custom event earnings, and donations — creators must submit their payout method information directly to Studio Flow administration.
+
+Where to send your information:
+📧 obviouslyinspiredstudio@outlook.com
+
+Include:
+• Your full name  
+• Your Studio Flow username  
+• Your preferred payout method  
+• Your payout account details (PayPal, Cash App, Venmo, Wise, or bank transfer)  
+• Your country  
+• Any required tax information (if applicable)
+
+This manual verification process ensures secure payouts and accurate creator identity."
+
+========================================
+TASK 11 — ENSURE VISUAL CONSISTENCY
+========================================
+
+Ensure all new modules:
+- Use the same card layout as existing modules
+- Use the same icons or matching icon style
+- Follow the same spacing, typography, and color scheme
+- Maintain responsive behavior
+
+Do NOT introduce new design systems.
+
+========================================
+TASK 12 — VERIFY BUILD
+========================================
+
+Run:
+pnpm run build
+(or the existing Studio Flow build command)
+
+Ensure:
+- Creator Academy loads without errors
+- All new modules appear correctly
+- No outdated references remain
+- Layout remains consistent
+
+========================================
+END OF TASKS
+========================================
