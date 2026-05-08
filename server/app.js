@@ -10,6 +10,7 @@ import payoutsRouter from './routes/payouts.js';
 import likesRouter from './routes/likes.js';
 import announcementsRouter from './routes/announcements.js';
 import customEventsRouter from './routes/customEvents.js';
+import paymentsRouter from './routes/payments.js';
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use('/api/payouts',       payoutsRouter);
 app.use('/api/likes',          likesRouter);
 app.use('/api/announcements',  announcementsRouter);
 app.use('/api/custom-events',  customEventsRouter);
+app.use('/api/payments',       paymentsRouter);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {

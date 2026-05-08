@@ -25,6 +25,7 @@ const NAV_SECTIONS = [
       { to: '/contests',       icon: '🏆', label: 'Contests' },
       { to: '/announcements',  icon: '📢', label: 'Announcements' },
       { to: '/creator-academy',icon: '🎓', label: 'Academy' },
+      { to: '/subscription',   icon: '🌟', label: 'Subscription' },
     ],
   },
   {
@@ -98,6 +99,16 @@ export default function AppSidebar({ open, onClose }) {
                 <span className="app-sidebar__link-icon">🛡</span>
                 Admin
                 <span className="app-sidebar__badge">Admin</span>
+              </NavLink>
+              <NavLink
+                to="/admin/event-requests"
+                className={({ isActive }) =>
+                  `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`
+                }
+                onClick={onClose}
+              >
+                <span className="app-sidebar__link-icon">🗂</span>
+                Event Requests
               </NavLink>
             </nav>
             <div className="app-sidebar__divider" />

@@ -1,0 +1,214 @@
+/**
+ * /api/payments — Subscription, donation, and custom event payment endpoints.
+ *
+ * Stripe integration uses placeholder payment links until real keys are wired.
+ * Webhook endpoints accept Stripe event payloads and update the database.
+ */
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
+
+const router = express.Router();
+
+// ── Stripe placeholder links (replace with real links when ready) ─────────
+export const STRIPE_LINKS = {
+  subscriptionLink:     'REPLACE_WITH_STRIPE_SUBSCRIPTION_LINK',
+  donationLink:         'REPLACE_WITH_STRIPE_DONATION_LINK',
+  eventPaymentBaseLink: 'REPLACE_WITH_STRIPE_EVENT_PAYMENT_LINK',
+};
+
+function getClient() {
+  return createClient(
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+  );
+}
+
+async function getUserFromHeader(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const { data: { user }, error } = await getClient().auth.getUser(authHeader.slice(7));
+  if (error || !user) return null;
+  return user;
+}
+
+async function requireAuth(req, res) {
+  const user = await getUserFromHeader(req);
+  if (!user) { res.status(401).json({ error: 'Authentication required.' }); return null; }
+  return user;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUBSCRIPTION
+// ─────────────────────────────────────────────────────────────
+
+// POST /api/payments/create-subscription
+router.post('/create-subscription', async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+
+    // When a real Stripe secret key is available, create a Checkout Session here.
+    // For now, return the placeholder subscription link.
+    const sessionUrl = STRIPE_LINKS.subscriptionLink;
+
+    res.json({ url: sessionUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/payments/subscription-webhook
+// Stripe sends events here. Verify signature with STRIPE_WEBHOOK_SECRET in production.
+router.post('/subscription-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const supabase = getClient();
+
+    if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
+      const sub = event.data?.object;
+      if (sub?.customer && sub?.id) {
+        // Upsert subscription status by stripe_customer_id
+        await supabase.from('subscription_status').upsert({
+          id:                     randomUUID(),
+          stripe_customer_id:     sub.customer,
+          stripe_subscription_id: sub.id,
+          is_active:              sub.status === 'active',
+          updated_at:             new Date().toISOString(),
+        }, { onConflict: 'stripe_customer_id' });
+      }
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+      const sub = event.data?.object;
+      if (sub?.customer) {
+        await supabase
+          .from('subscription_status')
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq('stripe_customer_id', sub.customer);
+      }
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// DONATIONS
+// ─────────────────────────────────────────────────────────────
+
+// POST /api/payments/create-donation
+router.post('/create-donation', async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+
+    const { amount } = req.body;
+    if (!amount || Number(amount) <= 0) {
+      return res.status(400).json({ error: 'A positive donation amount is required.' });
+    }
+
+    // Return placeholder donation link (append amount as query param for display)
+    const base       = STRIPE_LINKS.donationLink;
+    const sessionUrl = base === 'REPLACE_WITH_STRIPE_DONATION_LINK'
+      ? base
+      : `${base}?amount=${Math.round(Number(amount) * 100)}`;
+
+    res.json({ url: sessionUrl, amount: Number(amount) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/payments/donation-webhook
+router.post('/donation-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const supabase = getClient();
+
+    if (event.type === 'checkout.session.completed' || event.type === 'payment_intent.succeeded') {
+      const obj    = event.data?.object;
+      const amount = obj?.amount_total ? obj.amount_total / 100 : (obj?.amount_received ? obj.amount_received / 100 : null);
+
+      if (amount) {
+        await supabase.from('donations').insert({
+          id:                randomUUID(),
+          stripe_payment_id: obj.id,
+          amount,
+        });
+      }
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// CUSTOM EVENT PAYMENTS
+// ─────────────────────────────────────────────────────────────
+
+// POST /api/payments/create-event-payment
+router.post('/create-event-payment', async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+
+    const { event_slot_id, amount } = req.body;
+    if (!event_slot_id) return res.status(400).json({ error: 'event_slot_id is required.' });
+    if (!amount || Number(amount) <= 0) return res.status(400).json({ error: 'A positive amount is required.' });
+
+    // Verify slot exists
+    const supabase = getClient();
+    const { data: slot } = await supabase
+      .from('event_slots')
+      .select('id, title')
+      .eq('id', event_slot_id)
+      .maybeSingle();
+
+    if (!slot) return res.status(404).json({ error: 'Event slot not found.' });
+
+    const base       = STRIPE_LINKS.eventPaymentBaseLink;
+    const sessionUrl = base === 'REPLACE_WITH_STRIPE_EVENT_PAYMENT_LINK'
+      ? base
+      : `${base}?client_reference_id=${event_slot_id}&amount=${Math.round(Number(amount) * 100)}`;
+
+    res.json({ url: sessionUrl, slot });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/payments/event-webhook
+router.post('/event-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const supabase = getClient();
+
+    if (event.type === 'checkout.session.completed') {
+      const session      = event.data?.object;
+      const eventSlotId  = session?.client_reference_id;
+      const amount       = session?.amount_total ? session.amount_total / 100 : 0;
+      const creatorShare = Math.round(amount * 0.98 * 100) / 100;
+      const studioFee    = Math.round(amount * 0.02 * 100) / 100;
+
+      await supabase.from('event_payments').insert({
+        id:                    randomUUID(),
+        event_slot_id:         eventSlotId || null,
+        amount,
+        stripe_payment_id:     session?.payment_intent || session?.id,
+        creator_payout_amount: creatorShare,
+        studio_fee_amount:     studioFee,
+      });
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+export default router;

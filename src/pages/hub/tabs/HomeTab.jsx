@@ -1,4 +1,5 @@
 import { CONTESTS, EVENTS, EDUCATION_CATEGORIES } from '../data.js';
+import DonationButton from '../../../components/DonationButton.jsx';
 
 export default function HomeTab({ onTabChange, stats }) {
   const featured = CONTESTS.slice(0, 4);
@@ -65,12 +66,22 @@ export default function HomeTab({ onTabChange, stats }) {
         </div>
       </div>
 
+      {/* Donation strip */}
+      <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.15)', borderRadius: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+        <div>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem' }}>Support the Reward Pool 💝</p>
+          <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'rgba(200,200,215,0.5)' }}>100% of donations go directly to contest winners</p>
+        </div>
+        <DonationButton compact />
+      </div>
+
       {/* Quick links */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
         {[
           { icon: '🎟', label: 'Browse Events',       tab: 'Events',    color: 'var(--hub-blue)'  },
           { icon: '📚', label: 'Education Sessions',  tab: 'Education', color: 'var(--hub-green)' },
           { icon: '📢', label: 'Announcements',       tab: null,        color: 'var(--hub-gold)', href: '/announcements' },
+          { icon: '🌟', label: 'Subscription',        tab: null,        color: 'var(--hub-gold)', href: '/subscription' },
         ].map((item) => (
           item.href ? (
             <a

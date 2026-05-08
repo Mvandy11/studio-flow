@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { to: '/contests',        label: 'Contests',        icon: '🏆' },
   { to: '/announcements',   label: 'Announcements',   icon: '📢' },
   { to: '/creator-academy', label: 'Academy',         icon: '🎓' },
+  { to: '/subscription',    label: 'Subscription',    icon: '🌟' },
   { to: '/earnings',        label: 'Earnings',        icon: '◎' },
   { to: '/profile',         label: 'Profile',         icon: '◉' },
 ];
@@ -70,17 +71,30 @@ export default function MobileDrawer({ open, onClose }) {
           ))}
 
           {isCreatorAdmin(role) && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
-              }
-              onClick={onClose}
-              style={{ color: 'var(--accent-gold)' }}
-            >
-              <span className="mob-drawer__link-icon">🛡</span>
-              Admin
-            </NavLink>
+            <>
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
+                }
+                onClick={onClose}
+                style={{ color: 'var(--accent-gold)' }}
+              >
+                <span className="mob-drawer__link-icon">🛡</span>
+                Admin
+              </NavLink>
+              <NavLink
+                to="/admin/event-requests"
+                className={({ isActive }) =>
+                  `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
+                }
+                onClick={onClose}
+                style={{ color: 'var(--accent-gold)' }}
+              >
+                <span className="mob-drawer__link-icon">🗂</span>
+                Event Requests
+              </NavLink>
+            </>
           )}
         </nav>
 

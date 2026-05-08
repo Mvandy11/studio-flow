@@ -1,0 +1,246 @@
+You are a Replit coding agent. Perform ALL tasks below EXACTLY as written.
+Do not modify artifacts/mockup-sandbox.
+This update adds the Subscription system, Donation system, and Custom Event Payment system to Studio Flow.
+
+========================================
+TASK 1 — ADD SQL TABLE: subscription_status
+========================================
+
+Create a new migration:
+
+CREATE TABLE subscription_status (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  is_active boolean DEFAULT false,
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+Purpose:
+- Track whether a user is subscribed to the $30/month plan.
+
+========================================
+TASK 2 — ADD SQL TABLE: donations
+========================================
+
+Create a new migration:
+
+CREATE TABLE donations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  amount numeric NOT NULL,
+  stripe_payment_id text,
+  created_at timestamptz DEFAULT now()
+);
+
+Purpose:
+- Track all donations (100% goes to reward pool).
+
+========================================
+TASK 3 — ADD SQL TABLE: event_payments
+========================================
+
+Create a new migration:
+
+CREATE TABLE event_payments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_slot_id uuid REFERENCES event_slots(id) ON DELETE CASCADE,
+  buyer_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  amount numeric NOT NULL,
+  stripe_payment_id text,
+  creator_payout_amount numeric,
+  studio_fee_amount numeric,
+  created_at timestamptz DEFAULT now()
+);
+
+Purpose:
+- Track payments for custom events.
+- Store 98/2 split amounts.
+
+========================================
+TASK 4 — ADD BACKEND ENDPOINTS FOR SUBSCRIPTIONS
+========================================
+
+Add routes:
+
+POST /api/payments/create-subscription
+Body:
+- None
+
+Behavior:
+- Require authenticated user.
+- Create Stripe Checkout session using the $30/month subscription link (placeholder).
+- Return session URL.
+
+POST /api/payments/subscription-webhook
+Behavior:
+- Handle Stripe webhook events:
+  - subscription created → set subscription_status.is_active = true
+  - subscription canceled → set subscription_status.is_active = false
+
+Use existing webhook handler patterns.
+
+========================================
+TASK 5 — ADD BACKEND ENDPOINTS FOR DONATIONS
+========================================
+
+Add routes:
+
+POST /api/payments/create-donation
+Body:
+- amount
+
+Behavior:
+- Require authenticated user.
+- Create Stripe Checkout session using donation link (placeholder).
+- Return session URL.
+
+POST /api/payments/donation-webhook
+Behavior:
+- On successful payment:
+  - Insert into donations table.
+  - No payout split (100% goes to reward pool).
+
+========================================
+TASK 6 — ADD BACKEND ENDPOINTS FOR CUSTOM EVENT PAYMENTS
+========================================
+
+Add routes:
+
+POST /api/payments/create-event-payment
+Body:
+- event_slot_id
+- amount
+
+Behavior:
+- Require authenticated user.
+- Create Stripe Checkout session using custom event payment link (placeholder).
+- Return session URL.
+
+POST /api/payments/event-webhook
+Behavior:
+- On successful payment:
+  - Insert into event_payments table.
+  - Calculate:
+    creator_payout_amount = amount * 0.98
+    studio_fee_amount = amount * 0.02
+  - Store Stripe payment ID.
+
+========================================
+TASK 7 — ADD FRONTEND UI: SUBSCRIPTION BUTTON
+========================================
+
+Locate:
+src/pages/Subscription.jsx (create if missing)
+
+Add:
+- Title: "Become a Studio Flow Member"
+- Description: "$30/month. $10 goes to the monthly reward pool."
+- Button: "Subscribe Now"
+- On click → call POST /api/payments/create-subscription
+- Redirect user to returned Stripe Checkout URL.
+
+Add navigation link:
+"Subscription" → /subscription
+
+========================================
+TASK 8 — ADD FRONTEND UI: DONATION BUTTON
+========================================
+
+Locate:
+src/components/DonationButton.jsx (create)
+
+Add:
+- Amount input
+- Button: "Donate"
+- On click → call POST /api/payments/create-donation
+- Redirect to Stripe Checkout URL
+
+Add donation button to:
+- Home page
+- Contest pages
+- Creator Academy (Monetization section)
+
+========================================
+TASK 9 — ADD FRONTEND UI: CUSTOM EVENT PAYMENT
+========================================
+
+Locate:
+src/pages/EventSlotView.jsx (create)
+
+Add:
+- Title of event
+- Description
+- Price
+- Button: "Purchase Access"
+- On click → call POST /api/payments/create-event-payment
+- Redirect to Stripe Checkout URL
+
+This page is separate from the upload page.
+
+========================================
+TASK 10 — ADD PLACEHOLDER STRIPE LINKS
+========================================
+
+In backend config file:
+stripeLinks.js (or equivalent)
+
+Add placeholders:
+
+module.exports = {
+  subscriptionLink: "REPLACE_WITH_STRIPE_SUBSCRIPTION_LINK",
+  donationLink: "REPLACE_WITH_STRIPE_DONATION_LINK",
+  eventPaymentBaseLink: "REPLACE_WITH_STRIPE_EVENT_PAYMENT_LINK"
+};
+
+Do NOT hardcode real links yet.
+
+========================================
+TASK 11 — ADD ADMIN PAGE TO VIEW EVENT REQUESTS
+========================================
+
+Create:
+src/pages/AdminEventRequests.jsx
+
+Features:
+- List all custom_event_requests
+- Approve button → calls /api/custom-events/create-slot
+- Reject button → updates status to "rejected"
+
+Add route:
+"/admin/event-requests"
+
+Add navigation link ONLY for admin users.
+
+========================================
+TASK 12 — CLEAN UP TEXT REFERENCES
+========================================
+
+Remove any references to:
+- Ticketed events
+- Ticket purchases
+- Old event pricing
+- Old membership tiers
+
+Replace with:
+"Studio Flow uses a subscription, donation, and custom event payment system."
+
+========================================
+TASK 13 — VERIFY BUILD
+========================================
+
+Run:
+pnpm run build
+
+Ensure:
+- Subscription page loads
+- Donation button works
+- Event payment flow works
+- SQL migrations run cleanly
+- No references to old payment system remain
+
+========================================
+END OF TASKS
+========================================

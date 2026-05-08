@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './CreatorAcademy.css';
+import DonationButton from '../components/DonationButton';
 
 /* ─── Icon Components (inline SVG for zero-dependency usage) ─── */
 const icons = {
@@ -551,6 +552,31 @@ export default function CreatorAcademy() {
           <SectionCard key={section.id} section={section} index={index} />
         ))}
       </main>
+
+      {/* ── Donation callout (tied to Monetization module) ── */}
+      <section style={{ maxWidth: '720px', margin: '0 auto 4rem', padding: '0 1.5rem' }}>
+        <div style={{
+          background: 'rgba(245,166,35,0.06)',
+          border: '1px solid rgba(245,166,35,0.18)',
+          borderRadius: '20px',
+          padding: '2rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1.5rem',
+        }}>
+          <div>
+            <h3 style={{ margin: '0 0 0.35rem', fontWeight: 800, fontSize: '1.1rem' }}>
+              💝 Support the Reward Pool
+            </h3>
+            <p style={{ margin: 0, color: 'rgba(200,200,215,0.6)', fontSize: '0.9rem', maxWidth: '400px' }}>
+              100% of donations go directly to the monthly creator Reward Pool — helping fund contest winners and growing the Studio Flow community.
+            </p>
+          </div>
+          <DonationButton />
+        </div>
+      </section>
 
       {/* ── FAQ ── */}
       <section className="ca-faq" id="faq">

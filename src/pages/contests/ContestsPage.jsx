@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
 import ContestCard from '../../components/contests/ContestCard';
+import DonationButton from '../../components/DonationButton';
 import '../../styles/contests.css';
 import '../../styles/library-ai-grid.css';
 
@@ -116,6 +117,16 @@ export default function ContestsPage() {
       {!loading && contests.length > 0 && (
         <div className="contests-grid">
           {contests.map((c) => <ContestCard key={c.id} contest={c} />)}
+        </div>
+      )}
+
+      {/* Donation section */}
+      {!loading && (
+        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+          <p style={{ textAlign: 'center', color: 'rgba(200,200,215,0.5)', fontSize: '0.9rem', maxWidth: '400px' }}>
+            Love what creators are making? Donate to the Reward Pool — 100% goes to contest winners.
+          </p>
+          <DonationButton />
         </div>
       )}
     </div>
