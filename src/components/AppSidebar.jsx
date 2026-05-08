@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
@@ -38,8 +39,27 @@ const NAV_SECTIONS = [
   },
 ];
 
+function useActiveContests() {
+  const [contests, setContests] = useState([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res  = await fetch('/api/contests?status=active&limit=6');
+        if (!res.ok) return;
+        const json = await res.json();
+        setContests(Array.isArray(json.data) ? json.data : []);
+      } catch (_) {}
+    }
+    load();
+  }, []);
+
+  return contests;
+}
+
 export default function AppSidebar({ open, onClose }) {
   const { user, role, logout } = useAuth();
+  const activeContests = useActiveContests();
   const initial = user?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
@@ -81,6 +101,26 @@ export default function AppSidebar({ open, onClose }) {
                   {label}
                 </NavLink>
               ))}
+
+              {/* Active contest sub-links — only shown under the Platform section */}
+              {section.label === 'Platform' && activeContests.length > 0 && (
+                <div style={{ paddingLeft: '1.25rem', marginTop: '0.15rem', marginBottom: '0.25rem' }}>
+                  {activeContests.map((c) => (
+                    <NavLink
+                      key={c.id}
+                      to={`/contests/${c.id}`}
+                      className={({ isActive }) =>
+                        `app-sidebar__link app-sidebar__link--sub${isActive ? ' active' : ''}`
+                      }
+                      onClick={onClose}
+                      style={{ fontSize: '0.78rem', paddingTop: '0.3rem', paddingBottom: '0.3rem', opacity: 0.8 }}
+                    >
+                      <span className="app-sidebar__link-icon" style={{ fontSize: '0.7rem' }}>›</span>
+                      {c.title}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </nav>
             <div className="app-sidebar__divider" />
           </div>
