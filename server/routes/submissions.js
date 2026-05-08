@@ -1,5 +1,6 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
+import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
 
@@ -18,30 +19,64 @@ async function getUserFromHeader(req) {
   return user;
 }
 
+// POST /api/submissions/create
+router.post('/create', async (req, res) => {
+  try {
+    const { user_name, user_email, media_url, description } = req.body;
+
+    if (!user_name || !user_email || !media_url) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const supabase = getClient();
+    const { data, error } = await supabase
+      .from('submissions')
+      .insert([{ user_name, user_email, media_url, description }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await sendEmail({
+      to:      'obviouslyinspiredstudio@outlook.com',
+      subject: 'New Submission Received',
+      text: `A new submission has been received:
+
+Name: ${user_name}
+Email: ${user_email}
+Media URL: ${media_url}
+Description: ${description || 'None'}
+
+Submission ID: ${data.id}`,
+    });
+
+    return res.json({ success: true, message: 'Submission received.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/submissions — list all submissions (admin) or own submissions (user)
 router.get('/', async (req, res) => {
   try {
     const user = await getUserFromHeader(req);
-    const supabase = getClient();
+    if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
+    const supabase = getClient();
     let query = supabase
       .from('contest_entries')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (user) {
-      // Check if admin
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
 
-      if (profile?.role !== 'creator_admin') {
-        query = query.eq('user_id', user.id);
-      }
-    } else {
-      return res.status(401).json({ error: 'Authentication required.' });
+    if (profile?.role !== 'creator_admin') {
+      query = query.eq('user_id', user.id);
     }
 
     const { data, error } = await query;
@@ -68,7 +103,6 @@ router.get('/:id', async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Submission not found.' });
 
-    // Only the owner or admin can view
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')

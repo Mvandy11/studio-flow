@@ -1,0 +1,104 @@
+REPLIT AGENT PROMPT:
+
+I need you to cleanly rebuild my backend submissions route and mount it correctly. My backend uses ESM imports, not CommonJS. Follow these exact steps:
+
+1. Create file: server/routes/submissions.js
+Use ESM syntax. The file must contain:
+
+import express from "express";
+
+import supabase from "../supabase.js";
+
+import sendEmail from "../utils/sendEmail.js";
+
+Then create a router with:
+
+POST /create
+
+Validate user_name, user_email, media_url
+
+Insert into Supabase table submissions
+
+Send email to: obviouslyinspiredstudio@outlook.com
+
+Return { success: true } on success
+
+Use this exact ESM version of the route:
+
+js
+import express from "express";
+import supabase from "../supabase.js";
+import sendEmail from "../utils/sendEmail.js";
+
+const router = express.Router();
+
+router.post("/create", async (req, res) => {
+  try {
+    const { user_name, user_email, media_url, description } = req.body;
+
+    if (!user_name || !user_email || !media_url) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const { data, error } = await supabase
+      .from("submissions")
+      .insert([{ user_name, user_email, media_url, description }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await sendEmail({
+      to: "obviouslyinspiredstudio@outlook.com",
+      subject: "New Submission Received",
+      text: `
+A new submission has been received:
+
+Name: ${user_name}
+Email: ${user_email}
+Media URL: ${media_url}
+Description: ${description || "None"}
+
+Submission ID: ${data.id}
+      `
+    });
+
+    return res.json({ success: true, message: "Submission received." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+export default router;
+2. Mount this route in server/app.js
+Add:
+
+js
+import submissionsRouter from "./routes/submissions.js";
+app.use("/api/submissions", submissionsRouter);
+Make sure it appears after app.use(express.json()).
+
+3. Ensure Supabase client file is ESM
+File: server/supabase.js
+
+Should contain:
+
+js
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export default supabase;
+4. Ensure sendEmail utility is ESM
+File: server/utils/sendEmail.js
+
+Must export default.
+
+5. Confirm server boots cleanly
+Run the server and confirm no import/require mismatches.
+
+END OF PROMPT
