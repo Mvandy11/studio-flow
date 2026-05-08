@@ -23,12 +23,4 @@ export const categories = [
     route:       '/submissions',
     color:       'var(--hub-green)',
   },
-  {
-    id:          'events',
-    icon:        '🎟',
-    title:       'Events',
-    description: 'Browse and attend upcoming creator events and live sessions.',
-    route:       '/events',
-    color:       'var(--hub-purple, #a78bfa)',
-  },
 ];
