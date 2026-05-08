@@ -1,0 +1,139 @@
+You are a Replit coding agent. Perform ALL tasks below EXACTLY as written.
+Do not modify artifacts/mockup-sandbox.
+This update wires the new Stripe Subscription and Donation URLs into Studio Flow.
+
+========================================
+TASK 1 — LOCATE STRIPE CONFIG FILE
+========================================
+
+Find or create:
+backend/config/stripeLinks.js
+(or the equivalent config file used for payment URLs)
+
+Replace its contents with:
+
+module.exports = {
+  subscriptionLink: "https://buy.stripe.com/7sYdRb2yx3JS1wwacZb7y0o",
+  donationLink: "https://buy.stripe.com/dRmaEZehf3JSfnm84Rb7y0p",
+  eventPaymentBaseLink: "REPLACE_WITH_EVENT_PAYMENT_LINK"
+};
+
+Do NOT modify eventPaymentBaseLink yet.
+
+========================================
+TASK 2 — UPDATE SUBSCRIPTION ENDPOINT
+========================================
+
+Locate:
+POST /api/payments/create-subscription
+
+Replace any placeholder or old URL logic with:
+
+const { subscriptionLink } = require("../config/stripeLinks");
+return res.json({ url: subscriptionLink });
+
+Ensure:
+- No old subscription URLs remain.
+- No ticket-based logic remains.
+
+========================================
+TASK 3 — UPDATE DONATION ENDPOINT
+========================================
+
+Locate:
+POST /api/payments/create-donation
+
+Replace any placeholder or old URL logic with:
+
+const { donationLink } = require("../config/stripeLinks");
+return res.json({ url: donationLink });
+
+Ensure:
+- No old donation URLs remain.
+- No ticket-based donation logic remains.
+
+========================================
+TASK 4 — UPDATE FRONTEND SUBSCRIPTION BUTTON
+========================================
+
+Locate:
+src/pages/Subscription.jsx
+(or equivalent)
+
+Ensure the Subscribe button:
+
+1. Calls POST /api/payments/create-subscription
+2. Redirects user to the returned URL
+3. Shows loading state while waiting
+
+Remove any old:
+- Membership tier logic
+- Ticket references
+- Old Stripe links
+
+========================================
+TASK 5 — UPDATE FRONTEND DONATION BUTTON
+========================================
+
+Locate:
+src/components/DonationButton.jsx
+(or equivalent)
+
+Ensure the Donate button:
+
+1. Calls POST /api/payments/create-donation
+2. Redirects user to the returned URL
+3. Supports custom or fixed $5 donation
+
+Remove any old:
+- Ticket donation logic
+- Pricing tables
+- Legacy payment references
+
+========================================
+TASK 6 — CLEAN UP OLD PAYMENT REFERENCES
+========================================
+
+Search the entire codebase for:
+
+- "stripe.com"
+- "payment link"
+- "ticket"
+- "membership tier"
+- "old subscription"
+- "old donation"
+
+Remove or replace any outdated URLs or logic.
+
+Ensure ONLY the new URLs remain:
+Subscription: https://buy.stripe.com/7sYdRb2yx3JS1wwacZb7y0o
+Donation: https://buy.stripe.com/dRmaEZehf3JSfnm84Rb7y0p
+
+========================================
+TASK 7 — UPDATE CREATOR ACADEMY REFERENCES
+========================================
+
+In CreatorAcademy.jsx:
+
+- Ensure the Monetization section references the new subscription + donation system.
+- Ensure no old ticket-based payment text remains.
+- Ensure no outdated Stripe links remain.
+
+========================================
+TASK 8 — VERIFY BUILD
+========================================
+
+Run:
+pnpm run build
+(or the existing Studio Flow build command)
+
+Verify:
+- Subscription button redirects to correct Stripe URL
+- Donation button redirects to correct Stripe URL
+- No old payment links remain
+- No ticket-based logic remains
+- No console errors
+
+========================================
+END OF TASKS
+========================================

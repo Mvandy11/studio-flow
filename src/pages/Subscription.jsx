@@ -23,10 +23,8 @@ export default function SubscriptionPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Could not create subscription session.');
 
-      if (json.url && !json.url.startsWith('REPLACE_')) {
+      if (json.url) {
         window.location.href = json.url;
-      } else {
-        setError('Subscription payment link is not yet configured. Please contact Studio Flow administration.');
       }
     } catch (err) {
       setError(err.message);

@@ -7,15 +7,9 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { subscriptionLink, donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
 const router = express.Router();
-
-// ── Stripe placeholder links (replace with real links when ready) ─────────
-export const STRIPE_LINKS = {
-  subscriptionLink:     'REPLACE_WITH_STRIPE_SUBSCRIPTION_LINK',
-  donationLink:         'REPLACE_WITH_STRIPE_DONATION_LINK',
-  eventPaymentBaseLink: 'REPLACE_WITH_STRIPE_EVENT_PAYMENT_LINK',
-};
 
 function getClient() {
   return createClient(
@@ -47,12 +41,7 @@ router.post('/create-subscription', async (req, res) => {
   try {
     const user = await requireAuth(req, res);
     if (!user) return;
-
-    // When a real Stripe secret key is available, create a Checkout Session here.
-    // For now, return the placeholder subscription link.
-    const sessionUrl = STRIPE_LINKS.subscriptionLink;
-
-    res.json({ url: sessionUrl });
+    res.json({ url: subscriptionLink });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -104,19 +93,7 @@ router.post('/create-donation', async (req, res) => {
   try {
     const user = await requireAuth(req, res);
     if (!user) return;
-
-    const { amount } = req.body;
-    if (!amount || Number(amount) <= 0) {
-      return res.status(400).json({ error: 'A positive donation amount is required.' });
-    }
-
-    // Return placeholder donation link (append amount as query param for display)
-    const base       = STRIPE_LINKS.donationLink;
-    const sessionUrl = base === 'REPLACE_WITH_STRIPE_DONATION_LINK'
-      ? base
-      : `${base}?amount=${Math.round(Number(amount) * 100)}`;
-
-    res.json({ url: sessionUrl, amount: Number(amount) });
+    res.json({ url: donationLink });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -171,10 +148,9 @@ router.post('/create-event-payment', async (req, res) => {
 
     if (!slot) return res.status(404).json({ error: 'Event slot not found.' });
 
-    const base       = STRIPE_LINKS.eventPaymentBaseLink;
-    const sessionUrl = base === 'REPLACE_WITH_STRIPE_EVENT_PAYMENT_LINK'
-      ? base
-      : `${base}?client_reference_id=${event_slot_id}&amount=${Math.round(Number(amount) * 100)}`;
+    const sessionUrl = eventPaymentBaseLink === 'REPLACE_WITH_EVENT_PAYMENT_LINK'
+      ? eventPaymentBaseLink
+      : `${eventPaymentBaseLink}?client_reference_id=${event_slot_id}&amount=${Math.round(Number(amount) * 100)}`;
 
     res.json({ url: sessionUrl, slot });
   } catch (err) {
