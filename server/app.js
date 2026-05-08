@@ -12,6 +12,7 @@ import announcementsRouter from './routes/announcements.js';
 import customEventsRouter from './routes/customEvents.js';
 import paymentsRouter from './routes/payments.js';
 import submissionsRouter from './routes/submissions.js';
+import eventSlotsRouter from './routes/eventSlots.js';
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/announcements',  announcementsRouter);
 app.use('/api/custom-events',  customEventsRouter);
 app.use('/api/payments',       paymentsRouter);
 app.use('/api/submissions',    submissionsRouter);
+app.use('/api/event-slots',   eventSlotsRouter);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
