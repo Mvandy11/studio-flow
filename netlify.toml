@@ -9,7 +9,7 @@
 # ── Function configuration ──────────────────────────────────────
 [functions]
   node_bundler          = "esbuild"
-  external_node_modules = ["sharp", "fluent-ffmpeg"]
+  external_node_modules = ["sharp"]
 
 # ── API routes → Netlify Function ──────────────────────────────
 [[redirects]]
