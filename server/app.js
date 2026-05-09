@@ -16,6 +16,7 @@ import eventSlotsRouter from './routes/eventSlots.js';
 import customEventRequestsRouter from './routes/customEventRequests.js';
 import adminApprovalRouter from './routes/adminApproval.js';
 import slotCreationRouter from './routes/slotCreation.js';
+import eventsRouter from './routes/events.js';
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/event-slots',            eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);
 app.use('/api/admin',                adminApprovalRouter);
 app.use('/api/slots',               slotCreationRouter);
+app.use('/api/events',             eventsRouter);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
