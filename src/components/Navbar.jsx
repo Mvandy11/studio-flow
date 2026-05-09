@@ -55,7 +55,7 @@ export default function Navbar({ onHamburger }) {
               Log Out
             </button>
           ) : (
-            <Link to="/" style={{ color:'var(--accent-blue)', fontSize:'0.875rem' }}>Log In</Link>
+            <Link to="/login" style={{ color:'var(--accent-blue)', fontSize:'0.875rem' }}>Log In</Link>
           )}
         </div>
       </nav>

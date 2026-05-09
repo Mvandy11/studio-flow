@@ -31,6 +31,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import EarningsDashboard from './pages/EarningsDashboard';
 import CreatorProfile from './pages/CreatorProfile';
 import AnnouncementsPage from './pages/AnnouncementsPage';
+import LoginPage from './pages/LoginPage';
 import EducationPage from './pages/Education';
 import EventSlotUpload from './pages/EventSlotUpload';
 import CustomEventRequestPage from './pages/CustomEventRequestPage';
@@ -50,6 +51,7 @@ export default function App() {
       <Layout>
         <Routes>
           {/* ── Core ── */}
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<Home />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/profile" element={<CreatorProfile />} />
