@@ -5,7 +5,7 @@
  */
 import app from './app.js';
 
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[server] Studio Flow API running on port ${PORT}`);
