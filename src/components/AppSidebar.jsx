@@ -40,13 +40,13 @@ const NAV_SECTIONS = [
   },
 ];
 
-function useActiveContests() {
+function useContests() {
   const [contests, setContests] = useState([]);
 
   useEffect(() => {
     async function load() {
       try {
-        const res  = await fetch(`${API_BASE}/api/contests?status=active&limit=6`);
+        const res  = await fetch(`${API_BASE}/api/contests?limit=50`);
         if (!res.ok) return;
         const json = await res.json();
         setContests(Array.isArray(json.data) ? json.data : []);
@@ -60,7 +60,7 @@ function useActiveContests() {
 
 export default function AppSidebar({ open, onClose }) {
   const { user, role, logout } = useAuth();
-  const activeContests = useActiveContests();
+  const activeContests = useContests();
   const initial = user?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
