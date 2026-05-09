@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CONTESTS, calculatePayout } from '../data.js';
+import { calculatePayout } from '../data.js';
 import { supabase } from '../../../lib/supabase.js';
 
 const ADMIN_PASSWORD = 'studio2026';
@@ -14,9 +14,7 @@ export default function AdminTab() {
 
   const [submissions,  setSubmissions]  = useState([]);
   const [tickets,      setTickets]      = useState([]);
-  const [contestData,  setContestData]  = useState(() =>
-    CONTESTS.map((c) => ({ ...c, submissionCount: 0, voteCount: 0, revenue: 0, winners: [] }))
-  );
+  const [contestData,  setContestData]  = useState([]);
   const [loading, setLoading] = useState(false);
   const [payoutHistory, setPayoutHistory] = useState([]);
   const [processingPayout, setProcessingPayout] = useState(null);
@@ -39,11 +37,21 @@ export default function AdminTab() {
       setSubmissions(allSubs);
       setTickets(allTix);
 
-      setContestData(CONTESTS.map((c) => {
-        const csubs   = allSubs.filter((s) => s.contest_id === c.id);
-        const votes   = csubs.reduce((s, sb) => s + (sb.vote_count || 0), 0);
-        const revenue = csubs.length * c.entryFee;
-        return { ...c, submissionCount: csubs.length, voteCount: votes, revenue, submissions: csubs, winners: csubs.filter((s) => s.is_winner) };
+      const contestIds = [...new Set(allSubs.map((s) => s.contest_id).filter(Boolean))];
+      setContestData(contestIds.map((cid) => {
+        const csubs  = allSubs.filter((s) => s.contest_id === cid);
+        const votes  = csubs.reduce((s, sb) => s + (sb.vote_count || 0), 0);
+        return {
+          id:              cid,
+          title:           cid,
+          emoji:           '🏆',
+          status:          'active',
+          submissionCount: csubs.length,
+          voteCount:       votes,
+          revenue:         0,
+          submissions:     csubs,
+          winners:         csubs.filter((s) => s.is_winner),
+        };
       }));
     } catch (_) {}
     setLoading(false);
@@ -164,7 +172,7 @@ export default function AdminTab() {
             <>
               <div className="admin-hub-overview">
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">${totalRevenue.toFixed(0)}</div><div className="admin-hub-stat__label">Total Revenue</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{CONTESTS.filter((c) => c.status === 'active').length}</div><div className="admin-hub-stat__label">Active Contests</div></div>
+                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{contestData.length}</div><div className="admin-hub-stat__label">Active Contests</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{totalSubmissions}</div><div className="admin-hub-stat__label">Submissions</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{totalVotes}</div><div className="admin-hub-stat__label">Total Votes</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{ticketsSold}</div><div className="admin-hub-stat__label">Tickets Sold</div></div>
@@ -176,7 +184,7 @@ export default function AdminTab() {
                   <div className="ticket-item__icon" style={{ background:'rgba(245,166,35,0.1)', fontSize:'1rem' }}>📋</div>
                   <div className="ticket-item__body">
                     <p className="ticket-item__title">{s.name}</p>
-                    <p className="ticket-item__meta">{CONTESTS.find((c) => c.id === s.contest_id)?.title || s.contest_id} · {s.vote_count || 0} votes</p>
+                    <p className="ticket-item__meta">{s.contest_id} · {s.vote_count || 0} votes</p>
                   </div>
                   {s.content_url && <a href={s.content_url} target="_blank" rel="noopener noreferrer" className="hub-btn hub-btn--ghost" style={{ fontSize:'0.78rem' }}>View</a>}
                 </div>

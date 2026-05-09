@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { supabase } from '../../lib/supabase.js';
-import { CONTESTS, EVENTS } from './data.js';
+import { EVENTS } from './data.js';
 import HomeTab       from './tabs/HomeTab.jsx';
 import ContestsTab   from './tabs/ContestsTab.jsx';
 import EventsTab     from './tabs/EventsTab.jsx';
@@ -24,7 +24,7 @@ export default function StudioFlowHub() {
 
   const [activeTab, setActiveTab] = useState('Home');
   const [stats,     setStats]     = useState({
-    activeContests: CONTESTS.filter((c) => c.status === 'active').length,
+    activeContests: 0,
     upcomingEvents: EVENTS.length,
     totalMembers:   0,
   });
