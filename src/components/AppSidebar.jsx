@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
+import API_BASE from '../lib/apiBase.js';
 
 const NAV_SECTIONS = [
   {
@@ -45,7 +46,7 @@ function useActiveContests() {
   useEffect(() => {
     async function load() {
       try {
-        const res  = await fetch('/api/contests?status=active&limit=6');
+        const res  = await fetch(`${API_BASE}/api/contests?status=active&limit=6`);
         if (!res.ok) return;
         const json = await res.json();
         setContests(Array.isArray(json.data) ? json.data : []);

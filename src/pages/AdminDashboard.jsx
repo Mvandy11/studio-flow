@@ -5,6 +5,7 @@ import { isCreatorAdmin } from '../lib/roles';
 import { supabase } from '../lib/supabase';
 import { formatDistanceToNow, format } from 'date-fns';
 import '../styles/admin.css';
+import API_BASE from '../lib/apiBase.js';
 
 const TABS = ['Overview', 'Contests', 'Events', 'Submissions', 'Announcements', 'Moderation'];
 
@@ -51,7 +52,7 @@ export default function AdminDashboard() {
     let anns = [];
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/announcements', {
+      const res = await fetch(`${API_BASE}/api/announcements`, {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       const json = await res.json();
@@ -73,7 +74,7 @@ export default function AdminDashboard() {
 
   async function updateContestStatus(id, status) {
     const { data: { session } } = await supabase.auth.getSession();
-    await fetch(`/api/contests/${id}`, {
+    await fetch(`${API_BASE}/api/contests/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
       body: JSON.stringify({ status }),
@@ -92,7 +93,7 @@ export default function AdminDashboard() {
     setAnnError('');
     try {
       const token  = await getToken();
-      const url    = editingAnn ? `/api/announcements/${editingAnn.id}` : '/api/announcements';
+      const url    = editingAnn ? `${API_BASE}/api/announcements/${editingAnn.id}` : `${API_BASE}/api/announcements`;
       const method = editingAnn ? 'PATCH' : 'POST';
       const res = await fetch(url, {
         method,
@@ -113,7 +114,7 @@ export default function AdminDashboard() {
   async function deleteAnnouncement(id) {
     if (!confirm('Delete this announcement?')) return;
     const token = await getToken();
-    await fetch(`/api/announcements/${id}`, {
+    await fetch(`${API_BASE}/api/announcements/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

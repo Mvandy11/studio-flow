@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
 import { supabase } from '../../lib/supabase';
+import API_BASE from '../../lib/apiBase.js';
 import '../../styles/contests.css';
 
 const CATEGORIES = [
@@ -60,7 +61,7 @@ export default function CreateContestPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch('/api/contests', {
+      const res = await fetch(`${API_BASE}/api/contests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({

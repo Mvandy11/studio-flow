@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import API_BASE from '../lib/apiBase.js';
 
 /**
  * Shared Custom Event Request form.
@@ -28,7 +29,7 @@ export default function CustomEventRequestForm() {
         return;
       }
 
-      const res = await fetch('/api/custom-events/request', {
+      const res = await fetch(`${API_BASE}/api/custom-events/request`, {
         method:  'POST',
         headers: {
           'Content-Type':  'application/json',

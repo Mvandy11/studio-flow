@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import API_BASE from '../lib/apiBase.js';
 import { useAuth } from '../hooks/useAuth';
 
 export default function SubmissionsPage() {
@@ -21,7 +22,7 @@ export default function SubmissionsPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setLoading(false); return; }
-      const res  = await fetch('/api/submissions', {
+      const res  = await fetch(`${API_BASE}/api/submissions`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const json = await res.json();

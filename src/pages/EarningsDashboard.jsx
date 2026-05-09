@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import API_BASE from '../lib/apiBase.js';
 import { formatDistanceToNow } from 'date-fns';
 import '../styles/portfolio.css';
 
@@ -53,7 +54,7 @@ export default function EarningsDashboard() {
     setRequesting(true);
     setRequestMsg('');
     try {
-      const res = await fetch('/api/payouts/request', {
+      const res = await fetch(`${API_BASE}/api/payouts/request`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ userId: user.id }),

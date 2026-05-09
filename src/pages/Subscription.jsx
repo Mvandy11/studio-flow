@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import API_BASE from '../lib/apiBase.js';
 
 export default function SubscriptionPage() {
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ export default function SubscriptionPage() {
         return;
       }
 
-      const res  = await fetch('/api/payments/create-subscription', {
+      const res  = await fetch(`${API_BASE}/api/payments/create-subscription`, {
         method:  'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });

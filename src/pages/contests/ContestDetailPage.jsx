@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import API_BASE from '../../lib/apiBase.js';
 import { format } from 'date-fns';
 import '../../styles/contests.css';
 import '../../styles/portfolio.css';
@@ -35,7 +36,7 @@ export default function ContestDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/contests/${id}`);
+      const res = await fetch(`${API_BASE}/api/contests/${id}`);
       if (!res.ok) throw new Error('Contest not found.');
       const { contest: c, entries: e } = await res.json();
       setContest(c);
@@ -102,7 +103,7 @@ export default function ContestDetailPage() {
       form.append('description', subDesc);
       if (subFile) form.append('file', subFile);
 
-      const res = await fetch(`/api/contests/${id}/entries`, {
+      const res = await fetch(`${API_BASE}/api/contests/${id}/entries`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -127,7 +128,7 @@ export default function ContestDetailPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch('/api/likes', {
+      const res = await fetch(`${API_BASE}/api/likes`, {
         method: isLiked ? 'DELETE' : 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ entry_id: entryId }),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
+import API_BASE from '../lib/apiBase.js';
 import { format } from 'date-fns';
 
 export default function AnnouncementsPage() {
@@ -27,7 +28,7 @@ export default function AnnouncementsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/announcements');
+      const res = await fetch(`${API_BASE}/api/announcements`);
       if (!res.ok) throw new Error('Failed to load announcements.');
       const { data } = await res.json();
       setAnnouncements(data || []);
@@ -57,7 +58,7 @@ export default function AnnouncementsPage() {
       const { data: { session } } = await sb.auth.getSession();
       const token = session?.access_token;
 
-      const url    = editingId ? `/api/announcements/${editingId}` : '/api/announcements';
+      const url    = editingId ? `${API_BASE}/api/announcements/${editingId}` : `${API_BASE}/api/announcements`;
       const method = editingId ? 'PATCH' : 'POST';
 
       const res = await fetch(url, {
@@ -82,7 +83,7 @@ export default function AnnouncementsPage() {
       const { supabase: sb } = await import('../lib/supabase');
       const { data: { session } } = await sb.auth.getSession();
       const token = session?.access_token;
-      await fetch(`/api/announcements/${id}`, {
+      await fetch(`${API_BASE}/api/announcements/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

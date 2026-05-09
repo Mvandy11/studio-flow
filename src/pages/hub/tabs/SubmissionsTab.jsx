@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase.js';
+import API_BASE from '../../../lib/apiBase.js';
 import { useAuth } from '../../../hooks/useAuth.js';
 
 export default function SubmissionsTab() {
@@ -15,7 +16,7 @@ export default function SubmissionsTab() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setLoading(false); return; }
       try {
-        const res  = await fetch('/api/submissions', {
+        const res  = await fetch(`${API_BASE}/api/submissions`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         const data = await res.json();
