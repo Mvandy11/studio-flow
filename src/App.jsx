@@ -12,6 +12,7 @@ import SessionEditor from './pages/SessionEditor';
 import PremierSettings from './pages/PremierSettings';
 import EventsPage from './pages/events/EventsPage';
 import EventPage from './pages/events/EventPage';
+import EventDetailsPage from './pages/events/EventDetailsPage';
 import PurchasePage from './pages/events/PurchasePage';
 import CreateEventPage from './pages/events/CreateEventPage';
 import StagePage from './pages/stage/StagePage';
@@ -64,7 +65,7 @@ export default function App() {
           {/* ── Events ── */}
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/create" element={<CreateEventPage />} />
-          <Route path="/events/:id" element={<EventPage />} />
+          <Route path="/events/:id" element={<EventDetailsPage />} />
           <Route path="/events/:eventId/purchase" element={<PurchasePage />} />
           <Route path="/stage/:stageRoomId" element={<StagePage />} />
 

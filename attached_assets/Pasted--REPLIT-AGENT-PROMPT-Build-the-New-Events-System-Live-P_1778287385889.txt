@@ -1,0 +1,227 @@
+⭐ REPLIT AGENT PROMPT — Build the New Events System (Live + Pre‑Recorded)
+I need you to build a new Events system for Studio Flow that supports live events and pre‑recorded events, fully integrated with Supabase and the existing app architecture.
+
+The goals:
+
+Replace the old static Events section
+
+Use Supabase as the source of truth
+
+Support both live and pre‑recorded events
+
+Expose events via a clean Events page + Event Details page
+
+Keep Custom Events and Contests logic intact
+
+Follow these steps exactly.
+
+1. Supabase: Create events table
+Create a new table events with columns:
+
+id — uuid, primary key, default uuid_generate_v4()
+
+title — text, not null
+
+description — text
+
+event_type — text, not null ('live' or 'recorded')
+
+start_time — timestamp with time zone, nullable (for scheduled/live)
+
+duration_minutes — integer, nullable
+
+price — numeric, default 0
+
+is_paid — boolean, default false
+
+location — text (e.g., “Virtual”, “Studio Flow Live Hall”)
+
+thumbnail_url — text
+
+video_url — text (for pre‑recorded / replay)
+
+live_room_id — text (for live session / room reference)
+
+created_by — uuid, references profiles.id or auth.users
+
+created_at — timestamp with time zone, default now()
+
+status — text, default 'upcoming' ('upcoming' | 'live' | 'ended' | 'cancelled')
+
+Do not modify existing tables.
+
+2. Backend: Events routes (ESM)
+Create server/routes/events.js (or equivalent ESM route file) with:
+
+GET /api/events
+Returns all public events ordered by start_time ascending.
+
+Optional query filters: status, event_type.
+
+GET /api/events/:id
+Returns a single event by id.
+
+POST /api/events
+Admin/creator only.
+
+Creates a new event with payload:
+
+title, description, event_type, start_time, duration_minutes, price, is_paid, location, thumbnail_url, video_url, live_room_id.
+
+Auto‑set created_by from auth context if available.
+
+PATCH /api/events/:id
+Admin/creator only.
+
+Update event fields (title, description, status, etc.).
+
+DELETE /api/events/:id
+Admin only.
+
+Soft delete or hard delete (choose one and be consistent).
+
+Mount in server/app.js:
+
+js
+import eventsRouter from "./routes/events.js";
+app.use("/api/events", eventsRouter);
+Use Supabase client consistent with existing backend.
+
+3. Frontend: Events list page
+Create src/pages/Events.jsx:
+
+Fetch events from Supabase (or /api/events):
+
+js
+const { data: events, error } = await supabase
+  .from("events")
+  .select("*")
+  .order("start_time", { ascending: true });
+Group or visually distinguish:
+
+Live events (event_type === 'live', status === 'live' or upcoming with start_time)
+
+Pre‑recorded events (event_type === 'recorded', with video_url)
+
+Render event cards with:
+
+Title
+
+Badge: Live / Recorded
+
+Date/time (if applicable)
+
+Price (Free / $X)
+
+Location
+
+Thumbnail
+
+Button: “View Event” → /events/:eventId
+
+4. Frontend: Event details page
+Create src/pages/EventDetails.jsx:
+
+Read eventId from route params.
+
+Fetch event by ID from Supabase or /api/events/:id.
+
+If event_type === 'live':
+
+Show live event layout:
+
+Title, description, time, status
+
+“Join Live” button (link to live room using live_room_id or existing live engine route)
+
+If status === 'upcoming', show countdown.
+
+If event_type === 'recorded':
+
+Show video player using video_url.
+
+If is_paid === true:
+
+Show ticket/paywall UI placeholder (do not implement Stripe here unless already wired; just keep the hook/button).
+
+5. Routing: Wire Events pages
+In your main router (e.g., src/App.jsx or src/routes.jsx):
+
+jsx
+<Route path="/events" element={<EventsPage />} />
+<Route path="/events/:eventId" element={<EventDetailsPage />} />
+Ensure no old /events routes conflict.
+
+6. Dashboard: Remove old static Events section
+In the dashboard component (Dashboard.jsx or Home.jsx):
+
+Remove the entire static “Events” block that lists hard‑coded events like:
+
+Creator Showcase Night
+
+Beat Battle Live
+
+Comedy Open Mic
+
+Art & Design Expo
+
+Producer Workshop
+
+Freestyle Friday
+
+Replace it (if needed) with:
+
+A simple card: “Events” → link to /events
+
+Or rely on the unified categories system if already in place.
+
+Do not leave any old event pricing or static cards.
+
+7. Navigation: Add Events entry (optional, if desired)
+In the sidebar / navbar / platform section:
+
+Ensure there is a single “Events” link that routes to /events.
+
+Do not add Events back into the main category dropdown if the new architecture is:
+
+Custom Events
+
+Contests
+
+Submissions
+
+If Events should be part of the dropdown, use:
+
+js
+{
+  id: "events",
+  title: "Events",
+  route: "/events"
+}
+8. Live vs Recorded: Data model consistency
+When creating events via POST /api/events:
+
+If event_type === 'live':
+
+live_room_id should be set or ready to be set by the live engine.
+
+video_url can be null (replay can be added later).
+
+If event_type === 'recorded':
+
+video_url must be set.
+
+live_room_id can be null.
+
+Do not implement the live engine itself here — just ensure the fields exist and are wired.
+
+9. Do NOT modify contests, custom events, or submissions logic
+Leave existing contests system intact (/contests, /contests/:contestId, submissions, video entries).
+
+Leave Custom Event Request flow intact.
+
+Leave Submissions inbox intact.
+
+This task is only for the new Events system and removal of the old static Events block.
+
+END PROMPT

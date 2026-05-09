@@ -10,18 +10,19 @@ function getClient() {
   );
 }
 
-function isAdmin(req) {
-  return req.user?.role === 'creator_admin';
-}
-
 /* ── GET /api/events ──────────────────────────────────────────── */
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
+  const { status, event_type } = req.query;
   try {
-    const { data, error } = await getClient()
+    let q = getClient()
       .from('events')
       .select('*')
-      .order('starts_at', { ascending: true });
+      .order('start_time', { ascending: true, nullsFirst: false });
 
+    if (status)     q = q.eq('status', status);
+    if (event_type) q = q.eq('event_type', event_type);
+
+    const { data, error } = await q;
     if (error) throw error;
     res.json({ data: data || [] });
   } catch (err) {
@@ -46,17 +47,25 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-/* ── POST /api/events (admin only) ──────────────────────────── */
+/* ── POST /api/events (creator_admin only) ───────────────────── */
 router.post('/', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
+  const {
+    title, description, event_type = 'live', start_time, duration_minutes,
+    price = 0, is_paid = false, location, thumbnail_url, video_url, live_room_id,
+    status = 'upcoming', created_by,
+  } = req.body;
 
-  const { title, description, price, event_type, starts_at, location, image_url } = req.body;
   if (!title) return res.status(400).json({ error: 'title is required.' });
+  if (!event_type) return res.status(400).json({ error: 'event_type is required.' });
 
   try {
     const { data, error } = await getClient()
       .from('events')
-      .insert([{ title, description, price, event_type, starts_at, location, image_url }])
+      .insert([{
+        title, description, event_type, start_time, duration_minutes,
+        price, is_paid, location, thumbnail_url, video_url, live_room_id,
+        status, created_by,
+      }])
       .select()
       .single();
 
@@ -67,10 +76,39 @@ router.post('/', async (req, res) => {
   }
 });
 
-/* ── DELETE /api/events/:id (admin only) ─────────────────────── */
-router.delete('/:id', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
+/* ── PATCH /api/events/:id (creator_admin only) ──────────────── */
+router.patch('/:id', async (req, res) => {
+  const allowed = [
+    'title', 'description', 'event_type', 'start_time', 'duration_minutes',
+    'price', 'is_paid', 'location', 'thumbnail_url', 'video_url', 'live_room_id', 'status',
+  ];
 
+  const updates = Object.fromEntries(
+    Object.entries(req.body).filter(([k]) => allowed.includes(k)),
+  );
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No valid fields provided.' });
+  }
+
+  try {
+    const { data, error } = await getClient()
+      .from('events')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Event not found.' });
+    res.json({ data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ── DELETE /api/events/:id (creator_admin only) ─────────────── */
+router.delete('/:id', async (req, res) => {
   try {
     const { error } = await getClient()
       .from('events')
