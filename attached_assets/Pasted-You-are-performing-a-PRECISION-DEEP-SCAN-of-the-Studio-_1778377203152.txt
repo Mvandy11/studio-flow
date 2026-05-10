@@ -1,0 +1,111 @@
+You are performing a PRECISION DEEP SCAN of the Studio Flow frontend. 
+Your goal is to locate the EXACT files still causing:
+1. Duplicate contest items under “Subscription”
+2. Announcements and Events failing due to wrong API paths
+
+You must identify and fix the specific files the app is actually using.
+
+RULES:
+- Modify ONLY frontend files.
+- Do NOT modify backend or Supabase.
+- Do NOT commit test files.
+- All changes must be permanent.
+
+TASKS:
+
+────────────────────────────────────────
+1. LOCATE THE ACTUAL SIDEBAR FILE
+────────────────────────────────────────
+Search the ENTIRE repo for ALL files named or containing:
+  “Sidebar”
+  “sidebar”
+  “SideNav”
+  “Navigation”
+  “NavMenu”
+
+For EACH file:
+  - Open it.
+  - Look for a “Subscription” section.
+  - If it contains:
+        “Funniest Baby Moments”
+        “Worlds Funniest Video”
+    → DELETE those items.
+
+Next:
+  - Determine which Sidebar file is ACTUALLY imported by the app.
+    Search for imports like:
+        import Sidebar from ...
+        import SideNav from ...
+  - Ensure the app imports ONLY ONE Sidebar file.
+  - DELETE any unused Sidebar files.
+
+────────────────────────────────────────
+2. FIX ALL API CALLS (Announcements, Events, etc.)
+────────────────────────────────────────
+Search the ENTIRE repo for:
+  “/api/”
+  “axios.get(‘/api”
+  “fetch(‘/api”
+  “axios.get("/api”
+  “fetch("/api”
+
+For EACH occurrence:
+  - Replace the hardcoded path with:
+        `${import.meta.env.VITE_API_BASE_URL}/api/...`
+  - Remove ANY fallback logic that defaults to “/api”.
+
+────────────────────────────────────────
+3. LOCATE ANNOUNCEMENTS + EVENTS COMPONENTS
+────────────────────────────────────────
+Search for files containing:
+  “Announcements”
+  “Events”
+  “Failed to load announcements”
+  “Unexpected token”
+  “No events scheduled”
+
+For EACH file:
+  - Ensure API calls use:
+        `${import.meta.env.VITE_API_BASE_URL}/api/...`
+  - Remove any hardcoded `/api/...` paths.
+
+────────────────────────────────────────
+4. LOCATE NETLIFY REDIRECTS INSIDE THE REPO
+────────────────────────────────────────
+Search for:
+  “netlify.toml”
+  “_redirects”
+
+If ANY redirect rewrites `/api/*` to frontend HTML or Netlify functions:
+  - DELETE the redirect.
+
+────────────────────────────────────────
+5. REMOVE OLD STATIC CONTEST/EVENT COMPONENTS
+────────────────────────────────────────
+Search for:
+  “Creator Showcase Night”
+  “Beat Battle Live”
+  “Comedy Open Mic”
+  “Art & Design Expo”
+  “Producer Workshop”
+  “Freestyle Friday”
+  “Funniest Baby Moments”
+  “Worlds Funniest Video”
+
+For EACH file:
+  - DELETE the entire static block.
+  - DELETE unused components.
+  - DELETE unused imports.
+
+────────────────────────────────────────
+6. VERIFY
+────────────────────────────────────────
+Run the frontend and confirm:
+  - Subscription section has NO contest items.
+  - Announcements loads without JSON errors.
+  - Events loads without JSON errors.
+  - All API calls hit the Render backend.
+  - Only ONE Sidebar file exists and is imported.
+  - No hardcoded “/api” remains anywhere.
+
+Commit all cleaned-up files.
