@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { isCreatorAdmin } from '../../lib/roles';
 import { supabase } from '../../lib/supabase';
 import { api } from '../../lib/api.js';
 import { format } from 'date-fns';
@@ -10,7 +11,8 @@ import '../../styles/portfolio.css';
 export default function ContestDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = isCreatorAdmin(role);
 
   const [contest,   setContest]   = useState(null);
   const [entries,   setEntries]   = useState([]);
@@ -27,10 +29,12 @@ export default function ContestDetailPage() {
   const fileRef = useRef(null);
 
   // likes state: { [entryId]: count }
-  const [likeCounts,  setLikeCounts]  = useState({});
-  // set of entry IDs the current user has liked
+  const [likeCounts,   setLikeCounts]   = useState({});
   const [likedEntries, setLikedEntries] = useState(new Set());
-  const [liking, setLiking] = useState(null);
+  const [liking,       setLiking]       = useState(null);
+
+  // admin winner marking
+  const [markingWinner, setMarkingWinner] = useState(null); // entryId being updated
 
   async function load() {
     setLoading(true);
@@ -38,7 +42,6 @@ export default function ContestDetailPage() {
     try {
       const { contest: c, entries: e } = await api(`/api/contests/${id}`);
       setContest(c);
-      // Sort entries by like count descending (will be updated after likes load)
       setEntries(e);
     } catch (err) {
       setError(err.message);
@@ -54,7 +57,6 @@ export default function ContestDetailPage() {
     if (entries.length === 0) return;
     const ids = entries.map((e) => e.id);
 
-    // Fetch all likes for these entries in one query
     supabase
       .from('likes')
       .select('entry_id')
@@ -66,13 +68,11 @@ export default function ContestDetailPage() {
           counts[row.entry_id] = (counts[row.entry_id] || 0) + 1;
         }
         setLikeCounts(counts);
-        // Re-sort entries by like count
         setEntries((prev) =>
           [...prev].sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))
         );
       });
 
-    // Fetch which entries the current user liked
     if (user) {
       supabase
         .from('likes')
@@ -87,7 +87,7 @@ export default function ContestDetailPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!user)          { setSubError('You must be logged in to submit.'); return; }
+    if (!user)            { setSubError('You must be logged in to submit.'); return; }
     if (!subTitle.trim()) { setSubError('Please enter a title.'); return; }
 
     setSubmitting(true);
@@ -139,7 +139,6 @@ export default function ContestDetailPage() {
         ...prev,
         [entryId]: Math.max(0, (prev[entryId] || 0) + (isLiked ? -1 : 1)),
       }));
-      // Re-sort entries by updated like count
       setEntries((prev) =>
         [...prev].sort((a, b) => {
           const ca = (likeCounts[b.id] || 0) + (b.id === entryId && !isLiked ? 1 : b.id === entryId && isLiked ? -1 : 0);
@@ -151,6 +150,29 @@ export default function ContestDetailPage() {
       alert(err.message);
     } finally {
       setLiking(null);
+    }
+  }
+
+  async function handleMarkWinner(entry, rank) {
+    setMarkingWinner(entry.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const isAlreadyWinner = entry.is_winner && entry.winner_rank === rank;
+      await api(`/api/contests/${id}/entries/${entry.id}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          isAlreadyWinner
+            ? { is_winner: false, winner_rank: null }
+            : { is_winner: true,  winner_rank: rank }
+        ),
+      });
+      load();
+    } catch (err) {
+      alert(`Winner update failed: ${err.message}`);
+    } finally {
+      setMarkingWinner(null);
     }
   }
 
@@ -167,8 +189,8 @@ export default function ContestDetailPage() {
     </div>
   );
 
-  const canSubmit = contest.status === 'active' || contest.status === 'draft';
-  const isCompleted = contest.status === 'completed';
+  const canSubmit  = contest.status === 'active' || contest.status === 'draft';
+  const isCompleted = contest.status === 'completed' || contest.status === 'voting';
 
   return (
     <div className="page-container">
@@ -177,6 +199,18 @@ export default function ContestDetailPage() {
       )}
 
       <h1 className="page-title">{contest.title}</h1>
+
+      {/* Admin badge */}
+      {isAdmin && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#f2c98f', background: 'rgba(242,201,143,0.1)', border: '1px solid rgba(242,201,143,0.25)', borderRadius: '4px', padding: '0.2rem 0.55rem' }}>
+            🛡 Admin View
+          </span>
+          <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.45)' }}>
+            Click 🥇 🥈 🥉 on any entry to toggle its winner status.
+          </span>
+        </div>
+      )}
 
       <div className="contest-detail__meta-row">
         {contest.prize_pool > 0 && (
@@ -295,8 +329,9 @@ export default function ContestDetailPage() {
             {entries.map((entry) => {
               const count   = likeCounts[entry.id] || 0;
               const isLiked = likedEntries.has(entry.id);
+              const isBusy  = markingWinner === entry.id;
               return (
-                <div key={entry.id} className="contest-entry-card">
+                <div key={entry.id} className="contest-entry-card" style={entry.is_winner ? { border: '1px solid rgba(242,201,143,0.35)', background: 'rgba(242,201,143,0.04)' } : undefined}>
                   {entry.file_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(entry.file_url) && (
                     <img src={entry.file_url} alt={entry.title} className="contest-entry-card__thumb" loading="lazy" />
                   )}
@@ -312,6 +347,46 @@ export default function ContestDetailPage() {
                       <span className="contest-winner-badge">
                         {entry.winner_rank === 1 ? '🥇' : entry.winner_rank === 2 ? '🥈' : '🥉'} Winner
                       </span>
+                    )}
+
+                    {/* ── Admin winner controls ── */}
+                    {isAdmin && (
+                      <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
+                        {[1, 2, 3].map((rank) => {
+                          const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                          const isSet = entry.is_winner && entry.winner_rank === rank;
+                          return (
+                            <button
+                              key={rank}
+                              onClick={() => handleMarkWinner(entry, rank)}
+                              disabled={isBusy}
+                              style={{
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: isBusy ? 'not-allowed' : 'pointer',
+                                border: isSet ? '1px solid rgba(242,201,143,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                                background: isSet ? 'rgba(242,201,143,0.15)' : 'rgba(255,255,255,0.04)',
+                                color: isSet ? '#f2c98f' : 'rgba(200,200,215,0.5)',
+                                transition: 'all 0.15s',
+                              }}
+                              title={isSet ? `Remove ${medal} winner` : `Mark as ${medal} place`}
+                            >
+                              {isBusy ? '…' : medal}
+                            </button>
+                          );
+                        })}
+                        {entry.is_winner && (
+                          <button
+                            onClick={() => handleMarkWinner(entry, entry.winner_rank)}
+                            disabled={isBusy}
+                            style={{ padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', cursor: isBusy ? 'not-allowed' : 'pointer', border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: '#fca5a5' }}
+                          >
+                            ✕ Remove
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="contest-entry-card__footer">
