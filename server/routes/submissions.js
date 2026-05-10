@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
 
     let q = supabase
       .from('submissions')
-      .select('id, user_name, user_email, media_url, description, created_at')
+      .select('id, user_id, user_name, user_email, media_url, description, status, created_at')
       .order('created_at', { ascending: false });
 
     if (profile?.role !== 'creator_admin') {
@@ -78,7 +78,7 @@ router.get('/:id', async (req, res) => {
 
     const { data, error } = await supabase
       .from('submissions')
-      .select('id, user_name, user_email, media_url, description, created_at')
+      .select('id, user_id, user_name, user_email, media_url, description, status, created_at')
       .eq('id', req.params.id)
       .maybeSingle();
 
@@ -95,6 +95,45 @@ router.get('/:id', async (req, res) => {
       return res.status(403).json({ error: 'Forbidden.' });
     }
 
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/submissions/:id — admin only (update status / feature)
+router.patch('/:id', async (req, res) => {
+  try {
+    const user = await getUserFromHeader(req);
+    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.role !== 'creator_admin') {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+
+    const allowed = ['status', 'featured'];
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([k]) => allowed.includes(k)),
+    );
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided.' });
+    }
+
+    const { data, error } = await supabase
+      .from('submissions')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });

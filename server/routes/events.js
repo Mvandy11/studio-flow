@@ -18,6 +18,28 @@ function addComputed(row) {
   };
 }
 
+async function requireAdmin(req, res) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return null;
+  }
+  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
+  if (error || !user) { res.status(401).json({ error: 'Authentication required.' }); return null; }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profile?.role !== 'creator_admin') {
+    res.status(403).json({ error: 'Admin access required.' });
+    return null;
+  }
+  return user;
+}
+
 /* ── GET /api/events ──────────────────────────────────────────── */
 router.get('/', async (req, res) => {
   const { status, event_type } = req.query;
@@ -57,21 +79,24 @@ router.get('/:id', async (req, res) => {
 
 /* ── POST /api/events (creator_admin only) ───────────────────── */
 router.post('/', async (req, res) => {
-  const {
-    title, description, event_type = 'live', start_time, duration_minutes,
-    price = 0, is_paid = false, location, thumbnail_url, video_url, live_room_id,
-    status = 'upcoming', created_by,
-  } = req.body;
-
-  if (!title) return res.status(400).json({ error: 'title is required.' });
-
   try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const {
+      title, description, event_type = 'live', start_time, duration_minutes,
+      price = 0, is_paid = false, location, thumbnail_url, video_url, live_room_id,
+      status = 'upcoming',
+    } = req.body;
+
+    if (!title) return res.status(400).json({ error: 'title is required.' });
+
     const { data, error } = await supabase
       .from('events')
       .insert([{
         title, description, event_type, start_time, duration_minutes,
         price, is_paid, location, thumbnail_url, video_url, live_room_id,
-        status, created_by,
+        status, created_by: admin.id,
       }])
       .select()
       .single();
@@ -85,20 +110,23 @@ router.post('/', async (req, res) => {
 
 /* ── PATCH /api/events/:id (creator_admin only) ──────────────── */
 router.patch('/:id', async (req, res) => {
-  const allowed = [
-    'title', 'description', 'event_type', 'start_time', 'duration_minutes',
-    'price', 'is_paid', 'location', 'thumbnail_url', 'video_url', 'live_room_id', 'status',
-  ];
-
-  const updates = Object.fromEntries(
-    Object.entries(req.body).filter(([k]) => allowed.includes(k)),
-  );
-
-  if (Object.keys(updates).length === 0) {
-    return res.status(400).json({ error: 'No valid fields provided.' });
-  }
-
   try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const allowed = [
+      'title', 'description', 'event_type', 'start_time', 'duration_minutes',
+      'price', 'is_paid', 'location', 'thumbnail_url', 'video_url', 'live_room_id', 'status',
+    ];
+
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([k]) => allowed.includes(k)),
+    );
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided.' });
+    }
+
     const { data, error } = await supabase
       .from('events')
       .update(updates)
@@ -117,6 +145,9 @@ router.patch('/:id', async (req, res) => {
 /* ── DELETE /api/events/:id (creator_admin only) ─────────────── */
 router.delete('/:id', async (req, res) => {
   try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
     const { error } = await supabase
       .from('events')
       .delete()

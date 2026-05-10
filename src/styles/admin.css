@@ -197,10 +197,18 @@
   padding: 0.15rem 0.5rem;
   border-radius: 99px;
 }
-.admin-badge--active { background: rgba(134,239,172,0.12); color: #86efac; border: 1px solid rgba(134,239,172,0.25); }
-.admin-badge--draft  { background: rgba(250,188,80,0.1);   color: #fabc50; border: 1px solid rgba(250,188,80,0.25); }
-.admin-badge--voting { background: rgba(110,168,255,0.12); color: #6ea8ff; border: 1px solid rgba(110,168,255,0.25); }
+.admin-badge--active    { background: rgba(134,239,172,0.12); color: #86efac; border: 1px solid rgba(134,239,172,0.25); }
+.admin-badge--draft     { background: rgba(250,188,80,0.1);   color: #fabc50; border: 1px solid rgba(250,188,80,0.25); }
+.admin-badge--voting    { background: rgba(110,168,255,0.12); color: #6ea8ff; border: 1px solid rgba(110,168,255,0.25); }
 .admin-badge--completed { background: rgba(255,255,255,0.06); color: rgba(200,200,215,0.5); border: 1px solid rgba(255,255,255,0.1); }
+.admin-badge--archived  { background: rgba(100,100,120,0.12); color: rgba(180,180,200,0.5); border: 1px solid rgba(100,100,120,0.2); }
+.admin-badge--pending   { background: rgba(245,166,35,0.12);  color: #f5a623; border: 1px solid rgba(245,166,35,0.3); }
+.admin-badge--approved  { background: rgba(134,239,172,0.12); color: #86efac; border: 1px solid rgba(134,239,172,0.25); }
+.admin-badge--rejected  { background: rgba(239,68,68,0.1);    color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+.admin-badge--live      { background: rgba(239,68,68,0.12);   color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+.admin-badge--recorded  { background: rgba(110,168,255,0.1);  color: #6ea8ff; border: 1px solid rgba(110,168,255,0.25); }
+.admin-badge--upcoming  { background: rgba(134,239,172,0.1);  color: #86efac; border: 1px solid rgba(134,239,172,0.2); }
+.admin-badge--ended     { background: rgba(255,255,255,0.04); color: rgba(200,200,215,0.4); border: 1px solid rgba(255,255,255,0.08); }
 
 /* Empty state */
 .admin-empty {

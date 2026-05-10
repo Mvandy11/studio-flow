@@ -342,6 +342,114 @@ router.post('/:id/entries/:entryId/vote', async (req, res) => {
   }
 });
 
+// ── PATCH /api/contests/:id/entries/:entryId (admin — mark winner/featured) ──
+router.patch('/:id/entries/:entryId', async (req, res) => {
+  try {
+    const user = await getUserFromHeader(req);
+    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.role !== 'creator_admin') {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+
+    const allowed = ['is_winner', 'winner_rank', 'featured'];
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([k]) => allowed.includes(k)),
+    );
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided.' });
+    }
+
+    const { data, error } = await supabase
+      .from('contest_entries')
+      .update(updates)
+      .eq('id', req.params.entryId)
+      .eq('contest_id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ entry: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/contests/:id/payout (admin — record prize earnings) ──
+router.post('/:id/payout', async (req, res) => {
+  try {
+    const user = await getUserFromHeader(req);
+    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.role !== 'creator_admin') {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+
+    const { data: contest, error: cErr } = await supabase
+      .from('contests')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (cErr || !contest) return res.status(404).json({ error: 'Contest not found.' });
+
+    const { data: winners, error: wErr } = await supabase
+      .from('contest_entries')
+      .select('*')
+      .eq('contest_id', req.params.id)
+      .eq('is_winner', true)
+      .order('winner_rank', { ascending: true });
+
+    if (wErr) throw wErr;
+    if (!winners || winners.length === 0) {
+      return res.status(400).json({ error: 'No winners marked. Please mark winners before triggering payout.' });
+    }
+
+    const prizePool = Number(contest.prize_pool) || 0;
+    if (prizePool <= 0) {
+      return res.status(400).json({ error: 'This contest has no prize pool set.' });
+    }
+
+    const prizeShare = Math.round((prizePool / winners.length) * 100) / 100;
+
+    const results = await Promise.allSettled(
+      winners.map((w) =>
+        supabase.from('earnings').insert({
+          creator_id: w.user_id,
+          contest_id: req.params.id,
+          amount:     prizeShare,
+          source:     'contest_prize',
+          status:     'pending',
+        }),
+      ),
+    );
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+
+    await supabase
+      .from('contests')
+      .update({ status: 'completed' })
+      .eq('id', req.params.id);
+
+    res.json({ success: true, winners: succeeded, prizeShare, total: prizePool });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/contests/:id/entries ─────────────────────────────
 router.get('/:id/entries', async (req, res) => {
   try {
