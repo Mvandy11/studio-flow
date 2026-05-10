@@ -1,0 +1,165 @@
+You are rebuilding the Studio Flow backend from scratch to align with the current Supabase schema, the current frontend build logic, and the Render deployment environment.
+
+Your job is to:
+- Fix all API routes
+- Remove all legacy code
+- Ensure every route returns clean JSON
+- Ensure no route crashes with 500 errors
+- Ensure all routes match the REAL Supabase tables
+- Ensure the backend is production-ready for Render
+
+====================================================
+1. REMOVE ALL LEGACY / BROKEN CODE
+====================================================
+
+Search the entire backend for:
+- Replit DB code
+- Replit AI imports
+- Netlify function handlers (exports.handler)
+- Old mock data
+- Old unused routes
+- Old schema references
+- Any code referencing tables that no longer exist
+- Any code referencing fields that no longer exist
+
+Delete all of it.
+
+====================================================
+2. REBUILD THE SUPABASE CLIENT
+====================================================
+
+Ensure the backend uses ONE clean Supabase client:
+- import { createClient } from "@supabase/supabase-js"
+- Load SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from environment variables
+- Export the client for all routes
+
+====================================================
+3. REBUILD /api/events ROUTE
+====================================================
+
+Rebuild the entire route using ONLY the real columns from the Supabase "events" table:
+
+id,
+creator_id,
+title,
+description,
+thumbnail_url,
+start_time,
+end_time,
+is_paid_event,
+ticket_price,
+visibility,
+stage_room_id,
+created_at,
+event_type,
+status
+
+Add computed fields:
+- computed_status (upcoming, live, ended)
+- computed_event_type (fallback to 'live')
+
+Ensure:
+- No HTML is ever returned
+- All errors return JSON
+- Empty tables return []
+
+====================================================
+4. REBUILD /api/announcements ROUTE
+====================================================
+
+Use ONLY the real columns from the "announcements" table:
+
+id,
+title,
+message,
+image_url,
+contest_id,
+created_at
+
+Ensure:
+- No HTML is ever returned
+- All errors return JSON
+- Empty tables return []
+
+====================================================
+5. REBUILD /api/custom-event-requests ROUTE
+====================================================
+
+Use ONLY the real columns:
+
+id,
+user_id,
+title,
+event_type,
+price,
+description,
+status,
+created_at,
+processed_at
+
+====================================================
+6. REBUILD /api/event-slots ROUTE
+====================================================
+
+Use ONLY the real columns:
+
+id,
+user_id,
+request_id,
+title,
+password,
+submission_id,
+created_at
+
+====================================================
+7. ENSURE ALL ROUTES USE EXPRESS ROUTERS
+====================================================
+
+Each route file must:
+- export a router
+- be mounted in server.js as:
+    app.use("/api/events", eventsRouter)
+    app.use("/api/announcements", announcementsRouter)
+    app.use("/api/custom-event-requests", customEventRequestsRouter)
+    app.use("/api/event-slots", eventSlotsRouter)
+
+====================================================
+8. CLEAN UP IMPORTS
+====================================================
+
+Remove:
+- unused imports
+- unused variables
+- unused functions
+
+====================================================
+9. VERIFY ALL ROUTES
+====================================================
+
+Test each endpoint:
+
+/api/events
+/api/announcements
+/api/custom-event-requests
+/api/event-slots
+
+Each must return:
+- valid JSON
+- no HTML
+- no 500 errors
+- no crashes
+
+====================================================
+10. PREPARE FOR RENDER DEPLOYMENT
+====================================================
+
+Ensure:
+- server listens on process.env.PORT
+- CORS is enabled
+- JSON body parsing is enabled
+- No Replit-specific code remains
+- No Netlify-specific code remains
+
+====================================================
+
+Perform the full rebuild now.

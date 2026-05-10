@@ -1,20 +1,13 @@
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import supabase from '../supabase.js';
 
 const router = express.Router();
-
-function getClient() {
-  return createClient(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-  );
-}
 
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return null;
-  const { data: { user }, error } = await getClient().auth.getUser(authHeader.slice(7));
+  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
   if (error || !user) return null;
   return user;
 }
@@ -28,7 +21,6 @@ router.post('/', async (req, res) => {
     const { entry_id } = req.body;
     if (!entry_id) return res.status(400).json({ error: 'entry_id is required.' });
 
-    const supabase = getClient();
     const { error } = await supabase
       .from('likes')
       .insert({ id: randomUUID(), user_id: user.id, entry_id });
@@ -55,7 +47,6 @@ router.delete('/', async (req, res) => {
     const { entry_id } = req.body;
     if (!entry_id) return res.status(400).json({ error: 'entry_id is required.' });
 
-    const supabase = getClient();
     const { error } = await supabase
       .from('likes')
       .delete()
@@ -75,7 +66,6 @@ router.get('/count', async (req, res) => {
     const { entry_id } = req.query;
     if (!entry_id) return res.status(400).json({ error: 'entry_id is required.' });
 
-    const supabase = getClient();
     const { count, error } = await supabase
       .from('likes')
       .select('id', { count: 'exact', head: true })
@@ -97,7 +87,6 @@ router.get('/user', async (req, res) => {
     const { entry_id } = req.query;
     if (!entry_id) return res.status(400).json({ error: 'entry_id is required.' });
 
-    const supabase = getClient();
     const { data, error } = await supabase
       .from('likes')
       .select('id')

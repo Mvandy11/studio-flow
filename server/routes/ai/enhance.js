@@ -1,8 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import supabase from '../../supabase.js';
 
 const router = express.Router();
 
@@ -30,12 +30,6 @@ function getOpenAI() {
   }
   return _openai;
 }
-
-// ── Supabase client (service role for server-side writes) ────
-const supabase = createClient(
-  process.env.SUPABASE_URL  || process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-);
 
 const BUCKET       = process.env.SUPABASE_STORAGE_BUCKET || 'studio-flow-library';
 const ENHANCE_PATH = 'library/ai-outputs/enhance';

@@ -1,25 +1,18 @@
 import express from 'express';
 import multer from 'multer';
 import nodemailer from 'nodemailer';
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import supabase from '../supabase.js';
 
 const router = express.Router();
 
 const ADMIN_EMAIL = 'obviouslyinspiredstudio@outlook.com';
 const BUCKET      = process.env.SUPABASE_STORAGE_BUCKET || 'studio-flow-library';
 
-function getClient() {
-  return createClient(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-  );
-}
-
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return null;
-  const { data: { user }, error } = await getClient().auth.getUser(authHeader.slice(7));
+  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
   if (error || !user) return null;
   return user;
 }
@@ -34,7 +27,7 @@ async function requireAdmin(req, res) {
   const user = await getUserFromHeader(req);
   if (!user) { res.status(401).json({ error: 'Authentication required.' }); return null; }
 
-  const { data: profile } = await getClient()
+  const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -89,10 +82,7 @@ async function sendRequestEmail({ userName, userEmail, userId, title, event_type
   }
 }
 
-// ─────────────────────────────────────────────────────────────
 // POST /api/custom-events/request
-// Authenticated user submits a custom event request.
-// ─────────────────────────────────────────────────────────────
 router.post('/request', async (req, res) => {
   try {
     const user = await requireAuth(req, res);
@@ -106,9 +96,6 @@ router.post('/request', async (req, res) => {
       return res.status(400).json({ error: 'Price is required for locked/ticketed events.' });
     }
 
-    const supabase = getClient();
-
-    // Fetch profile for name
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name, username')
@@ -118,13 +105,13 @@ router.post('/request', async (req, res) => {
     const userName = profile?.full_name || profile?.username || null;
 
     const row = {
-      id:         randomUUID(),
-      user_id:    user.id,
-      title:      title.trim(),
-      event_type: event_type.trim(),
-      price:      price != null && price !== '' ? Number(price) : null,
+      id:          randomUUID(),
+      user_id:     user.id,
+      title:       title.trim(),
+      event_type:  event_type.trim(),
+      price:       price != null && price !== '' ? Number(price) : null,
       description: description?.trim() || null,
-      status:     'pending',
+      status:      'pending',
     };
 
     const { data, error } = await supabase
@@ -135,14 +122,13 @@ router.post('/request', async (req, res) => {
 
     if (error) throw error;
 
-    // Send notification email (non-blocking)
     sendRequestEmail({
       userName,
-      userEmail:  user.email,
-      userId:     user.id,
-      title:      row.title,
-      event_type: row.event_type,
-      price:      row.price,
+      userEmail:   user.email,
+      userId:      user.id,
+      title:       row.title,
+      event_type:  row.event_type,
+      price:       row.price,
       description: row.description,
     }).catch(() => {});
 
@@ -152,9 +138,7 @@ router.post('/request', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────
 // POST /api/custom-events/create-slot  (admin only)
-// ─────────────────────────────────────────────────────────────
 router.post('/create-slot', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
@@ -165,7 +149,7 @@ router.post('/create-slot', async (req, res) => {
       return res.status(400).json({ error: 'user_id, title, and password are required.' });
     }
 
-    const { data, error } = await getClient()
+    const { data, error } = await supabase
       .from('event_slots')
       .insert({
         id:         randomUUID(),
@@ -184,10 +168,7 @@ router.post('/create-slot', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// POST /api/custom-events/upload/:slotId
-// Password-protected video upload for a specific event slot.
-// ─────────────────────────────────────────────────────────────
+// POST /api/custom-events/upload/:slotId  (password-protected video upload)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
 router.post('/upload/:slotId', upload.single('file'), async (req, res) => {
@@ -201,9 +182,6 @@ router.post('/upload/:slotId', upload.single('file'), async (req, res) => {
     if (!password) return res.status(400).json({ error: 'Password is required.' });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
 
-    const supabase = getClient();
-
-    // Fetch slot
     const { data: slot, error: slotErr } = await supabase
       .from('event_slots')
       .select('*')
@@ -212,17 +190,14 @@ router.post('/upload/:slotId', upload.single('file'), async (req, res) => {
 
     if (slotErr || !slot) return res.status(404).json({ error: 'Event slot not found.' });
 
-    // Validate owner
     if (slot.user_id !== user.id) {
       return res.status(403).json({ error: 'You are not authorized to upload to this slot.' });
     }
 
-    // Validate password
     if (slot.password !== password) {
       return res.status(403).json({ error: 'Incorrect password.' });
     }
 
-    // Upload video to Supabase Storage
     const ext      = req.file.originalname.split('.').pop();
     const videoId  = randomUUID();
     const filePath = `event-slots/${slotId}/${videoId}.${ext}`;
@@ -238,7 +213,6 @@ router.post('/upload/:slotId', upload.single('file'), async (req, res) => {
 
     const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
 
-    // Update the slot with the video reference
     await supabase
       .from('event_slots')
       .update({ video_id: videoId, video_url: publicUrl })

@@ -1,15 +1,10 @@
 import express from 'express';
 import multer from 'multer';
 import nodemailer from 'nodemailer';
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import supabase from '../supabase.js';
 
 const router = express.Router();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-);
 
 const BUCKET         = process.env.SUPABASE_STORAGE_BUCKET || 'studio-flow-library';
 const ADMIN_EMAIL    = 'obviouslyinspiredstudio@outlook.com';

@@ -1,27 +1,17 @@
 /**
  * /api/payments — Subscription, donation, and custom event payment endpoints.
- *
- * Stripe integration uses placeholder payment links until real keys are wired.
- * Webhook endpoints accept Stripe event payloads and update the database.
  */
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import supabase from '../supabase.js';
 import { subscriptionLink, donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
 const router = express.Router();
 
-function getClient() {
-  return createClient(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-  );
-}
-
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return null;
-  const { data: { user }, error } = await getClient().auth.getUser(authHeader.slice(7));
+  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
   if (error || !user) return null;
   return user;
 }
@@ -32,9 +22,7 @@ async function requireAuth(req, res) {
   return user;
 }
 
-// ─────────────────────────────────────────────────────────────
-// SUBSCRIPTION
-// ─────────────────────────────────────────────────────────────
+// ── SUBSCRIPTION ──────────────────────────────────────────────
 
 // POST /api/payments/create-subscription
 router.post('/create-subscription', async (req, res) => {
@@ -48,16 +36,13 @@ router.post('/create-subscription', async (req, res) => {
 });
 
 // POST /api/payments/subscription-webhook
-// Stripe sends events here. Verify signature with STRIPE_WEBHOOK_SECRET in production.
 router.post('/subscription-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const supabase = getClient();
 
     if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
       const sub = event.data?.object;
       if (sub?.customer && sub?.id) {
-        // Upsert subscription status by stripe_customer_id
         await supabase.from('subscription_status').upsert({
           id:                     randomUUID(),
           stripe_customer_id:     sub.customer,
@@ -84,9 +69,7 @@ router.post('/subscription-webhook', express.raw({ type: 'application/json' }), 
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// DONATIONS
-// ─────────────────────────────────────────────────────────────
+// ── DONATIONS ─────────────────────────────────────────────────
 
 // POST /api/payments/create-donation
 router.post('/create-donation', async (req, res) => {
@@ -103,11 +86,12 @@ router.post('/create-donation', async (req, res) => {
 router.post('/donation-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const supabase = getClient();
 
     if (event.type === 'checkout.session.completed' || event.type === 'payment_intent.succeeded') {
       const obj    = event.data?.object;
-      const amount = obj?.amount_total ? obj.amount_total / 100 : (obj?.amount_received ? obj.amount_received / 100 : null);
+      const amount = obj?.amount_total
+        ? obj.amount_total / 100
+        : (obj?.amount_received ? obj.amount_received / 100 : null);
 
       if (amount) {
         await supabase.from('donations').insert({
@@ -124,9 +108,7 @@ router.post('/donation-webhook', express.raw({ type: 'application/json' }), asyn
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// CUSTOM EVENT PAYMENTS
-// ─────────────────────────────────────────────────────────────
+// ── CUSTOM EVENT PAYMENTS ─────────────────────────────────────
 
 // POST /api/payments/create-event-payment
 router.post('/create-event-payment', async (req, res) => {
@@ -138,8 +120,6 @@ router.post('/create-event-payment', async (req, res) => {
     if (!event_slot_id) return res.status(400).json({ error: 'event_slot_id is required.' });
     if (!amount || Number(amount) <= 0) return res.status(400).json({ error: 'A positive amount is required.' });
 
-    // Verify slot exists
-    const supabase = getClient();
     const { data: slot } = await supabase
       .from('event_slots')
       .select('id, title')
@@ -162,7 +142,6 @@ router.post('/create-event-payment', async (req, res) => {
 router.post('/event-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const supabase = getClient();
 
     if (event.type === 'checkout.session.completed') {
       const session      = event.data?.object;

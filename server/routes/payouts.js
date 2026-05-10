@@ -1,35 +1,26 @@
 /**
  * POST /api/payouts/record-earning
  *   Called by PaymentSuccess page after a ticket purchase.
- *   Looks up the event creator and records 98% of ticket price as earnings (platform keeps 2% processing fee).
+ *   Looks up the event creator and records 98% of ticket price as earnings.
  *
  * POST /api/payouts/request
  *   Marks a creator's pending earnings as 'requested' for manual payout.
  */
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
+import supabase from '../supabase.js';
 
 const router = express.Router();
 
-function getServiceClient() {
-  return createClient(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-}
-
-// ── POST /api/payouts/record-earning ─────────────────────────
+// POST /api/payouts/record-earning
 router.post('/record-earning', async (req, res) => {
-  const { eventId, contestId, amount, ticketType, buyerUserId } = req.body;
+  const { eventId, contestId, amount, ticketType } = req.body;
 
   if (!amount || (!eventId && !contestId)) {
     return res.status(400).json({ error: 'amount and eventId or contestId are required.' });
   }
 
-  const supabase = getServiceClient();
-  let creatorId  = null;
+  let creatorId = null;
 
-  // Look up the event creator from the events table
   if (eventId) {
     const { data: event } = await supabase
       .from('events')
@@ -40,15 +31,12 @@ router.post('/record-earning', async (req, res) => {
     creatorId = event?.creator_id || event?.user_id || null;
   }
 
-  // For contests the creator is the platform itself — skip earnings record
-  // (platform keeps 100% of contest ticket revenue; prize pool is separate)
   if (!creatorId) {
     return res.json({ recorded: false, reason: 'no_creator_found' });
   }
 
   const creatorShare = Math.round(Number(amount) * 0.98 * 100) / 100;
 
-  // Fetch the creator's current payout method
   const { data: settings } = await supabase
     .from('creator_settings')
     .select('payout_method')
@@ -66,14 +54,13 @@ router.post('/record-earning', async (req, res) => {
   });
 
   if (error) {
-    console.error('[payouts] record-earning insert error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 
   return res.json({ recorded: true, creatorShare });
 });
 
-// ── POST /api/payouts/request ─────────────────────────────────
+// POST /api/payouts/request
 router.post('/request', async (req, res) => {
   const { userId } = req.body;
 
@@ -81,9 +68,6 @@ router.post('/request', async (req, res) => {
     return res.status(400).json({ error: 'userId is required.' });
   }
 
-  const supabase = getServiceClient();
-
-  // Verify there is a payout method configured
   const { data: settings } = await supabase
     .from('creator_settings')
     .select('payout_method')
@@ -96,7 +80,6 @@ router.post('/request', async (req, res) => {
     });
   }
 
-  // Mark pending earnings as 'requested'
   const { data, error } = await supabase
     .from('earnings')
     .update({ status: 'requested' })
@@ -105,13 +88,12 @@ router.post('/request', async (req, res) => {
     .select();
 
   if (error) {
-    console.error('[payouts] request error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 
   return res.json({
-    requested:   true,
-    rowsUpdated: data?.length ?? 0,
+    requested:    true,
+    rowsUpdated:  data?.length ?? 0,
     payoutMethod: settings.payout_method,
   });
 });
