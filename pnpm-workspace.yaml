@@ -1,8 +1,4 @@
-packages:
-  - artifacts/*
-  - lib/*
-  - scripts
-  - server
+packages: []
 
 autoInstallPeers: false
 
