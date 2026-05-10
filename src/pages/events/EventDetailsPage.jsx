@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { checkEventAccess } from '../../lib/checkEventAccess';
+import API_BASE from '../../lib/apiBase.js';
 
 /* ── helpers ─────────────────────────────────────────────────── */
 function formatDate(iso) {
@@ -88,7 +89,7 @@ export default function EventDetailsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res  = await fetch(`/api/events/${eventId}`);
+        const res  = await fetch(`${API_BASE}/api/events/${eventId}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Event not found.');
         setEvent(json.data);

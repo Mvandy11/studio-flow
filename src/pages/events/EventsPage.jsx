@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
+import API_BASE from '../../lib/apiBase.js';
 
 const TYPE_FILTERS = [
   { value: '',         label: 'All' },
@@ -107,7 +108,7 @@ export default function EventsPage() {
         const params = new URLSearchParams();
         if (typeFilter) params.set('event_type', typeFilter);
         if (statusFilt) params.set('status', statusFilt);
-        const res  = await fetch(`/api/events?${params}`);
+        const res  = await fetch(`${API_BASE}/api/events?${params}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Failed to load events.');
         setEvents(Array.isArray(json.data) ? json.data : []);
