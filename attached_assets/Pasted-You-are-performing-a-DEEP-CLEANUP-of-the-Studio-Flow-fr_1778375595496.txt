@@ -1,0 +1,89 @@
+You are performing a DEEP CLEANUP of the Studio Flow frontend. Your job is to remove ALL outdated, duplicated, or static contest/event UI elements across the entire codebase.
+
+GOAL:
+1. Remove all static contest items under the “Subscription” sidebar section.
+2. Remove all old hard-coded Events from the Dashboard.
+3. Remove all old hard-coded Contests from the Dashboard.
+4. Remove all outdated contest/event components, routes, imports, and JSON files.
+5. Remove all references to the nonexistent Supabase table “profiles”.
+6. Ensure contests appear ONLY at /contests (API-driven).
+7. Ensure events appear ONLY at /events (API-driven).
+8. Ensure the sidebar contains ONLY the correct items.
+9. Ensure no duplicate contest/event UI exists anywhere.
+
+RULES:
+- Modify ONLY frontend files.
+- Do NOT modify backend code.
+- Do NOT modify Supabase.
+- Do NOT commit any test files.
+- All changes must be permanent and committed.
+
+TASKS:
+
+1. FULL REPO SEARCH (MANDATORY)
+   Search the ENTIRE repository for the following strings:
+     “Funniest Baby Moments”
+     “Worlds Funniest Video”
+     “Creator Showcase Night”
+     “Beat Battle Live”
+     “Comedy Open Mic”
+     “Art & Design Expo”
+     “Producer Workshop”
+     “Freestyle Friday”
+     “profiles?select”
+     “/rest/v1/profiles”
+   For EACH file containing ANY of these:
+     - Remove the entire block of static data.
+     - Remove the component if it exists solely for old contests/events.
+     - Remove the import if unused.
+     - Remove the route if it points to an old component.
+
+2. SIDEBAR CLEANUP
+   - Open ALL sidebar-related files (search for “Sidebar” in filenames).
+   - Remove ALL static contest entries under “Subscription”.
+   - Ensure the ONLY contest link is:
+       { name: "Contests", route: "/contests" }
+   - Ensure the ONLY events link is:
+       { name: "Events", route: "/events" }
+
+3. DASHBOARD CLEANUP
+   - Search for the Dashboard component (Dashboard.jsx, Home.jsx, Hub.jsx, Overview.jsx).
+   - DELETE the entire old Events block.
+   - DELETE the entire old Contests block.
+   - DELETE any static cards referencing old events or contests.
+   - Dashboard should show ONLY:
+       - Status widgets
+       - Quick links
+       - Optional summary counts
+
+4. ROUTER CLEANUP
+   - Open the router file(s).
+   - Remove ANY route referencing old contest/event components.
+   - Ensure ONLY these routes exist:
+       /contests
+       /contests/:contestId
+       /events
+       /events/:eventId
+
+5. COMPONENT CLEANUP
+   - Delete any unused components found in step 1.
+   - Delete any static JSON files containing old contest/event data.
+   - Delete any “mock data” files for contests/events.
+
+6. API CLEANUP
+   - Remove ALL calls to:
+       /rest/v1/profiles
+     because the table does not exist.
+   - Remove any code depending on profiles.is_member.
+
+7. VERIFY
+   - Run the frontend.
+   - Confirm:
+       - Sidebar has NO contests under Subscription.
+       - Dashboard shows NO events and NO contests.
+       - /contests shows ONLY API-driven contests.
+       - /events shows ONLY API-driven events.
+       - No duplicates anywhere.
+       - No 404s from nonexistent Supabase tables.
+
+8. Commit all cleaned-up files.

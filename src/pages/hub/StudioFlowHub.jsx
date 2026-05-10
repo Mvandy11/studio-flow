@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
-import { supabase } from '../../lib/supabase.js';
 import HomeTab       from './tabs/HomeTab.jsx';
 import ContestsTab   from './tabs/ContestsTab.jsx';
 import EventsTab     from './tabs/EventsTab.jsx';
@@ -28,17 +27,6 @@ export default function StudioFlowHub() {
     totalMembers:   0,
   });
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { count } = await supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('is_member', true);
-        setStats((prev) => ({ ...prev, totalMembers: count || 0 }));
-      } catch (_) {}
-    })();
-  }, []);
 
   return (
     <div className="hub">
