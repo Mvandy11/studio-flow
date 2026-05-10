@@ -1,0 +1,76 @@
+You are repairing the Studio Flow backend. Perform a full backend audit and fix all API routes so they match the actual Supabase schema.
+
+GOAL:
+Fix all backend routes so they return clean JSON, never crash, and match the real Supabase tables:
+- events
+- custom_event_requests
+- event_slots
+- submissions
+- videos
+
+TASKS:
+
+1. LOCATE ALL ROUTE FILES
+Search the entire backend for:
+  /api/events
+  /api/announcements
+  /api/custom-event-requests
+  /api/event-slots
+  /api/submissions
+
+Open each route file and inspect the Supabase queries.
+
+2. FIX /api/events
+Replace the entire GET route with a version that selects ONLY the real columns:
+  id, creator_id, title, description, thumbnail_url,
+  start_time, end_time, is_paid_event, ticket_price,
+  visibility, stage_room_id, created_at, event_type, status
+
+Add computed fields:
+  computed_status (upcoming, live, ended)
+  computed_event_type (fallback to 'live')
+
+Ensure the route NEVER crashes. Always return JSON.
+
+3. FIX /api/announcements
+Ensure it selects ONLY real columns from the announcements table.
+Remove any references to nonexistent fields.
+Ensure it returns JSON, not HTML.
+
+4. FIX /api/custom-event-requests
+Ensure it selects:
+  id, user_id, title, event_type, price, description,
+  status, created_at, processed_at
+
+Remove any references to nonexistent fields.
+
+5. FIX /api/event-slots
+Ensure it selects:
+  id, user_id, request_id, title, password,
+  submission_id, created_at
+
+Remove any references to nonexistent fields.
+
+6. REMOVE OLD CODE
+Search for and DELETE:
+  - Replit AI imports
+  - Replit DB code
+  - Netlify function handlers (exports.handler)
+  - Old mock data
+  - Old unused routes
+
+7. CLEAN UP IMPORTS
+Remove unused imports.
+Ensure all routes use the same Supabase client.
+
+8. VERIFY
+Run the backend locally.
+Hit each endpoint:
+  /api/events
+  /api/announcements
+  /api/custom-event-requests
+  /api/event-slots
+
+Ensure all return valid JSON with no errors.
+
+Commit all changes.
