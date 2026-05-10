@@ -1,0 +1,88 @@
+You are cleaning and normalizing the PNPM workspace for the Studio Flow monorepo.
+
+Your goals:
+- Remove all `.ignored` packages created by mixed npm/yarn installs
+- Ensure every package uses PNPM only
+- Ensure the workspace lockfile is fully consistent
+- Ensure Netlify and Render builds succeed without frozen-lockfile errors
+- Ensure no stale dependencies remain in any workspace package
+- Ensure the workspace structure is clean and correct
+
+====================================================
+1. VERIFY WORKSPACE STRUCTURE
+====================================================
+Inspect the root:
+- pnpm-workspace.yaml
+- package.json
+- pnpm-lock.yaml
+
+Ensure the workspace includes ONLY the correct packages:
+  - frontend/
+  - server/
+  - any shared libs (if present)
+
+Remove any accidental workspace entries.
+
+====================================================
+2. REMOVE LEGACY NODE_MODULES
+====================================================
+For every workspace package:
+- Delete node_modules
+- Delete package-lock.json
+- Delete yarn.lock
+- Delete .npmrc if it forces npm
+
+====================================================
+3. CLEAN SERVER PACKAGE
+====================================================
+Inside /server:
+- Remove all `.ignored` directories
+- Remove any leftover npm-installed modules
+- Ensure dependencies in package.json match what the backend actually uses
+- Remove unused dependencies:
+    serverless-http
+    netlify-lambda
+    replit-db
+    any old serverless or Netlify function packages
+
+====================================================
+4. CLEAN FRONTEND PACKAGE
+====================================================
+Inside /frontend:
+- Remove `.ignored` directories
+- Remove any leftover npm-installed modules
+- Ensure dependencies match the Vite + React build
+- Remove unused dependencies:
+    axios (if replaced by fetch)
+    old Netlify function clients
+    any unused libraries
+
+====================================================
+5. REGENERATE LOCKFILE
+====================================================
+At the workspace root:
+- Run: pnpm install
+This must produce a clean, warning-free lockfile.
+
+If warnings appear about `.ignored` modules:
+- Remove the offending modules
+- Re-run pnpm install until clean
+
+====================================================
+6. VALIDATE BUILD COMPATIBILITY
+====================================================
+Ensure:
+- Netlify can run: pnpm install --frozen-lockfile
+- Render can run: pnpm install
+- No workspace package references a missing dependency
+- No workspace package references a stale dependency
+
+====================================================
+7. OUTPUT A CLEANUP REPORT
+====================================================
+List:
+- All removed dependencies
+- All removed node_modules
+- All removed lockfiles
+- All workspace packages validated
+- Confirmation that pnpm-lock.yaml is now fully in sync
