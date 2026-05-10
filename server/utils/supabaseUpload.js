@@ -1,24 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import supabase from '../supabase.js';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY;
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'studio-flow-library';
-
-if (!supabaseUrl) {
-  console.warn('[supabase] SUPABASE_URL is not set — storage uploads will fail.');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Upload any buffer to Supabase Storage.
  *
  * @param {Buffer}  buffer       - File bytes
- * @param {string}  folder       - Storage path without leading slash (e.g. "library/ai-outputs/upscale")
+ * @param {string}  folder       - Storage path without leading slash
  * @param {string}  filename     - Desired filename
  * @param {string}  contentType  - MIME type
  * @returns {Promise<{ publicUrl: string, path: string, id: string }>}
