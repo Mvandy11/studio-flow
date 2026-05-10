@@ -1,9 +1,10 @@
 [build]
-  command   = "pnpm run build"
-  publish   = "dist"
+  command = "pnpm install && pnpm run build"
+  publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "22"
+  NODE_VERSION        = "22"
+  NETLIFY_USE_PNPM    = "true"
 
 # ── SPA catch-all (must be last) ───────────────────────────────
 [[redirects]]
