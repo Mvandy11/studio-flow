@@ -1,64 +1,61 @@
 import { Link } from 'react-router-dom';
-import { EVENTS } from '../data.js';
 
 export default function EventsTab() {
   return (
     <div className="hub-content">
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 className="hub-section-title" style={{ fontSize: '1.6rem' }}>🎟 Events</h1>
-        <p style={{ color: 'var(--hub-muted)', fontSize: '0.9rem', margin: 0 }}>
-          Upcoming events hosted on Studio Flow. View details and register on the events page.
+      <div style={{ textAlign: 'center', padding: '3rem 1.5rem', maxWidth: '480px', margin: '0 auto' }}>
+        <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🎟</div>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--hub-text)', margin: '0 0 0.75rem' }}>
+          Events
+        </h2>
+        <p style={{ color: 'var(--hub-muted)', fontSize: '0.95rem', lineHeight: 1.6, margin: '0 0 2rem' }}>
+          All upcoming events are listed on the Events page. View details, check dates, and register for your spot.
         </p>
-      </div>
+        <Link
+          to="/events"
+          style={{
+            display: 'inline-block',
+            padding: '0.75rem 2rem',
+            borderRadius: '12px',
+            background: 'var(--hub-gold)',
+            color: '#0d0d14',
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            textDecoration: 'none',
+          }}
+        >
+          Browse All Events →
+        </Link>
 
-      <div className="events-grid">
-        {EVENTS.map((event) => {
-          const isStandard = event.price <= 2;
-          const tierColor  = isStandard ? 'var(--hub-blue)' : 'var(--hub-gold)';
-          const tierLabel  = isStandard ? 'Standard' : 'Premium';
-
-          return (
-            <div key={event.id} className="event-card-hub">
-              <div className="event-card-hub__header">
-                <span className="event-card-hub__emoji">{event.emoji}</span>
-                <h3 className="event-card-hub__title">{event.title}</h3>
-                <span className="event-card-hub__price" style={{ color: tierColor }}>${event.price}</span>
-              </div>
-
-              <div className="event-card-hub__meta">
-                <span>📅 {event.date}</span>
-                <span>📍 {event.venue}</span>
-              </div>
-
-              <p className="event-card-hub__desc">{event.description}</p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                <span className="hub-badge" style={{
-                  background: isStandard ? 'rgba(59,130,246,0.1)' : 'rgba(245,166,35,0.1)',
-                  color: tierColor,
-                  border: `1px solid ${isStandard ? 'rgba(59,130,246,0.3)' : 'rgba(245,166,35,0.3)'}`,
-                }}>
-                  {tierLabel} · ${event.price}
-                </span>
-                <Link
-                  to="/events"
-                  className="hub-btn hub-btn--gold"
-                  style={{ textDecoration: 'none', fontSize: '0.82rem' }}
-                >
-                  View Event →
-                </Link>
-              </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '0.75rem',
+          marginTop: '2.5rem',
+        }}>
+          {[
+            { icon: '📅', label: 'Live Events',    detail: 'In-person & online' },
+            { icon: '🎟', label: 'Ticketed',        detail: '$2 standard · $5 premium' },
+            { icon: '🎁', label: 'Free Companion',  detail: 'View-only ticket included' },
+            { icon: '🏆', label: 'Prizes',          detail: 'Select events award cash' },
+          ].map((item) => (
+            <div
+              key={item.label}
+              style={{
+                background: 'var(--hub-card)',
+                border: '1px solid var(--hub-border)',
+                borderRadius: '10px',
+                padding: '0.875rem',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: '1.25rem', marginBottom: '0.4rem' }}>{item.icon}</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--hub-text)', marginBottom: '0.2rem' }}>{item.label}</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--hub-muted)' }}>{item.detail}</div>
             </div>
-          );
-        })}
-      </div>
-
-      {EVENTS.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--hub-muted)' }}>
-          <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎟</p>
-          <p>No upcoming events. Check back soon!</p>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
