@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
 import { supabase } from '../../lib/supabase';
-import API_BASE from '../../lib/apiBase.js';
+import { api } from '../../lib/api.js';
 import '../../styles/contests.css';
 
 const CATEGORIES = [
@@ -61,7 +61,7 @@ export default function CreateContestPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`${API_BASE}/api/contests`, {
+      const json = await api('/api/contests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -78,8 +78,6 @@ export default function CreateContestPage() {
           thumbnail_url:    form.thumbnail_url    || null,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to create contest.');
       navigate(`/contests/${json.contest.id}`);
     } catch (err) {
       setError(err.message);

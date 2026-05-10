@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import API_BASE from '../../lib/apiBase.js';
+import { api } from '../../lib/api.js';
 import { format } from 'date-fns';
 import '../../styles/contests.css';
 import '../../styles/portfolio.css';
@@ -36,9 +36,7 @@ export default function ContestDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/contests/${id}`);
-      if (!res.ok) throw new Error('Contest not found.');
-      const { contest: c, entries: e } = await res.json();
+      const { contest: c, entries: e } = await api(`/api/contests/${id}`);
       setContest(c);
       // Sort entries by like count descending (will be updated after likes load)
       setEntries(e);
@@ -103,13 +101,11 @@ export default function ContestDetailPage() {
       form.append('description', subDesc);
       if (subFile) form.append('file', subFile);
 
-      const res = await fetch(`${API_BASE}/api/contests/${id}/entries`, {
+      await api(`/api/contests/${id}/entries`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Submission failed.');
       setSubSuccess(true);
       setSubTitle(''); setSubDesc(''); setSubFile(null);
       load();
@@ -128,12 +124,11 @@ export default function ContestDetailPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`${API_BASE}/api/likes`, {
+      await api('/api/likes', {
         method: isLiked ? 'DELETE' : 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ entry_id: entryId }),
       });
-      if (!res.ok) throw new Error('Action failed.');
 
       setLikedEntries((prev) => {
         const next = new Set(prev);

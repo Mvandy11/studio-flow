@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import API_BASE from '../lib/apiBase.js';
+import { api } from '../lib/api.js';
 
 /**
  * Public view page for a custom event slot.
@@ -39,13 +39,11 @@ export default function EventSlotView() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setError('Please log in to purchase access.'); setBuying(false); return; }
 
-      const res  = await fetch(`${API_BASE}/api/payments/create-event-payment`, {
+      const json = await api('/api/payments/create-event-payment', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body:    JSON.stringify({ event_slot_id: slotId, amount: slot.price }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Could not start payment.');
 
       if (json.url && !json.url.startsWith('REPLACE_')) {
         window.location.href = json.url;

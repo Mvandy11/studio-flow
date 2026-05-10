@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import API_BASE from '../lib/apiBase.js';
+import { api } from '../lib/api.js';
 import { formatDistanceToNow } from 'date-fns';
 import '../styles/portfolio.css';
 
@@ -54,23 +54,18 @@ export default function EarningsDashboard() {
     setRequesting(true);
     setRequestMsg('');
     try {
-      const res = await fetch(`${API_BASE}/api/payouts/request`, {
+      const json = await api('/api/payouts/request', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ userId: user.id }),
       });
-      const json = await res.json();
-      if (!res.ok) {
-        setRequestMsg(json.error || 'Request failed.');
-      } else {
-        setRequestMsg(`Payout requested for ${json.rowsUpdated} earning(s). We'll process it shortly.`);
-        // Optimistically update status in UI
-        setEarnings((prev) =>
-          prev.map((e) => e.status === 'pending' ? { ...e, status: 'requested' } : e)
-        );
-      }
-    } catch {
-      setRequestMsg('Network error — please try again.');
+      setRequestMsg(`Payout requested for ${json.rowsUpdated} earning(s). We'll process it shortly.`);
+      // Optimistically update status in UI
+      setEarnings((prev) =>
+        prev.map((e) => e.status === 'pending' ? { ...e, status: 'requested' } : e)
+      );
+    } catch (err) {
+      setRequestMsg(err.message || 'Network error — please try again.');
     } finally {
       setRequesting(false);
     }

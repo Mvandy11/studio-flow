@@ -6,7 +6,7 @@ import ContestCard from '../../components/contests/ContestCard';
 import DonationButton from '../../components/DonationButton';
 import '../../styles/contests.css';
 import '../../styles/library-ai-grid.css';
-import API_BASE from '../../lib/apiBase.js';
+import { api } from '../../lib/api.js';
 
 const STATUS_FILTERS = [
   { value: '',          label: 'All' },
@@ -42,9 +42,7 @@ export default function ContestsPage() {
         const params = new URLSearchParams({ limit: '50' });
         if (filter)   params.set('status', filter);
         if (category) params.set('category', category);
-        const res = await fetch(`${API_BASE}/api/contests?${params}`);
-        if (!res.ok) throw new Error('Failed to load contests.');
-        const { data } = await res.json();
+        const { data } = await api(`/api/contests?${params}`);
         setContests(data);
       } catch (err) {
         setError(err.message);

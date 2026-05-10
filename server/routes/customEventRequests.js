@@ -18,6 +18,37 @@ async function requireAuth(req, res) {
   return user;
 }
 
+// GET /api/custom-event-requests — list all requests (admin only, or own requests)
+router.get('/', async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const isAdmin = profile?.role === 'creator_admin';
+
+    const query = supabase
+      .from('custom_event_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Non-admins only see their own requests
+    if (!isAdmin) query.eq('user_id', user.id);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    console.error('[custom-event-requests] list:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/custom-event-requests/create
 router.post('/create', async (req, res) => {
   try {

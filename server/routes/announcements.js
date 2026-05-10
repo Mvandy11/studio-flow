@@ -38,7 +38,13 @@ router.get('/', async (req, res) => {
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      // Gracefully degrade if the table hasn't been created yet
+      if (error.message.includes('schema cache') || error.message.includes('does not exist')) {
+        return res.json({ data: [] });
+      }
+      throw error;
+    }
     res.json({ data: data || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });

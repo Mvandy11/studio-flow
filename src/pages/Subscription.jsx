@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import API_BASE from '../lib/apiBase.js';
+import { api } from '../lib/api.js';
 
 export default function SubscriptionPage() {
   const [loading, setLoading] = useState(false);
@@ -17,12 +17,10 @@ export default function SubscriptionPage() {
         return;
       }
 
-      const res  = await fetch(`${API_BASE}/api/payments/create-subscription`, {
+      const json = await api('/api/payments/create-subscription', {
         method:  'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Could not create subscription session.');
 
       if (json.url) {
         window.location.href = json.url;
