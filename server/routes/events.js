@@ -1,20 +1,28 @@
 import { Router } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import supabase from '../supabase.js';
 
 const router = Router();
 
-function getClient() {
-  return createClient(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY,
-  );
+function computeStatus(row) {
+  if (row.status) return row.status;
+  const start = row.start_time ? new Date(row.start_time).getTime() : null;
+  if (!start || Date.now() < start) return 'upcoming';
+  return 'ended';
+}
+
+function addComputed(row) {
+  return {
+    ...row,
+    computed_status:     computeStatus(row),
+    computed_event_type: row.event_type || 'live',
+  };
 }
 
 /* ── GET /api/events ──────────────────────────────────────────── */
 router.get('/', async (req, res) => {
   const { status, event_type } = req.query;
   try {
-    let q = getClient()
+    let q = supabase
       .from('events')
       .select('*')
       .order('start_time', { ascending: true, nullsFirst: false });
@@ -24,7 +32,7 @@ router.get('/', async (req, res) => {
 
     const { data, error } = await q;
     if (error) throw error;
-    res.json({ data: data || [] });
+    res.json({ data: (data || []).map(addComputed) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -33,7 +41,7 @@ router.get('/', async (req, res) => {
 /* ── GET /api/events/:id ─────────────────────────────────────── */
 router.get('/:id', async (req, res) => {
   try {
-    const { data, error } = await getClient()
+    const { data, error } = await supabase
       .from('events')
       .select('*')
       .eq('id', req.params.id)
@@ -41,7 +49,7 @@ router.get('/:id', async (req, res) => {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Event not found.' });
-    res.json({ data });
+    res.json({ data: addComputed(data) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -56,10 +64,9 @@ router.post('/', async (req, res) => {
   } = req.body;
 
   if (!title) return res.status(400).json({ error: 'title is required.' });
-  if (!event_type) return res.status(400).json({ error: 'event_type is required.' });
 
   try {
-    const { data, error } = await getClient()
+    const { data, error } = await supabase
       .from('events')
       .insert([{
         title, description, event_type, start_time, duration_minutes,
@@ -92,7 +99,7 @@ router.patch('/:id', async (req, res) => {
   }
 
   try {
-    const { data, error } = await getClient()
+    const { data, error } = await supabase
       .from('events')
       .update(updates)
       .eq('id', req.params.id)
@@ -110,7 +117,7 @@ router.patch('/:id', async (req, res) => {
 /* ── DELETE /api/events/:id (creator_admin only) ─────────────── */
 router.delete('/:id', async (req, res) => {
   try {
-    const { error } = await getClient()
+    const { error } = await supabase
       .from('events')
       .delete()
       .eq('id', req.params.id);

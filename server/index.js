@@ -1,8 +1,3 @@
-/**
- * Local development entrypoint.
- * Imports the Express app from app.js and starts the HTTP server.
- * On Netlify, netlify/functions/api.js is used instead — it does NOT call listen().
- */
 import app from './app.js';
 
 const PORT = process.env.PORT || 3001;

@@ -1,20 +1,13 @@
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
+import supabase from '../supabase.js';
 import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
 
-function getClient() {
-  return createClient(
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-  );
-}
-
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return null;
-  const { data: { user }, error } = await getClient().auth.getUser(authHeader.slice(7));
+  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
   if (error || !user) return null;
   return user;
 }
@@ -25,10 +18,9 @@ router.post('/create', async (req, res) => {
     const { user_name, user_email, media_url, description } = req.body;
 
     if (!user_name || !user_email || !media_url) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'user_name, user_email, and media_url are required.' });
     }
 
-    const supabase = getClient();
     const { data, error } = await supabase
       .from('submissions')
       .insert([{ user_name, user_email, media_url, description }])
@@ -40,34 +32,20 @@ router.post('/create', async (req, res) => {
     await sendEmail({
       to:      'obviouslyinspiredstudio@outlook.com',
       subject: 'New Submission Received',
-      text: `A new submission has been received:
-
-Name: ${user_name}
-Email: ${user_email}
-Media URL: ${media_url}
-Description: ${description || 'None'}
-
-Submission ID: ${data.id}`,
+      text: `A new submission has been received:\n\nName: ${user_name}\nEmail: ${user_email}\nMedia URL: ${media_url}\nDescription: ${description || 'None'}\n\nSubmission ID: ${data.id}`,
     });
 
     return res.json({ success: true, message: 'Submission received.' });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/submissions — list all submissions (admin) or own submissions (user)
+// GET /api/submissions — admin sees all; user sees own
 router.get('/', async (req, res) => {
   try {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
-
-    const supabase = getClient();
-    let query = supabase
-      .from('contest_entries')
-      .select('*')
-      .order('created_at', { ascending: false });
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -75,11 +53,16 @@ router.get('/', async (req, res) => {
       .eq('id', user.id)
       .maybeSingle();
 
+    let q = supabase
+      .from('submissions')
+      .select('id, user_name, user_email, media_url, description, created_at')
+      .order('created_at', { ascending: false });
+
     if (profile?.role !== 'creator_admin') {
-      query = query.eq('user_id', user.id);
+      q = q.eq('user_email', user.email);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await q;
     if (error) throw error;
     res.json(data || []);
   } catch (err) {
@@ -93,10 +76,9 @@ router.get('/:id', async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    const supabase = getClient();
     const { data, error } = await supabase
-      .from('contest_entries')
-      .select('*')
+      .from('submissions')
+      .select('id, user_name, user_email, media_url, description, created_at')
       .eq('id', req.params.id)
       .maybeSingle();
 
@@ -109,7 +91,7 @@ router.get('/:id', async (req, res) => {
       .eq('id', user.id)
       .maybeSingle();
 
-    if (data.user_id !== user.id && profile?.role !== 'creator_admin') {
+    if (data.user_email !== user.email && profile?.role !== 'creator_admin') {
       return res.status(403).json({ error: 'Forbidden.' });
     }
 
@@ -119,16 +101,15 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/submissions/:id — delete a submission (owner or admin)
+// DELETE /api/submissions/:id — owner or admin
 router.delete('/:id', async (req, res) => {
   try {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    const supabase = getClient();
     const { data: existing } = await supabase
-      .from('contest_entries')
-      .select('user_id')
+      .from('submissions')
+      .select('user_email')
       .eq('id', req.params.id)
       .maybeSingle();
 
@@ -140,12 +121,12 @@ router.delete('/:id', async (req, res) => {
       .eq('id', user.id)
       .maybeSingle();
 
-    if (existing.user_id !== user.id && profile?.role !== 'creator_admin') {
+    if (existing.user_email !== user.email && profile?.role !== 'creator_admin') {
       return res.status(403).json({ error: 'Forbidden.' });
     }
 
     const { error } = await supabase
-      .from('contest_entries')
+      .from('submissions')
       .delete()
       .eq('id', req.params.id);
 
