@@ -1,7 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 /**
  * Upload an image for AI enhancement.
+ * Uses multipart/form-data — cannot use the api() helper directly.
  * @param {File}   file              - The image file to enhance.
  * @param {object} [options]
  * @param {string} [options.quality] - "low" | "medium" | "high" | "auto"
@@ -15,7 +16,7 @@ export async function enhanceImage(file, options = {}) {
   if (options.quality) formData.append('quality', options.quality);
   if (options.size)    formData.append('size',    options.size);
 
-  const res = await fetch(`${API_BASE}/api/ai/enhance`, {
+  const res = await fetch(`${BASE}/api/ai/enhance`, {
     method: 'POST',
     body:   formData,
     signal: options.signal,

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { supabase } from '../lib/supabase';
-import API_BASE from '../lib/apiBase.js';
+import { api } from '../lib/api.js';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function AdminEventRequests() {
@@ -52,7 +52,7 @@ export default function AdminEventRequests() {
     setSaveError('');
     try {
       const token = await getToken();
-      const res   = await fetch(`${API_BASE}/api/custom-events/create-slot`, {
+      await api('/api/custom-events/create-slot', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({
@@ -62,8 +62,6 @@ export default function AdminEventRequests() {
           password:   slotPassword.trim(),
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to create slot.');
 
       // Mark request as approved
       await supabase

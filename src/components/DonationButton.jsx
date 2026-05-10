@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import API_BASE from '../lib/apiBase.js';
+import { api } from '../lib/api.js';
 
 const PRESET_AMOUNTS = [5, 10, 25, 50];
 
@@ -28,13 +28,11 @@ export default function DonationButton({ compact = false }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setError('Please log in to donate.'); setLoading(false); return; }
 
-      const res  = await fetch(`${API_BASE}/api/payments/create-donation`, {
+      const json = await api('/api/payments/create-donation', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body:    JSON.stringify({ amount: effective }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Could not start donation.');
 
       if (json.url) {
         window.location.href = json.url;

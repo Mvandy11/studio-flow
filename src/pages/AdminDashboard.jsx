@@ -5,7 +5,7 @@ import { isCreatorAdmin } from '../lib/roles';
 import { supabase } from '../lib/supabase';
 import { formatDistanceToNow, format } from 'date-fns';
 import '../styles/admin.css';
-import API_BASE from '../lib/apiBase.js';
+import { api } from '../lib/api.js';
 
 const TABS = ['Overview', 'Contests', 'Events', 'Submissions', 'Announcements', 'Moderation'];
 
@@ -48,14 +48,13 @@ export default function AdminDashboard() {
       supabase.from('contest_entries').select('*, contests(title)').order('created_at', { ascending: false }).limit(100),
     ]);
 
-    // Fetch announcements via the API (which enforces admin check server-side)
+    // Fetch announcements via the API (enforces admin check server-side)
     let anns = [];
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${API_BASE}/api/announcements`, {
+      const json = await api('/api/announcements', {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      const json = await res.json();
       anns = json.data || [];
     } catch (_) {}
 
@@ -74,7 +73,7 @@ export default function AdminDashboard() {
 
   async function updateContestStatus(id, status) {
     const { data: { session } } = await supabase.auth.getSession();
-    await fetch(`${API_BASE}/api/contests/${id}`, {
+    await api(`/api/contests/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
       body: JSON.stringify({ status }),
@@ -93,15 +92,13 @@ export default function AdminDashboard() {
     setAnnError('');
     try {
       const token  = await getToken();
-      const url    = editingAnn ? `${API_BASE}/api/announcements/${editingAnn.id}` : `${API_BASE}/api/announcements`;
+      const path   = editingAnn ? `/api/announcements/${editingAnn.id}` : '/api/announcements';
       const method = editingAnn ? 'PATCH' : 'POST';
-      const res = await fetch(url, {
+      await api(path, {
         method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: annTitle, body: annBody, pinned: annPinned }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Save failed.');
       resetAnnForm();
       loadAll();
     } catch (err) {
@@ -114,7 +111,7 @@ export default function AdminDashboard() {
   async function deleteAnnouncement(id) {
     if (!confirm('Delete this announcement?')) return;
     const token = await getToken();
-    await fetch(`${API_BASE}/api/announcements/${id}`, {
+    await api(`/api/announcements/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

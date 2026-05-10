@@ -1,11 +1,9 @@
+import { api } from '../lib/api.js';
+
+const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+
 /**
- * Fetch wrapper for POST /api/ai/upscale
- *
- * @param {File}    file         - Image file (PNG/JPEG/WebP, ≤ 10 MB)
- * @param {number}  scaleFactor  - 2 or 4
- * @param {AbortSignal} signal   - AbortController signal for cancellation
- * @param {function} onProgress  - Optional progress callback (0–100)
- * @returns {Promise<object>}    - Server response JSON
+ * POST /api/ai/upscale via XHR (supports upload progress tracking).
  */
 export async function uploadForUpscale(file, scaleFactor = 4, signal = null, onProgress = null) {
   const formData = new FormData();
@@ -47,22 +45,17 @@ export async function uploadForUpscale(file, scaleFactor = 4, signal = null, onP
     );
     xhr.addEventListener('abort', () => reject(new Error('Upload cancelled.')));
 
-    xhr.open('POST', '/api/ai/upscale');
+    xhr.open('POST', `${BASE}/api/ai/upscale`);
     xhr.send(formData);
   });
 }
 
 /**
- * Fetch /api/ai/outputs
- *
- * @param {string|null} tool  - Filter: 'denoise' | 'upscale' | null (all)
+ * GET /api/ai/outputs — fetch saved AI output records.
  */
 export async function fetchAiOutputs(tool = null) {
-  const url = tool ? `/api/ai/outputs?tool=${encodeURIComponent(tool)}` : '/api/ai/outputs';
-  const res = await fetch(url);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Failed to load outputs (${res.status})`);
-  }
-  return res.json();
+  const path = tool
+    ? `/api/ai/outputs?tool=${encodeURIComponent(tool)}`
+    : '/api/ai/outputs';
+  return api(path);
 }

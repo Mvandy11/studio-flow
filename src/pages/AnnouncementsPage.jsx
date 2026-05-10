@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
-import API_BASE from '../lib/apiBase.js';
+import { api } from '../lib/api.js';
 import { format } from 'date-fns';
 
 export default function AnnouncementsPage() {
@@ -28,9 +28,7 @@ export default function AnnouncementsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/announcements`);
-      if (!res.ok) throw new Error('Failed to load announcements.');
-      const { data } = await res.json();
+      const { data } = await api('/api/announcements');
       setAnnouncements(data || []);
     } catch (err) {
       setError(err.message);
@@ -58,16 +56,14 @@ export default function AnnouncementsPage() {
       const { data: { session } } = await sb.auth.getSession();
       const token = session?.access_token;
 
-      const url    = editingId ? `${API_BASE}/api/announcements/${editingId}` : `${API_BASE}/api/announcements`;
+      const path   = editingId ? `/api/announcements/${editingId}` : '/api/announcements';
       const method = editingId ? 'PATCH' : 'POST';
 
-      const res = await fetch(url, {
+      await api(path, {
         method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: formTitle, body: formBody, pinned: formPinned }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Save failed.');
       resetForm();
       load();
     } catch (err) {
@@ -83,7 +79,7 @@ export default function AnnouncementsPage() {
       const { supabase: sb } = await import('../lib/supabase');
       const { data: { session } } = await sb.auth.getSession();
       const token = session?.access_token;
-      await fetch(`${API_BASE}/api/announcements/${id}`, {
+      await api(`/api/announcements/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
