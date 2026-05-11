@@ -10,7 +10,6 @@ import StudioSessions from './pages/StudioSessions';
 import SessionEditor from './pages/SessionEditor';
 import PremierSettings from './pages/PremierSettings';
 import EventsPage from './pages/events/EventsPage';
-import EventPage from './pages/events/EventPage';
 import EventDetailsPage from './pages/events/EventDetailsPage';
 import PurchasePage from './pages/events/PurchasePage';
 import CreateEventPage from './pages/events/CreateEventPage';
