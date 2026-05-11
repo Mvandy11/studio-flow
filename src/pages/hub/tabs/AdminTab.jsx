@@ -1,157 +1,162 @@
 import { useState, useEffect } from 'react';
-import { calculatePayout } from '../data.js';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../../hooks/useAuth.js';
+import { isCreatorAdmin } from '../../../lib/roles.js';
 import { supabase } from '../../../lib/supabase.js';
+import { api } from '../../../lib/api.js';
+import { calculatePayout } from '../data.js';
 
-const ADMIN_PASSWORD = 'studio2026';
-
-const STATUS_OPTIONS = ['active', 'voting', 'closed', 'archived'];
+const ADMIN_TABS = ['Overview', 'Contests', 'Events', 'Submissions', 'Announcements', 'Tickets'];
 
 export default function AdminTab() {
-  const [password,   setPassword]   = useState('');
-  const [authed,     setAuthed]     = useState(false);
-  const [error,      setError]      = useState('');
+  const { user, role, loading: authLoading } = useAuth();
+
   const [activeTab,  setActiveTab]  = useState('Overview');
+  const [loading,    setLoading]    = useState(false);
 
+  const [contests,     setContests]     = useState([]);
+  const [events,       setEvents]       = useState([]);
   const [submissions,  setSubmissions]  = useState([]);
+  const [entries,      setEntries]      = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [tickets,      setTickets]      = useState([]);
-  const [contestData,  setContestData]  = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [payoutHistory, setPayoutHistory] = useState([]);
-  const [processingPayout, setProcessingPayout] = useState(null);
 
-  function handleLogin() {
-    if (password === ADMIN_PASSWORD) { setAuthed(true); setError(''); }
-    else setError('Incorrect password. Try again.');
+  const isAdmin = isCreatorAdmin(role);
+
+  async function getToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token;
   }
 
-  async function loadData() {
+  useEffect(() => {
+    if (!authLoading && isAdmin) loadAll();
+  }, [authLoading, isAdmin]);
+
+  async function loadAll() {
     setLoading(true);
     try {
-      const [{ data: subs }, { data: tix }] = await Promise.all([
-        supabase.from('hub_submissions').select('*').order('created_at', { ascending: false }),
-        supabase.from('hub_tickets').select('*').order('purchased_at', { ascending: false }),
+      const token = await getToken();
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [contResult, evResult, subResult] = await Promise.all([
+        api('/api/admin/contests',     { headers }),
+        api('/api/admin/events',       { headers }),
+        api('/api/admin/submissions',  { headers }),
       ]);
 
-      const allSubs  = subs  || [];
-      const allTix   = tix   || [];
-      setSubmissions(allSubs);
-      setTickets(allTix);
+      setContests(contResult.data || []);
+      setEvents(evResult.data || []);
+      setSubmissions(subResult.data?.submissions || []);
+      setEntries(subResult.data?.contest_entries || []);
 
-      const contestIds = [...new Set(allSubs.map((s) => s.contest_id).filter(Boolean))];
-      setContestData(contestIds.map((cid) => {
-        const csubs  = allSubs.filter((s) => s.contest_id === cid);
-        const votes  = csubs.reduce((s, sb) => s + (sb.vote_count || 0), 0);
-        return {
-          id:              cid,
-          title:           cid,
-          emoji:           '🏆',
-          status:          'active',
-          submissionCount: csubs.length,
-          voteCount:       votes,
-          revenue:         0,
-          submissions:     csubs,
-          winners:         csubs.filter((s) => s.is_winner),
-        };
-      }));
+      // Announcements
+      const annResult = await api('/api/announcements');
+      setAnnouncements(annResult.data || []);
+
+      // Tickets (free_tickets table)
+      const { data: tix } = await supabase
+        .from('free_tickets')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      setTickets(tix || []);
     } catch (_) {}
     setLoading(false);
   }
 
-  useEffect(() => { if (authed) loadData(); }, [authed]);
+  async function updateContestStatus(id, status) {
+    try {
+      const token = await getToken();
+      await api(`/api/contests/${id}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ status }),
+      });
+      loadAll();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  }
 
-  async function handleStatusChange(contestId, newStatus) {
-    setContestData((prev) =>
-      prev.map((c) => c.id === contestId ? { ...c, status: newStatus } : c)
+  async function deleteEvent(id) {
+    if (!confirm('Delete this event?')) return;
+    try {
+      const token = await getToken();
+      await api(`/api/events/${id}`, {
+        method:  'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      loadAll();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  }
+
+  // ── Not logged in ──
+  if (authLoading) {
+    return (
+      <div className="hub-content" style={{ textAlign: 'center', paddingTop: '4rem' }}>
+        <div className="cinematic-spinner" />
+      </div>
     );
   }
 
-  async function approveWinners(contest) {
-    const sorted = [...(contest.submissions || [])].sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
-    const payouts = calculatePayout(contest.revenue);
-    const winnerCount = payouts.length;
-    const winners = sorted.slice(0, winnerCount);
-
-    for (let i = 0; i < winners.length; i++) {
-      await supabase
-        .from('hub_submissions')
-        .update({ is_winner: true, winner_rank: i + 1 })
-        .eq('id', winners[i].id);
-    }
-    await loadData();
-  }
-
-  async function processPayout(contest) {
-    setProcessingPayout(contest.id);
-    const payouts = calculatePayout(contest.revenue);
-    const sorted  = [...(contest.submissions || [])].sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
-    const winners = sorted.slice(0, payouts.length);
-    const record  = {
-      contestId: contest.id,
-      contestTitle: contest.title,
-      date: new Date().toLocaleDateString(),
-      payouts: payouts.map((p, i) => ({
-        rank: p.rank,
-        name: winners[i]?.name || 'TBD',
-        amount: p.amount,
-      })),
-      totalRevenue: contest.revenue,
-    };
-    setPayoutHistory((prev) => [record, ...prev]);
-    setTimeout(() => {
-      alert(`✅ Payout processed!\n\n${record.payouts.map((p) => `${p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : '🥉'} ${p.name}: $${p.amount.toFixed(2)}`).join('\n')}`);
-      setProcessingPayout(null);
-    }, 800);
-  }
-
-  const totalRevenue    = tickets.filter((t) => t.ticket_type === 'paid').reduce((s, t) => s + Number(t.amount || 0), 0);
-  const totalSubmissions = submissions.length;
-  const totalVotes      = submissions.reduce((s, sub) => s + (sub.vote_count || 0), 0);
-  const ticketsSold     = tickets.filter((t) => t.ticket_type === 'paid').length;
-  const freeIssued      = tickets.filter((t) => t.ticket_type === 'free').length;
-
-  const ADMIN_TABS = ['Overview', 'Contests', 'Tickets', 'Vote Totals', 'Winner Approval', 'Payouts', 'Archive'];
-
-  // ── Login Gate ──
-  if (!authed) {
+  if (!user) {
     return (
       <div className="hub-content">
         <div className="admin-hub-gate">
-          <div style={{ fontSize:'2.5rem', marginBottom:'0.5rem' }}>🛡</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🛡</div>
           <h2 className="admin-hub-gate__title">Creator Dashboard</h2>
-          <p className="admin-hub-gate__sub">Admin access only. Enter your password to continue.</p>
-          <input
-            className="admin-hub-gate__input"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            placeholder="Password"
-          />
-          {error && <p style={{ color:'#fca5a5', fontSize:'0.85rem', marginBottom:'0.75rem' }}>{error}</p>}
-          <button className="hub-btn hub-btn--gold" style={{ width:'100%' }} onClick={handleLogin}>
-            Access Dashboard
-          </button>
+          <p className="admin-hub-gate__sub">
+            You must be signed in as a creator-admin to access this panel.
+          </p>
+          <Link to="/login" className="hub-btn hub-btn--gold" style={{ display: 'inline-block', textDecoration: 'none', textAlign: 'center', width: '100%', padding: '0.65rem' }}>
+            Sign In
+          </Link>
         </div>
       </div>
     );
   }
 
-  // ── Admin Panel ──
+  if (!isAdmin) {
+    return (
+      <div className="hub-content">
+        <div className="admin-hub-gate">
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔒</div>
+          <h2 className="admin-hub-gate__title">Access Denied</h2>
+          <p className="admin-hub-gate__sub">
+            This panel is reserved for Studio Flow creator-admins.
+          </p>
+          <p style={{ fontSize: '0.78rem', color: 'var(--hub-muted)', marginTop: '0.5rem' }}>
+            Signed in as: {user.email}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Stats ──
+  const pendingSubs  = submissions.filter((s) => !s.status || s.status === 'pending').length;
+  const activeEvents = events.filter((e) => e.status === 'upcoming' || !e.status).length;
+  const totalVotes   = entries.reduce((sum, e) => sum + (e.vote_count || 0), 0);
+
   return (
     <div className="hub-content hub-content--wide">
       {/* Header */}
       <div className="admin-hub-header">
         <div>
-          <p className="admin-hub-header__title">🛡 Creator Admin — Michael Vandeventer</p>
+          <p className="admin-hub-header__title">🛡 Creator Admin — {user.email?.split('@')[0]}</p>
           <p className="admin-hub-header__sub">Studio Flow Platform Management</p>
         </div>
-        <button className="hub-btn hub-btn--ghost" onClick={() => setAuthed(false)} style={{ fontSize:'0.8rem' }}>
-          Log Out
-        </button>
+        <Link to="/admin" style={{ textDecoration: 'none' }}>
+          <button className="hub-btn hub-btn--ghost" style={{ fontSize: '0.8rem' }}>
+            Full Admin Dashboard →
+          </button>
+        </Link>
       </div>
 
       {/* Sub-tabs */}
-      <div style={{ display:'flex', gap:0, borderBottom:'1px solid var(--hub-border)', marginBottom:'1.5rem', overflowX:'auto' }}>
+      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--hub-border)', marginBottom: '1.5rem', overflowX: 'auto' }}>
         {ADMIN_TABS.map((tab) => (
           <button
             key={tab}
@@ -159,264 +164,271 @@ export default function AdminTab() {
             onClick={() => setActiveTab(tab)}
           >
             {tab}
+            {tab === 'Submissions' && pendingSubs > 0 && (
+              <span style={{ marginLeft: '0.4rem', background: 'rgba(245,166,35,0.2)', color: '#f5a623', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem' }}>
+                {pendingSubs}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {loading && <div style={{ textAlign:'center', padding:'3rem' }}><div className="cinematic-spinner" /></div>}
-
-      {!loading && (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <div className="cinematic-spinner" />
+        </div>
+      ) : (
         <>
           {/* ── Overview ── */}
           {activeTab === 'Overview' && (
             <>
               <div className="admin-hub-overview">
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">${totalRevenue.toFixed(0)}</div><div className="admin-hub-stat__label">Total Revenue</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{contestData.length}</div><div className="admin-hub-stat__label">Active Contests</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{totalSubmissions}</div><div className="admin-hub-stat__label">Submissions</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{totalVotes}</div><div className="admin-hub-stat__label">Total Votes</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{ticketsSold}</div><div className="admin-hub-stat__label">Tickets Sold</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{freeIssued}</div><div className="admin-hub-stat__label">Free Tickets</div></div>
+                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{contests.length}</div><div className="admin-hub-stat__label">Contests</div></div>
+                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{activeEvents}</div><div className="admin-hub-stat__label">Active Events</div></div>
+                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{submissions.length}</div><div className="admin-hub-stat__label">Submissions</div></div>
+                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{totalVotes}</div><div className="admin-hub-stat__label">Contest Votes</div></div>
+                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{pendingSubs}</div><div className="admin-hub-stat__label">Pending Review</div></div>
+                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{announcements.length}</div><div className="admin-hub-stat__label">Announcements</div></div>
               </div>
-              <h2 className="hub-section-title">Recent Submissions</h2>
-              {submissions.slice(0, 5).map((s) => (
-                <div key={s.id} className="ticket-item" style={{ marginBottom:'0.5rem' }}>
-                  <div className="ticket-item__icon" style={{ background:'rgba(245,166,35,0.1)', fontSize:'1rem' }}>📋</div>
-                  <div className="ticket-item__body">
-                    <p className="ticket-item__title">{s.name}</p>
-                    <p className="ticket-item__meta">{s.contest_id} · {s.vote_count || 0} votes</p>
+
+              {pendingSubs > 0 && (
+                <>
+                  <h2 className="hub-section-title" style={{ marginTop: '1.5rem' }}>⏳ Pending Submissions</h2>
+                  {submissions.filter((s) => !s.status || s.status === 'pending').slice(0, 5).map((s) => (
+                    <div key={s.id} className="ticket-item" style={{ marginBottom: '0.5rem' }}>
+                      <div className="ticket-item__icon" style={{ background: 'rgba(245,166,35,0.1)', fontSize: '1rem' }}>📋</div>
+                      <div className="ticket-item__body">
+                        <p className="ticket-item__title">{s.user_name || 'Unnamed'}</p>
+                        <p className="ticket-item__meta">{s.user_email} · {s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}</p>
+                      </div>
+                      <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: 'rgba(245,166,35,0.15)', color: '#f5a623', border: '1px solid rgba(245,166,35,0.3)' }}>
+                        pending
+                      </span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <button className="hub-btn hub-btn--ghost" style={{ fontSize: '0.82rem' }} onClick={() => setActiveTab('Submissions')}>
+                      Review All Submissions →
+                    </button>
                   </div>
-                  {s.content_url && <a href={s.content_url} target="_blank" rel="noopener noreferrer" className="hub-btn hub-btn--ghost" style={{ fontSize:'0.78rem' }}>View</a>}
-                </div>
-              ))}
-              {submissions.length === 0 && <p style={{ color:'var(--hub-muted)', textAlign:'center', padding:'2rem' }}>No submissions yet.</p>}
+                </>
+              )}
+
+              <h2 className="hub-section-title" style={{ marginTop: '1.5rem' }}>Quick Links</h2>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <Link to="/admin"              className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🛡 Full Dashboard</Link>
+                <Link to="/admin/event-requests" className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🗂 Event Requests</Link>
+                <Link to="/contests/create"    className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🏆 Create Contest</Link>
+                <Link to="/events/create"      className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>📡 Create Event</Link>
+                <Link to="/announcements"      className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>📢 Announcements</Link>
+              </div>
             </>
           )}
 
-          {/* ── Contests Management ── */}
+          {/* ── Contests ── */}
           {activeTab === 'Contests' && (
             <div>
-              <h2 className="hub-section-title">Contest Management</h2>
-              <div className="hub-table-wrap">
-                <table className="hub-table">
-                  <thead><tr><th>Contest</th><th>Status</th><th>Submissions</th><th>Votes</th><th>Revenue</th><th>Actions</th></tr></thead>
-                  <tbody>
-                    {contestData.map((c) => (
-                      <tr key={c.id}>
-                        <td>{c.emoji} {c.title}</td>
-                        <td><span className={`hub-badge hub-badge--${c.status === 'active' ? 'open' : c.status}`}>{c.status}</span></td>
-                        <td>{c.submissionCount}</td>
-                        <td>{c.voteCount}</td>
-                        <td style={{ color:'var(--hub-gold)', fontWeight:700 }}>${c.revenue.toFixed(0)}</td>
-                        <td>
-                          <select
-                            className="hub-form-input"
-                            style={{ padding:'0.25rem 0.5rem', fontSize:'0.78rem', width:'auto', display:'inline-block', marginRight:'0.5rem' }}
-                            value={c.status}
-                            onChange={(e) => handleStatusChange(c.id, e.target.value)}
-                          >
-                            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h2 className="hub-section-title" style={{ margin: 0 }}>All Contests ({contests.length})</h2>
+                <Link to="/contests/create" className="hub-btn hub-btn--gold" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>
+                  + New Contest
+                </Link>
               </div>
-            </div>
-          )}
-
-          {/* ── Ticket Tracking ── */}
-          {activeTab === 'Tickets' && (
-            <div>
-              <div style={{ display:'flex', gap:'1rem', marginBottom:'1.5rem', flexWrap:'wrap' }}>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">${totalRevenue.toFixed(0)}</div><div className="admin-hub-stat__label">Total Revenue</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{ticketsSold}</div><div className="admin-hub-stat__label">Paid Sold</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{freeIssued}</div><div className="admin-hub-stat__label">Free Issued</div></div>
-              </div>
-              {tickets.length === 0
-                ? <p style={{ color:'var(--hub-muted)', textAlign:'center', padding:'2rem' }}>No tickets sold yet.</p>
-                : (
-                  <div className="hub-table-wrap">
-                    <table className="hub-table">
-                      <thead><tr><th>Event</th><th>Type</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
-                      <tbody>
-                        {tickets.map((tk) => (
-                          <tr key={tk.id}>
-                            <td>{tk.event_title}</td>
-                            <td><span className={`hub-badge hub-badge--${tk.ticket_type}`}>{tk.ticket_type === 'free' ? 'Free' : 'Paid'}</span></td>
-                            <td style={{ color:'var(--hub-gold)', fontWeight:700 }}>{tk.ticket_type === 'free' ? 'FREE' : `$${Number(tk.amount).toFixed(2)}`}</td>
-                            <td style={{ fontSize:'0.8rem', color:'var(--hub-muted)' }}>{tk.purchased_at ? new Date(tk.purchased_at).toLocaleDateString() : '—'}</td>
-                            <td><span className={`hub-badge hub-badge--${tk.status === 'upcoming' ? 'open' : 'closed'}`}>{tk.status}</span></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              }
-            </div>
-          )}
-
-          {/* ── Vote Totals ── */}
-          {activeTab === 'Vote Totals' && (
-            <div>
-              <h2 className="hub-section-title">Vote Leaderboard</h2>
-              {contestData.map((c) => {
-                const ranked = [...(c.submissions || [])].sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
-                const maxVotes = ranked[0]?.vote_count || 1;
-                return (
-                  <div key={c.id} style={{ marginBottom:'2rem' }}>
-                    <h3 style={{ fontSize:'0.95rem', fontWeight:700, color:'var(--hub-text)', margin:'0 0 0.875rem', display:'flex', alignItems:'center', gap:'0.4rem' }}>
-                      {c.emoji} {c.title}
-                    </h3>
-                    {ranked.length === 0
-                      ? <p style={{ color:'var(--hub-muted)', fontSize:'0.85rem' }}>No submissions yet.</p>
-                      : ranked.map((s, i) => (
-                        <div key={s.id} style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.5rem' }}>
-                          <span style={{ width:'20px', textAlign:'center', fontSize:'0.85rem', color:'var(--hub-muted)', flexShrink:0 }}>
-                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
-                          </span>
-                          <span style={{ width:'140px', fontSize:'0.85rem', color:'var(--hub-text)', flexShrink:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.name}</span>
-                          <div style={{ flex:1, height:'8px', background:'rgba(255,255,255,0.07)', borderRadius:'99px', overflow:'hidden' }}>
-                            <div style={{ height:'100%', width:`${((s.vote_count || 0) / maxVotes) * 100}%`, background:'linear-gradient(90deg, var(--hub-gold), #e8940f)', borderRadius:'99px', transition:'width 0.3s' }} />
-                          </div>
-                          <span style={{ fontSize:'0.85rem', fontWeight:700, color:'var(--hub-gold)', minWidth:'40px', textAlign:'right' }}>
-                            {s.vote_count || 0}
-                          </span>
-                        </div>
-                      ))
-                    }
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ── Winner Approval ── */}
-          {activeTab === 'Winner Approval' && (
-            <div>
-              <h2 className="hub-section-title">Winner Selection</h2>
-              {contestData.map((c) => {
-                const payouts = calculatePayout(c.revenue);
-                const sorted  = [...(c.submissions || [])].sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
-                const topN    = sorted.slice(0, payouts.length);
-                return (
-                  <div key={c.id} className="hub-card" style={{ padding:'1.25rem', marginBottom:'1.25rem' }}>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.875rem', flexWrap:'wrap', gap:'0.5rem' }}>
-                      <h3 style={{ margin:0, fontSize:'1rem', fontWeight:700, color:'var(--hub-text)' }}>{c.emoji} {c.title}</h3>
-                      <div style={{ display:'flex', gap:'0.5rem', flexWrap:'wrap' }}>
-                        <span style={{ fontSize:'0.82rem', color:'var(--hub-muted)' }}>${c.revenue.toFixed(0)} revenue</span>
-                        {c.submissionCount > 0 && (
-                          <button className="hub-btn hub-btn--gold" style={{ fontSize:'0.8rem', padding:'0.3rem 0.7rem' }} onClick={() => approveWinners(c)}>
-                            Approve Winners
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    {topN.length === 0
-                      ? <p style={{ color:'var(--hub-muted)', fontSize:'0.85rem' }}>No submissions to rank.</p>
-                      : topN.map((s, i) => (
-                        <div key={s.id} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 0', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
-                          <span style={{ fontSize:'1.25rem' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
-                          <div style={{ flex:1 }}>
-                            <p style={{ margin:0, fontSize:'0.9rem', fontWeight:600, color:'var(--hub-text)' }}>{s.name}</p>
-                            <p style={{ margin:0, fontSize:'0.78rem', color:'var(--hub-muted)' }}>{s.vote_count || 0} votes</p>
-                          </div>
-                          <span style={{ fontSize:'0.9rem', fontWeight:700, color:'var(--hub-gold)' }}>${(payouts[i]?.amount || 0).toFixed(2)}</span>
-                          {s.is_winner && <span className="hub-badge hub-badge--active">✓ Approved</span>}
-                        </div>
-                      ))
-                    }
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ── Payouts ── */}
-          {activeTab === 'Payouts' && (
-            <div>
-              <h2 className="hub-section-title">Payout Triggers</h2>
-              <div style={{ display:'flex', flexDirection:'column', gap:'1rem', marginBottom:'2rem' }}>
-                {contestData.filter((c) => c.submissionCount > 0).map((c) => {
-                  const payouts = calculatePayout(c.revenue);
-                  const sorted  = [...(c.submissions || [])].sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
-                  return (
-                    <div key={c.id} className="hub-card" style={{ padding:'1.25rem' }}>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'0.75rem' }}>
-                        <div>
-                          <h3 style={{ margin:'0 0 0.25rem', fontSize:'0.95rem', fontWeight:700, color:'var(--hub-text)' }}>{c.emoji} {c.title}</h3>
-                          <p style={{ margin:0, fontSize:'0.82rem', color:'var(--hub-muted)' }}>
-                            {payouts.length} winner{payouts.length !== 1 ? 's' : ''} · ${c.revenue.toFixed(0)} prize pool
-                          </p>
-                        </div>
-                        <button
-                          className="hub-btn hub-btn--green"
-                          onClick={() => processPayout(c)}
-                          disabled={processingPayout === c.id}
-                        >
-                          {processingPayout === c.id ? '⏳ Processing…' : '💸 Process Payout'}
-                        </button>
-                      </div>
-                      <div style={{ marginTop:'0.875rem', display:'flex', flexDirection:'column', gap:'0.375rem' }}>
-                        {payouts.map((p, i) => (
-                          <div key={p.rank} style={{ display:'flex', alignItems:'center', gap:'0.5rem', fontSize:'0.85rem' }}>
-                            <span>{p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : '🥉'}</span>
-                            <span style={{ color:'var(--hub-text)' }}>{sorted[i]?.name || 'TBD'}</span>
-                            <span style={{ marginLeft:'auto', fontWeight:700, color:'var(--hub-gold)' }}>${p.amount.toFixed(2)} ({p.pct}%)</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-                {contestData.every((c) => c.submissionCount === 0) && (
-                  <p style={{ color:'var(--hub-muted)', textAlign:'center', padding:'2rem' }}>No submissions to process payouts for yet.</p>
-                )}
-              </div>
-
-              {/* Payout History */}
-              {payoutHistory.length > 0 && (
-                <>
-                  <h2 className="hub-section-title">Payout History</h2>
-                  <div className="hub-table-wrap">
-                    <table className="hub-table">
-                      <thead><tr><th>Contest</th><th>Winners</th><th>Total</th><th>Date</th></tr></thead>
-                      <tbody>
-                        {payoutHistory.map((ph, i) => (
-                          <tr key={i}>
-                            <td>{ph.contestTitle}</td>
-                            <td style={{ fontSize:'0.82rem' }}>{ph.payouts.map((p) => `${p.name} ($${p.amount.toFixed(0)})`).join(' · ')}</td>
-                            <td style={{ color:'var(--hub-gold)', fontWeight:700 }}>${ph.totalRevenue.toFixed(0)}</td>
-                            <td style={{ fontSize:'0.8rem', color:'var(--hub-muted)' }}>{ph.date}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+              {contests.length === 0 ? (
+                <p style={{ color: 'var(--hub-muted)', textAlign: 'center', padding: '2rem' }}>No contests yet.</p>
+              ) : (
+                <div className="hub-table-wrap">
+                  <table className="hub-table">
+                    <thead>
+                      <tr><th>Title</th><th>Status</th><th>Prize</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                      {contests.map((c) => (
+                        <tr key={c.id}>
+                          <td>
+                            <Link to={`/contests/${c.id}`} style={{ color: 'var(--hub-gold)', textDecoration: 'none' }}>{c.title}</Link>
+                          </td>
+                          <td><span className={`hub-badge hub-badge--${c.status || 'active'}`}>{c.status || 'active'}</span></td>
+                          <td style={{ color: 'var(--hub-gold)', fontWeight: 700 }}>
+                            {c.prize_pool > 0 ? `$${Number(c.prize_pool).toLocaleString()}` : '—'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                              {c.status === 'draft'     && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'active')}>Publish</button>}
+                              {c.status === 'active'    && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'voting')}>Open Voting</button>}
+                              {c.status === 'voting'    && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'completed')}>End</button>}
+                              <button className="admin-action-btn admin-action-btn--danger" onClick={() => updateContestStatus(c.id, 'archived')}>Archive</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
 
-          {/* ── Archive ── */}
-          {activeTab === 'Archive' && (
+          {/* ── Events ── */}
+          {activeTab === 'Events' && (
             <div>
-              <h2 className="hub-section-title">Contest Archive</h2>
-              {contestData.filter((c) => c.status === 'archived' || c.status === 'closed').length === 0
-                ? <p style={{ color:'var(--hub-muted)', textAlign:'center', padding:'2rem', fontSize:'0.875rem' }}>No archived contests yet.</p>
-                : contestData.filter((c) => c.status === 'archived' || c.status === 'closed').map((c) => (
-                  <div key={c.id} className="hub-card" style={{ padding:'1.25rem', marginBottom:'1rem' }}>
-                    <h3 style={{ margin:'0 0 0.5rem', fontSize:'0.95rem', fontWeight:700 }}>{c.emoji} {c.title}</h3>
-                    <div style={{ display:'flex', gap:'1.5rem', flexWrap:'wrap', fontSize:'0.85rem', color:'var(--hub-muted)' }}>
-                      <span>Submissions: {c.submissionCount}</span>
-                      <span>Total Votes: {c.voteCount}</span>
-                      <span style={{ color:'var(--hub-gold)', fontWeight:700 }}>Revenue: ${c.revenue.toFixed(0)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h2 className="hub-section-title" style={{ margin: 0 }}>All Events ({events.length})</h2>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <Link to="/admin/event-requests" className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.82rem' }}>Requests</Link>
+                  <Link to="/events/create"        className="hub-btn hub-btn--gold"  style={{ textDecoration: 'none', fontSize: '0.85rem' }}>+ New Event</Link>
+                </div>
+              </div>
+              {events.length === 0 ? (
+                <p style={{ color: 'var(--hub-muted)', textAlign: 'center', padding: '2rem' }}>No events yet.</p>
+              ) : (
+                <div className="hub-table-wrap">
+                  <table className="hub-table">
+                    <thead>
+                      <tr><th>Title</th><th>Mode</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                      {events.map((ev) => {
+                        const mode   = ev.event_mode || ev.event_type || '—';
+                        const status = ev.status || 'upcoming';
+                        return (
+                          <tr key={ev.id}>
+                            <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</td>
+                            <td><span className={`hub-badge hub-badge--${mode || 'open'}`}>{mode || '—'}</span></td>
+                            <td><span className={`hub-badge hub-badge--${status}`}>{status}</span></td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                <Link to={`/events/${ev.id}`} className="admin-action-btn" style={{ textDecoration: 'none' }}>View</Link>
+                                <button className="admin-action-btn admin-action-btn--danger" onClick={() => deleteEvent(ev.id)}>Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Submissions ── */}
+          {activeTab === 'Submissions' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h2 className="hub-section-title" style={{ margin: 0 }}>
+                  Event Slot Submissions
+                  {pendingSubs > 0 && (
+                    <span style={{ marginLeft: '0.5rem', background: 'rgba(245,166,35,0.2)', color: '#f5a623', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.5rem' }}>
+                      {pendingSubs} pending
+                    </span>
+                  )}
+                </h2>
+                <Link to="/admin" className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.82rem' }}>Full Submissions View →</Link>
+              </div>
+
+              {submissions.length === 0 ? (
+                <p style={{ color: 'var(--hub-muted)', textAlign: 'center', padding: '2rem' }}>No submissions yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
+                  {submissions.map((s) => {
+                    const status = s.status || 'pending';
+                    const statusColor = { approved: '#22c55e', rejected: '#f87171', pending: '#f5a623' }[status] || '#8b9fc5';
+                    return (
+                      <div key={s.id} className="admin-submission-card">
+                        <div className="admin-submission-body">
+                          <p className="admin-submission-title">{s.user_name || 'Unnamed'}</p>
+                          <p className="admin-submission-meta">{s.user_email}</p>
+                          {s.description && <p style={{ fontSize: '0.8rem', opacity: 0.55, margin: '0.15rem 0 0' }}>{s.description}</p>}
+                        </div>
+                        <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}44`, whiteSpace: 'nowrap' }}>
+                          {status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <h2 className="hub-section-title" style={{ marginTop: '0.5rem' }}>Contest Entries ({entries.length})</h2>
+              {entries.length === 0 ? (
+                <p style={{ color: 'var(--hub-muted)', fontSize: '0.85rem' }}>No contest entries yet.</p>
+              ) : (
+                <div className="hub-table-wrap">
+                  <table className="hub-table">
+                    <thead><tr><th>Entry</th><th>Contest</th><th>Votes</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {entries.slice(0, 50).map((e) => (
+                        <tr key={e.id}>
+                          <td style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title || e.submitter_email || '—'}</td>
+                          <td style={{ color: 'var(--hub-muted)', fontSize: '0.82rem' }}>{e.contests?.title || '—'}</td>
+                          <td style={{ fontWeight: 700, color: 'var(--hub-gold)' }}>{e.vote_count || 0}</td>
+                          <td><span className={`hub-badge hub-badge--${e.is_winner ? 'active' : 'open'}`}>{e.is_winner ? '🏆 Winner' : 'Entered'}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Announcements ── */}
+          {activeTab === 'Announcements' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h2 className="hub-section-title" style={{ margin: 0 }}>Announcements ({announcements.length})</h2>
+                <Link to="/announcements" className="hub-btn hub-btn--gold" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>
+                  Manage Announcements →
+                </Link>
+              </div>
+              {announcements.length === 0 ? (
+                <p style={{ color: 'var(--hub-muted)', textAlign: 'center', padding: '2rem' }}>No announcements yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {announcements.map((a) => (
+                    <div key={a.id} style={{ padding: '1rem 1.25rem', borderRadius: '12px', background: a.pinned ? 'rgba(245,166,35,0.06)' : 'rgba(255,255,255,0.03)', border: `1px solid ${a.pinned ? 'rgba(245,166,35,0.2)' : 'rgba(255,255,255,0.07)'}` }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.25rem' }}>
+                        {a.pinned && <span style={{ fontSize: '0.75rem' }}>📌</span>}
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{a.title}</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(200,200,215,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {a.body}
+                      </p>
                     </div>
-                  </div>
-                ))
-              }
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Tickets ── */}
+          {activeTab === 'Tickets' && (
+            <div>
+              <h2 className="hub-section-title" style={{ marginBottom: '1rem' }}>Free Tickets Issued ({tickets.length})</h2>
+              {tickets.length === 0 ? (
+                <p style={{ color: 'var(--hub-muted)', textAlign: 'center', padding: '2rem' }}>No tickets issued yet.</p>
+              ) : (
+                <div className="hub-table-wrap">
+                  <table className="hub-table">
+                    <thead>
+                      <tr><th>Event ID</th><th>User ID</th><th>Type</th><th>Issued</th></tr>
+                    </thead>
+                    <tbody>
+                      {tickets.slice(0, 100).map((t) => (
+                        <tr key={t.id}>
+                          <td style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>{t.event_id?.slice(0, 8)}…</td>
+                          <td style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>{t.user_id?.slice(0, 8)}…</td>
+                          <td><span className="hub-badge hub-badge--open">{t.ticket_type || 'view_only'}</span></td>
+                          <td style={{ fontSize: '0.8rem', color: 'var(--hub-muted)' }}>
+                            {t.created_at ? new Date(t.created_at).toLocaleDateString() : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </>

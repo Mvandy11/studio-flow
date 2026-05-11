@@ -4,6 +4,181 @@ import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
 
+// ── Auth helpers ────────────────────────────────────────────────
+async function getUserFromHeader(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
+  if (error || !user) return null;
+  return user;
+}
+
+async function requireAdmin(req, res) {
+  const user = await getUserFromHeader(req);
+  if (!user) { res.status(401).json({ error: 'Authentication required.' }); return null; }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profile?.role !== 'creator_admin') {
+    res.status(403).json({ error: 'Admin access required.' });
+    return null;
+  }
+  return user;
+}
+
+// ── Admin data GET routes ────────────────────────────────────────
+
+// GET /api/admin/contests
+router.get('/contests', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { data, error } = await supabase
+      .from('contests')
+      .select('*, contest_entries(count)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/events
+router.get('/events', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/announcements
+router.get('/announcements', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('*')
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/submissions
+router.get('/submissions', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const [{ data: subs }, { data: entries }] = await Promise.all([
+      supabase.from('submissions').select('*').order('created_at', { ascending: false }),
+      supabase.from('contest_entries').select('*, contests(title)').order('created_at', { ascending: false }).limit(200),
+    ]);
+
+    res.json({
+      data: {
+        submissions:     subs    || [],
+        contest_entries: entries || [],
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/categories — categories are static for now
+router.get('/categories', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const categories = [
+      { id: 'music',       label: 'Music',       icon: '🎵' },
+      { id: 'photography', label: 'Photography',  icon: '📷' },
+      { id: 'film',        label: 'Film & Video', icon: '🎬' },
+      { id: 'design',      label: 'Design',       icon: '🎨' },
+      { id: 'writing',     label: 'Writing',      icon: '✍️' },
+      { id: 'comedy',      label: 'Comedy',       icon: '😄' },
+      { id: 'education',   label: 'Education',    icon: '🎓' },
+      { id: 'other',       label: 'Other',        icon: '✦'  },
+    ];
+    res.json({ data: categories });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/academy
+router.get('/academy', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    // Try the academy_content table first, fall back gracefully
+    const { data, error } = await supabase
+      .from('academy_content')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error && error.code !== '42P01') throw error; // 42P01 = table not found
+    res.json({ data: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/subscription
+router.get('/subscription', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    // Return subscription tier info and member counts
+    const [{ count: total }, { count: premierCount }] = await Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).not('stripe_customer_id', 'is', null),
+    ]);
+
+    res.json({
+      data: {
+        total_members:   total         || 0,
+        premier_members: premierCount  || 0,
+        tiers: [
+          { id: 'free',    label: 'Free',    price: 0,  features: ['Browse & vote', 'Enter contests', 'View events'] },
+          { id: 'premier', label: 'Premier', price: 15, features: ['All Free features', 'Upload submissions', 'Custom event requests', 'Monthly reward pool entry'] },
+        ],
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Submission approval actions ──────────────────────────────────
+
 // POST /api/admin/approve
 router.post('/approve', async (req, res) => {
   try {

@@ -44,15 +44,19 @@ export default function DonationButton({ compact = false }) {
     }
   }
 
+  const STRIPE_DONATE_URL = 'https://buy.stripe.com/dRmaEZehf3JSfnm84Rb7y0p';
+
   if (compact) {
     return (
-      <button
-        onClick={() => setOpen((o) => !o)}
+      <a
+        href={STRIPE_DONATE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
         style={compactTrigger}
-        title="Support creators with a donation"
+        title="Support contest winners with a donation"
       >
         💝 Donate
-      </button>
+      </a>
     );
   }
 
