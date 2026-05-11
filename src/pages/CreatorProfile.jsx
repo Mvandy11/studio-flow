@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { isCreatorAdmin } from '../lib/roles';
 import '../styles/portfolio.css';
 
 const SOCIAL_ICONS = {
@@ -16,7 +17,7 @@ function TipJar({ creatorName }) {
       <div className="tip-jar__title">💛 Tip Jar</div>
       <p className="tip-jar__desc">Support {creatorName}'s work with a one-time tip.</p>
       {sent ? (
-        <p style={{ color:'#86efac', fontWeight:600 }}>Thank you for your support! 🙏</p>
+        <p style={{ color: '#86efac', fontWeight: 600 }}>Thank you for your support! 🙏</p>
       ) : (
         <div className="tip-jar__amounts">
           {amounts.map((a) => (
@@ -30,9 +31,93 @@ function TipJar({ creatorName }) {
   );
 }
 
+const LINK_GROUP_STYLE = {
+  marginBottom: '1.5rem',
+};
+
+const LINK_GROUP_LABEL = {
+  fontSize: '0.7rem',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.1em',
+  color: 'rgba(200,200,215,0.35)',
+  marginBottom: '0.6rem',
+};
+
+const LINK_GRID = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.5rem',
+};
+
+function ProfileLink({ to, children }) {
+  return (
+    <Link
+      to={to}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.35rem',
+        padding: '0.45rem 0.9rem',
+        borderRadius: '8px',
+        border: '1px solid rgba(255,255,255,0.09)',
+        background: 'rgba(255,255,255,0.03)',
+        color: 'rgba(220,220,235,0.85)',
+        fontSize: '0.83rem',
+        fontWeight: 500,
+        textDecoration: 'none',
+        transition: 'border-color 0.15s, background 0.15s',
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(110,168,255,0.35)';
+        e.currentTarget.style.background   = 'rgba(110,168,255,0.06)';
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)';
+        e.currentTarget.style.background   = 'rgba(255,255,255,0.03)';
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function AdminLink({ to, children }) {
+  return (
+    <Link
+      to={to}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.35rem',
+        padding: '0.45rem 0.9rem',
+        borderRadius: '8px',
+        border: '1px solid rgba(245,166,35,0.2)',
+        background: 'rgba(245,166,35,0.05)',
+        color: 'var(--accent-gold, #f5a623)',
+        fontSize: '0.83rem',
+        fontWeight: 500,
+        textDecoration: 'none',
+        transition: 'border-color 0.15s, background 0.15s',
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(245,166,35,0.45)';
+        e.currentTarget.style.background   = 'rgba(245,166,35,0.12)';
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(245,166,35,0.2)';
+        e.currentTarget.style.background   = 'rgba(245,166,35,0.05)';
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export default function CreatorProfile() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, role, logout } = useAuth();
+  const navigate = useNavigate();
 
   const [profile,  setProfile]  = useState(null);
   const [sessions, setSessions] = useState([]);
@@ -58,15 +143,20 @@ export default function CreatorProfile() {
     load();
   }, [profileId]);
 
+  async function handleLogout() {
+    await logout();
+    navigate('/');
+  }
+
   if (loading) return (
-    <div className="portfolio-page" style={{ textAlign:'center', paddingTop:'4rem' }}>
+    <div className="portfolio-page" style={{ textAlign: 'center', paddingTop: '4rem' }}>
       <div className="cinematic-spinner" />
     </div>
   );
 
   if (!profile) return (
-    <div className="portfolio-page" style={{ textAlign:'center', paddingTop:'4rem' }}>
-      <p style={{ color:'rgba(200,200,215,0.5)' }}>Creator not found.</p>
+    <div className="portfolio-page" style={{ textAlign: 'center', paddingTop: '4rem' }}>
+      <p style={{ color: 'rgba(200,200,215,0.5)' }}>Creator not found.</p>
     </div>
   );
 
@@ -88,7 +178,7 @@ export default function CreatorProfile() {
       <div className="portfolio-header">
         <div className="portfolio-avatar">
           {profile.avatar_url
-            ? <img src={profile.avatar_url} alt={displayName} style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%' }} />
+            ? <img src={profile.avatar_url} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
             : initial}
         </div>
 
@@ -145,6 +235,83 @@ export default function CreatorProfile() {
         </div>
       </div>
 
+      {/* ── Own-profile quick links ─────────────────────────────── */}
+      {isOwn && (
+        <div className="portfolio-section">
+          <h2 className="portfolio-section-title">🔗 Quick Links</h2>
+
+          {/* Creator Tools */}
+          <div style={LINK_GROUP_STYLE}>
+            <div style={LINK_GROUP_LABEL}>Creator Tools</div>
+            <div style={LINK_GRID}>
+              <ProfileLink to="/submissions">My Submissions</ProfileLink>
+              <ProfileLink to="/contests">My Contest Entries</ProfileLink>
+              <ProfileLink to="/events">My Events</ProfileLink>
+              <ProfileLink to="/hub">My Tickets</ProfileLink>
+              <ProfileLink to="/earnings">My Earnings</ProfileLink>
+            </div>
+          </div>
+
+          {/* Platform Navigation */}
+          <div style={LINK_GROUP_STYLE}>
+            <div style={LINK_GROUP_LABEL}>Platform</div>
+            <div style={LINK_GRID}>
+              <ProfileLink to="/contests">Contests</ProfileLink>
+              <ProfileLink to="/events">Custom Events</ProfileLink>
+              <ProfileLink to="/creator-academy">Academy</ProfileLink>
+              <ProfileLink to="/announcements">Announcements</ProfileLink>
+            </div>
+          </div>
+
+          {/* Account */}
+          <div style={LINK_GROUP_STYLE}>
+            <div style={LINK_GROUP_LABEL}>Account</div>
+            <div style={LINK_GRID}>
+              <ProfileLink to="/premier/settings">Edit Profile</ProfileLink>
+              <button
+                onClick={handleLogout}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  background: 'rgba(239,68,68,0.05)',
+                  color: '#fca5a5',
+                  fontSize: '0.83rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(239,68,68,0.45)';
+                  e.currentTarget.style.background   = 'rgba(239,68,68,0.12)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)';
+                  e.currentTarget.style.background   = 'rgba(239,68,68,0.05)';
+                }}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+
+          {/* Admin — creator_admin only */}
+          {isCreatorAdmin(role) && (
+            <div style={LINK_GROUP_STYLE}>
+              <div style={{ ...LINK_GROUP_LABEL, color: 'rgba(245,166,35,0.5)' }}>Admin</div>
+              <div style={LINK_GRID}>
+                <AdminLink to="/admin">Admin Dashboard</AdminLink>
+                <AdminLink to="/admin/event-requests">Event Requests</AdminLink>
+                <AdminLink to="/admin/winner-approval">Winner Approval</AdminLink>
+                <AdminLink to="/admin/payouts">Payouts</AdminLink>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Sessions gallery */}
       {sessions.length > 0 && (
         <div className="portfolio-section">
@@ -154,7 +321,7 @@ export default function CreatorProfile() {
               <Link key={s.id} to={`/session/${s.id}`} className="portfolio-session-card">
                 {s.thumbnail_url
                   ? <img src={s.thumbnail_url} alt={s.title} className="portfolio-session-thumb" loading="lazy" />
-                  : <div className="portfolio-session-thumb" style={{ background:'rgba(255,255,255,0.04)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'2rem' }}>🎬</div>
+                  : <div className="portfolio-session-thumb" style={{ background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🎬</div>
                 }
                 <div className="portfolio-session-body">
                   <p className="portfolio-session-title">{s.title}</p>
@@ -169,50 +336,30 @@ export default function CreatorProfile() {
       {events.length > 0 && (
         <div className="portfolio-section">
           <h2 className="portfolio-section-title">📅 Events</h2>
-          <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
             {events.map((ev) => (
               <Link key={ev.id} to={`/events/${ev.id}`}
-                style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.875rem 1rem', borderRadius:'12px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', textDecoration:'none', transition:'border-color 0.2s' }}
-                onMouseOver={(e) => e.currentTarget.style.borderColor='rgba(110,168,255,0.3)'}
-                onMouseOut={(e) => e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'}
+                style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', textDecoration: 'none', transition: 'border-color 0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(110,168,255,0.3)'}
+                onMouseOut={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
               >
                 {ev.thumbnail_url && (
-                  <img src={ev.thumbnail_url} alt={ev.title} style={{ width:'64px', height:'48px', objectFit:'cover', borderRadius:'8px', flexShrink:0 }} />
+                  <img src={ev.thumbnail_url} alt={ev.title} style={{ width: '64px', height: '48px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
                 )}
-                <div style={{ flex:1 }}>
-                  <p style={{ margin:0, fontSize:'0.9rem', fontWeight:600, color:'var(--text-soft)' }}>{ev.title}</p>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-soft)' }}>{ev.title}</p>
                   {ev.is_paid_event && (
-                    <p style={{ margin:'0.1rem 0 0', fontSize:'0.78rem', color:'var(--accent-gold)' }}>
+                    <p style={{ margin: '0.1rem 0 0', fontSize: '0.78rem', color: 'var(--accent-gold)' }}>
                       ${ev.ticket_price} ticket
                     </p>
                   )}
                 </div>
-                <span style={{ fontSize:'0.8rem', color:'rgba(200,200,215,0.4)' }}>→</span>
+                <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.4)' }}>→</span>
               </Link>
             ))}
           </div>
         </div>
       )}
-
-      {/* Shop (placeholder) */}
-      <div className="portfolio-section">
-        <h2 className="portfolio-section-title">🛍 Shop</h2>
-        <div className="portfolio-shop-grid">
-          {[
-            { name:'Preset Pack',   price:'$12' },
-            { name:'Template Kit',  price:'$24' },
-            { name:'Sample Pack',   price:'$8'  },
-          ].map((item) => (
-            <div key={item.name} className="portfolio-product-card">
-              <p className="portfolio-product-name">{item.name}</p>
-              <p className="portfolio-product-price">{item.price}</p>
-              <button className="portfolio-cta portfolio-cta--secondary" style={{ fontSize:'0.8rem', padding:'0.35rem 0.75rem', cursor:'pointer' }}>
-                Buy
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Tip Jar */}
       {!isOwn && <TipJar creatorName={displayName} />}
