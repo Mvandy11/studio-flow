@@ -135,8 +135,9 @@ export default function EventDetailsPage() {
     </div>
   );
 
-  const isLive       = event.event_type === 'live' || (!event.event_type && event.stage_room_id);
-  const isRecorded   = event.event_type === 'recorded';
+  const eventMode    = event.event_mode || event.event_type || (event.stage_room_id ? 'live' : 'recorded');
+  const isLive       = eventMode === 'live';
+  const isRecorded   = eventMode === 'recorded';
   const eventStatus  = event.status || 'upcoming';
   const isPaid       = event.is_paid || event.is_paid_event;
   const price        = Number(event.price ?? event.ticket_price ?? 0);

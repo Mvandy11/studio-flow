@@ -8,13 +8,8 @@ const TYPE_FILTERS = [
   { value: '',         label: 'All' },
   { value: 'live',     label: '📡 Live' },
   { value: 'recorded', label: '🎬 Recorded' },
-];
-
-const STATUS_FILTERS = [
-  { value: '',         label: 'All Status' },
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'live',     label: 'Live Now' },
-  { value: 'ended',    label: 'Ended' },
+  { value: 'upcoming', label: '📅 Upcoming' },
+  { value: 'ended',    label: '✅ Ended' },
 ];
 
 const STATUS_BADGE = {
@@ -24,12 +19,18 @@ const STATUS_BADGE = {
   cancelled: { label: '🚫 Cancelled', color: '#f87171', bg: 'rgba(248,113,113,0.08)' },
 };
 
+// Resolve event mode — supports both event_mode and legacy event_type
+function getMode(event) {
+  return event.event_mode || event.event_type || (event.stage_room_id ? 'live' : 'recorded');
+}
+
 function EventCard({ event }) {
-  const status   = event.status || 'upcoming';
-  const badge    = STATUS_BADGE[status] ?? STATUS_BADGE.upcoming;
-  const isLive   = event.event_type === 'live' || (!event.event_type && event.stage_room_id);
-  const price    = Number(event.price ?? event.ticket_price ?? 0);
-  const dateStr  = event.start_time || event.starts_at
+  const mode    = getMode(event);
+  const isLive  = mode === 'live';
+  const status  = event.computed_status || event.status || 'upcoming';
+  const badge   = STATUS_BADGE[status] ?? STATUS_BADGE.upcoming;
+  const price   = Number(event.price ?? event.ticket_price ?? 0);
+  const dateStr = (event.start_time || event.starts_at)
     ? new Date(event.start_time || event.starts_at).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric',
         hour: 'numeric', minute: '2-digit',
@@ -38,11 +39,12 @@ function EventCard({ event }) {
 
   return (
     <Link to={`/events/${event.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-      <div style={{
-        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '16px', overflow: 'hidden', height: '100%',
-        transition: 'border-color 0.2s, transform 0.2s',
-      }}
+      <div
+        style={{
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '16px', overflow: 'hidden', height: '100%',
+          transition: 'border-color 0.2s, transform 0.2s',
+        }}
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(245,166,35,0.35)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'none'; }}
       >
@@ -51,7 +53,6 @@ function EventCard({ event }) {
           {event.thumbnail_url || event.image_url
             ? <img src={event.thumbnail_url || event.image_url} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
             : (isLive ? '📡' : '🎬')}
-          {/* Live pulse indicator */}
           {status === 'live' && (
             <span style={{ position: 'absolute', top: '0.6rem', left: '0.6rem', background: '#f87171', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.05em', animation: 'pulse 2s infinite' }}>
               ● Live
@@ -60,7 +61,6 @@ function EventCard({ event }) {
         </div>
 
         <div style={{ padding: '1rem 1.125rem' }}>
-          {/* Badges */}
           <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
             <span style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700, background: badge.bg, color: badge.color, border: `1px solid ${badge.color}44` }}>
               {badge.label}
@@ -98,7 +98,6 @@ export default function EventsPage() {
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [statusFilt, setStatusFilt] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -106,8 +105,7 @@ export default function EventsPage() {
       setError('');
       try {
         const params = new URLSearchParams();
-        if (typeFilter) params.set('event_type', typeFilter);
-        if (statusFilt) params.set('status', statusFilt);
+        if (typeFilter) params.set('type', typeFilter);
         const json = await api(`/api/events?${params}`);
         setEvents(Array.isArray(json.data) ? json.data : []);
       } catch (err) {
@@ -117,15 +115,19 @@ export default function EventsPage() {
       }
     }
     load();
-  }, [typeFilter, statusFilt]);
+  }, [typeFilter]);
 
-  const liveEvents     = events.filter((e) => e.event_type === 'live'     || (!e.event_type && e.stage_room_id));
-  const recordedEvents = events.filter((e) => e.event_type === 'recorded' || (!e.event_type && !e.stage_room_id));
-  const grouped = typeFilter
+  const modeFilter = typeFilter === 'live' || typeFilter === 'recorded' ? typeFilter : null;
+  const liveEvents     = events.filter((e) => getMode(e) === 'live');
+  const recordedEvents = events.filter((e) => getMode(e) === 'recorded');
+
+  const grouped = modeFilter
+    ? [{ label: null, list: events }]
+    : typeFilter  // upcoming/ended — show flat list
     ? [{ label: null, list: events }]
     : [
-        { label: liveEvents.length     ? '📡 Live Events'     : null, list: liveEvents },
-        { label: recordedEvents.length ? '🎬 Pre‑Recorded'    : null, list: recordedEvents },
+        { label: liveEvents.length     ? '📡 Live Events'  : null, list: liveEvents },
+        { label: recordedEvents.length ? '🎬 Pre‑Recorded' : null, list: recordedEvents },
       ].filter((g) => g.list.length > 0);
 
   return (
@@ -145,15 +147,11 @@ export default function EventsPage() {
       {/* Filters */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
         {TYPE_FILTERS.map((f) => (
-          <button key={f.value} onClick={() => setTypeFilter(f.value)}
-            className={`ai-grid__filter${typeFilter === f.value ? ' ai-grid__filter--active' : ''}`}>
-            {f.label}
-          </button>
-        ))}
-        <span style={{ width: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 0.25rem' }} />
-        {STATUS_FILTERS.map((f) => (
-          <button key={f.value} onClick={() => setStatusFilt(f.value)}
-            className={`ai-grid__filter${statusFilt === f.value ? ' ai-grid__filter--active' : ''}`}>
+          <button
+            key={f.value}
+            onClick={() => setTypeFilter(f.value)}
+            className={`ai-grid__filter${typeFilter === f.value ? ' ai-grid__filter--active' : ''}`}
+          >
             {f.label}
           </button>
         ))}
@@ -174,13 +172,17 @@ export default function EventsPage() {
       ) : events.length === 0 ? (
         <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '16px', padding: '3rem 2rem' }}>
           <p style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🎟</p>
-          <p style={{ fontWeight: 700, marginBottom: '0.4rem' }}>No events scheduled yet</p>
-          <p style={{ color: 'rgba(200,200,215,0.45)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
-            Check back soon or request a custom event slot.
+          <p style={{ fontWeight: 700, marginBottom: '0.4rem' }}>
+            {typeFilter ? `No ${typeFilter} events found` : 'No events scheduled yet'}
           </p>
-          <Link to="/custom-event-request" className="btn btn--primary" style={{ textDecoration: 'none' }}>
-            Request Custom Event
-          </Link>
+          <p style={{ color: 'rgba(200,200,215,0.45)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+            {typeFilter ? 'Try a different filter or check back soon.' : 'Check back soon or request a custom event slot.'}
+          </p>
+          {!typeFilter && (
+            <Link to="/custom-event-request" className="btn btn--primary" style={{ textDecoration: 'none' }}>
+              Request Custom Event
+            </Link>
+          )}
         </div>
       ) : (
         grouped.map(({ label, list }) => (

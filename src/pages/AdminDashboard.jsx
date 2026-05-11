@@ -448,7 +448,7 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody>
                       {events.map((ev) => {
-                        const mode = ev.event_type || 'live';
+                        const mode = ev.event_mode || ev.event_type || 'live';
                         const status = ev.status || (ev.start_time && new Date(ev.start_time) < new Date() ? 'ended' : 'upcoming');
                         return (
                           <tr key={ev.id}>

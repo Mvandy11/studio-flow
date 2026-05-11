@@ -1,45 +1,53 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { isCreatorAdmin } from '../../lib/roles';
 import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api.js';
 import EarningsCalculator from '../../components/events/EarningsCalculator';
 import BackstagePassToggle from '../../components/events/BackstagePassToggle';
 
 const MEMBERSHIP_COST = 15;
 
+const MODE_OPTIONS = [
+  { value: 'live',     label: '📡 Live Stream', desc: 'Real-time broadcast with a stage room' },
+  { value: 'recorded', label: '🎬 Pre-Recorded',  desc: 'Upload a video for on-demand viewing' },
+];
+
 export default function CreateEventPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
 
   const [form, setForm] = useState({
-    title: '',
-    description: '',
+    title:         '',
+    description:   '',
     thumbnail_url: '',
+    event_mode:    'live',
     is_paid_event: false,
-    ticket_price: '',
+    ticket_price:  '',
     stage_room_id: '',
-    starts_at: '',
+    starts_at:     '',
+    video_url:     '',
   });
   const [backstagePass, setBackstagePass] = useState(false);
-  const [seatLimit, setSeatLimit] = useState(50);
-  const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [seatLimit,     setSeatLimit]     = useState(50);
+  const [saving,        setSaving]        = useState(false);
+  const [errorMsg,      setErrorMsg]      = useState('');
 
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  const showCalculator =
-    form.is_paid_event &&
-    Number(form.ticket_price) > 0;
-
-  const backstagePassEnabled = form.is_paid_event && Number(form.ticket_price) > 0;
+  const isLive     = form.event_mode === 'live';
+  const isRecorded = form.event_mode === 'recorded';
+  const showCalc   = form.is_paid_event && Number(form.ticket_price) > 0;
+  const bpEnabled  = form.is_paid_event && Number(form.ticket_price) > 0;
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!user) { setErrorMsg('You must be signed in.'); return; }
-    if (!form.title.trim()) { setErrorMsg('Title is required.'); return; }
-    if (backstagePass && backstagePassEnabled && seatLimit < 1) {
+    if (!user)              { setErrorMsg('You must be signed in.');  return; }
+    if (!form.title.trim()) { setErrorMsg('Title is required.');      return; }
+    if (backstagePass && bpEnabled && seatLimit < 1) {
       setErrorMsg('Seat limit must be at least 1.');
       return;
     }
@@ -47,33 +55,67 @@ export default function CreateEventPage() {
     setSaving(true);
     setErrorMsg('');
 
-    const roomId = form.stage_room_id.trim() || `room-${Date.now()}`;
+    try {
+      // Admin users go through the API (auth-protected, event_mode support)
+      if (isCreatorAdmin(role)) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
-    const payload = {
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      thumbnail_url: form.thumbnail_url.trim() || null,
-      is_paid_event: form.is_paid_event,
-      ticket_price: form.is_paid_event ? Number(form.ticket_price) : null,
-      stage_room_id: roomId,
-      creator_id: user.id,
-      starts_at: form.starts_at || null,
-      ...(backstagePass && backstagePassEnabled
-        ? { backstage_pass: true, seat_limit: seatLimit }
-        : { backstage_pass: false, seat_limit: null }),
-    };
+        const roomId = isLive
+          ? (form.stage_room_id.trim() || `room-${Date.now()}`)
+          : null;
 
-    const { data, error } = await supabase
-      .from('events')
-      .insert(payload)
-      .select('id')
-      .single();
+        const result = await api('/api/events', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            title:         form.title.trim(),
+            description:   form.description.trim() || null,
+            thumbnail_url: form.thumbnail_url.trim() || null,
+            event_mode:    form.event_mode,
+            is_paid:       form.is_paid_event,
+            price:         form.is_paid_event ? Number(form.ticket_price) : 0,
+            stage_room_id: roomId,
+            live_room_id:  roomId,
+            starts_at:     form.starts_at || null,
+            start_time:    form.starts_at || null,
+            video_url:     isRecorded ? form.video_url.trim() || null : null,
+            status:        'upcoming',
+          }),
+        });
 
-    setSaving(false);
+        navigate(`/events/${result.data.id}`);
+        return;
+      }
 
-    if (error) { setErrorMsg(error.message); return; }
+      // Regular users use Supabase directly (legacy path)
+      const roomId = form.stage_room_id.trim() || `room-${Date.now()}`;
+      const { data, error } = await supabase
+        .from('events')
+        .insert({
+          title:         form.title.trim(),
+          description:   form.description.trim() || null,
+          thumbnail_url: form.thumbnail_url.trim() || null,
+          event_mode:    form.event_mode,
+          is_paid_event: form.is_paid_event,
+          ticket_price:  form.is_paid_event ? Number(form.ticket_price) : null,
+          stage_room_id: roomId,
+          creator_id:    user.id,
+          starts_at:     form.starts_at || null,
+          ...(backstagePass && bpEnabled
+            ? { backstage_pass: true, seat_limit: seatLimit }
+            : { backstage_pass: false, seat_limit: null }),
+        })
+        .select('id')
+        .single();
 
-    navigate(`/events/${data.id}`);
+      if (error) throw error;
+      navigate(`/events/${data.id}`);
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -82,6 +124,38 @@ export default function CreateEventPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="cinematic-card-xl" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+          {/* Event Mode */}
+          <div>
+            <label className="cinematic-label">Event Mode *</label>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+              {MODE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => set('event_mode', opt.value)}
+                  style={{
+                    flex: 1, minWidth: '160px',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '12px',
+                    border: form.event_mode === opt.value
+                      ? '1px solid rgba(245,166,35,0.5)'
+                      : '1px solid rgba(255,255,255,0.1)',
+                    background: form.event_mode === opt.value
+                      ? 'rgba(245,166,35,0.08)'
+                      : 'rgba(255,255,255,0.03)',
+                    color: form.event_mode === opt.value ? '#f5a623' : 'rgba(200,200,215,0.7)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem' }}>{opt.label}</div>
+                  <div style={{ fontSize: '0.75rem', opacity: 0.65 }}>{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div>
             <label className="cinematic-label">Event Title *</label>
@@ -116,7 +190,9 @@ export default function CreateEventPage() {
           </div>
 
           <div>
-            <label className="cinematic-label">Start Time</label>
+            <label className="cinematic-label">
+              {isLive ? 'Start Date & Time' : 'Release Date (optional)'}
+            </label>
             <input
               type="datetime-local"
               className="cinematic-input"
@@ -125,25 +201,44 @@ export default function CreateEventPage() {
             />
           </div>
 
-          <div>
-            <label className="cinematic-label">Stage Room ID</label>
-            <input
-              className="cinematic-input"
-              placeholder="Auto-generated if left blank"
-              value={form.stage_room_id}
-              onChange={(e) => set('stage_room_id', e.target.value)}
-            />
-          </div>
+          {/* Live-only: Stage Room ID */}
+          {isLive && (
+            <div>
+              <label className="cinematic-label">Stage Room ID</label>
+              <input
+                className="cinematic-input"
+                placeholder="Auto-generated if left blank"
+                value={form.stage_room_id}
+                onChange={(e) => set('stage_room_id', e.target.value)}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.3rem' }}>
+                Used to route viewers to the correct live stage.
+              </p>
+            </div>
+          )}
+
+          {/* Recorded-only: Video URL */}
+          {isRecorded && (
+            <div>
+              <label className="cinematic-label">Video URL</label>
+              <input
+                className="cinematic-input"
+                placeholder="YouTube, Vimeo, or direct video URL"
+                value={form.video_url}
+                onChange={(e) => set('video_url', e.target.value)}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.3rem' }}>
+                Supports YouTube, Vimeo, and direct .mp4 links.
+              </p>
+            </div>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <input
               type="checkbox"
               id="is_paid"
               checked={form.is_paid_event}
-              onChange={(e) => {
-                set('is_paid_event', e.target.checked);
-                if (!e.target.checked) setBackstagePass(false);
-              }}
+              onChange={(e) => { set('is_paid_event', e.target.checked); if (!e.target.checked) setBackstagePass(false); }}
               style={{ accentColor: 'var(--accent-blue)', width: '1rem', height: '1rem', cursor: 'pointer' }}
             />
             <label htmlFor="is_paid" className="cinematic-label" style={{ margin: 0, cursor: 'pointer' }}>
@@ -167,23 +262,22 @@ export default function CreateEventPage() {
             </div>
           )}
 
-          <BackstagePassToggle
-            backstagePass={backstagePass}
-            setBackstagePass={setBackstagePass}
-            seatLimit={seatLimit}
-            setSeatLimit={setSeatLimit}
-            disabled={!backstagePassEnabled}
-          />
+          {isLive && (
+            <BackstagePassToggle
+              backstagePass={backstagePass}
+              setBackstagePass={setBackstagePass}
+              seatLimit={seatLimit}
+              setSeatLimit={setSeatLimit}
+              disabled={!bpEnabled}
+            />
+          )}
 
-          {showCalculator && (
+          {showCalc && (
             <div className="cinematic-section" style={{ marginTop: '0.25rem' }}>
               <h3 className="cinematic-subtitle" style={{ marginBottom: '1rem', fontSize: '0.9rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 Potential Earnings
               </h3>
-              <EarningsCalculator
-                ticketPrice={Number(form.ticket_price)}
-                membershipCost={MEMBERSHIP_COST}
-              />
+              <EarningsCalculator ticketPrice={Number(form.ticket_price)} membershipCost={MEMBERSHIP_COST} />
             </div>
           )}
 
@@ -194,19 +288,11 @@ export default function CreateEventPage() {
           )}
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <button
-              type="button"
-              className="cinematic-button"
-              onClick={() => navigate(-1)}
-            >
+            <button type="button" className="cinematic-button" onClick={() => navigate(-1)}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="cinematic-button-accent"
-              disabled={saving}
-            >
-              {saving ? 'Creating…' : 'Create Event'}
+            <button type="submit" className="cinematic-button-accent" disabled={saving}>
+              {saving ? 'Creating…' : isLive ? '📡 Create Live Event' : '🎬 Create Recorded Event'}
             </button>
           </div>
 
