@@ -3,6 +3,16 @@ import { login, signup, logout, getCurrentUser, onAuthStateChange } from '../lib
 import { supabase } from '../lib/supabase';
 import { ROLES } from '../lib/roles';
 
+async function fetchRole(userId) {
+  if (!userId) return ROLES.USER;
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
+  return profile?.role ?? ROLES.USER;
+}
+
 export function useAuth() {
   const [user,    setUser]    = useState(null);
   const [role,    setRole]    = useState(ROLES.USER);
@@ -10,16 +20,14 @@ export function useAuth() {
 
   async function loadUser() {
     const current = await getCurrentUser();
-    setUser(current);
 
     if (current?.id) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', current.id)
-        .maybeSingle();
-      setRole(profile?.role ?? ROLES.USER);
+      const r = await fetchRole(current.id);
+      const merged = { ...current, role: r };
+      setUser(merged);
+      setRole(r);
     } else {
+      setUser(null);
       setRole(ROLES.USER);
     }
 
@@ -31,16 +39,13 @@ export function useAuth() {
 
     const { data: listener } = onAuthStateChange(async (_event, session) => {
       const authedUser = session?.user || null;
-      setUser(authedUser);
 
       if (authedUser?.id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', authedUser.id)
-          .maybeSingle();
-        setRole(profile?.role ?? ROLES.USER);
+        const r = await fetchRole(authedUser.id);
+        setUser({ ...authedUser, role: r });
+        setRole(r);
       } else {
+        setUser(null);
         setRole(ROLES.USER);
       }
     });

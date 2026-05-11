@@ -1,0 +1,135 @@
+You are updating the Studio Flow project. Perform the following tasks in order:
+
+────────────────────────────────────────
+1. FIX LOGIN + AUTH ROLE MERGE
+────────────────────────────────────────
+Locate all authentication logic in the project, including:
+- supabase.auth.getUser()
+- supabase.auth.onAuthStateChange()
+- any custom useAuth() hooks
+- any profile fetch logic
+
+Apply the following corrections:
+
+A. After supabase.auth.getUser(), always fetch the profile row:
+   SELECT * FROM profiles WHERE id = user.id LIMIT 1;
+
+B. Merge profile.role into the user object:
+   user.role = profile.role;
+
+C. Store the merged user object in global auth context.
+
+D. Ensure admin-only UI is only shown when user.role === 'creator_admin'.
+
+E. Ensure creators can submit entries and admins cannot.
+
+F. Fix any broken redirects or missing awaits in the login flow.
+
+────────────────────────────────────────
+2. FIX DONATE BUTTON
+────────────────────────────────────────
+Search the entire project for any <button> element containing the text "Donate" or "💖 Donate".
+
+Replace it with the following anchor tag:
+
+<a
+  href="https://buy.stripe.com/dRmaEZehf3JSfnm84Rb7y0p"
+  target="_blank"
+  rel="noopener noreferrer"
+  style={{
+    padding: "0.45rem 1rem",
+    borderRadius: "8px",
+    background: "rgba(245, 166, 35, 0.12)",
+    border: "1px solid rgba(245, 166, 35, 0.3)",
+    color: "var(--accent-gold, #f5a623)",
+    fontWeight: 600,
+    fontSize: "0.85rem",
+    cursor: "pointer",
+    display: "inline-block",
+    textDecoration: "none"
+  }}
+>
+  💖 Donate
+</a>
+
+Ensure no parent <form> blocks the click.
+
+────────────────────────────────────────
+3. INSERT NEW CONTESTS INTO SUPABASE
+────────────────────────────────────────
+Insert the following contests into the "contests" table if they do not already exist:
+
+Creative:
+- Ultimate Creative Mashup
+
+Music:
+- Best Freestyle or Remix
+
+Film:
+- 60-Second Short Film Challenge
+
+Comedy:
+- Funniest Skit or Sketch
+
+Photo:
+- Photo of the Month
+
+Design:
+- Best Graphic or Poster Design
+
+General:
+- Most Viral Moment
+
+Sports:
+- Best Sports Moments
+- Best Sports Tricks
+- Best Sports Bloopers
+- Best Dunk
+- Best QB/WR Throw & Catch
+
+Use:
+INSERT INTO contests (title, description, entry_fee)
+VALUES (...)
+ON CONFLICT (title) DO NOTHING;
+
+Descriptions:
+- Ultimate Creative Mashup: "Blend any two ideas into one wild creation — video, art, or animation."
+- Best Freestyle or Remix: "Show off your flow, remix skills, or original beat."
+- 60-Second Short Film Challenge: "Tell a complete story in one minute."
+- Funniest Skit or Sketch: "Your funniest scripted or improv moment."
+- Photo of the Month: "Your most striking, artistic, or meaningful photo."
+- Best Graphic or Poster Design: "Showcase your design skills with a poster, cover, or graphic."
+- Most Viral Moment: "Any category, any style — the clip with the biggest 'wow' factor wins."
+- Best Sports Moments: "Your most impressive sports highlight."
+- Best Sports Tricks: "Show off your best trick play or skill move."
+- Best Sports Bloopers: "Your funniest sports fail or unexpected moment."
+- Best Dunk: "Your most explosive or creative dunk."
+- Best QB/WR Throw & Catch: "Your best quarterback-to-receiver highlight."
+
+────────────────────────────────────────
+4. FULL PROJECT EFFICIENCY SCAN
+────────────────────────────────────────
+Perform a full optimization pass:
+
+A. Remove unused imports, unused variables, dead code, and commented-out legacy code.
+B. Fix all broken imports and incorrect relative paths.
+C. Ensure all React components:
+   - Have correct return statements
+   - Do not contain blocking awaits
+   - Have correct useEffect dependency arrays
+   - Avoid unnecessary re-renders
+D. Validate all API routes and ensure they match the folder structure.
+E. Ensure Supabase client is initialized only once.
+F. Remove console.log spam and unused CSS.
+G. Ensure no infinite loops in data fetching.
+H. Ensure contests, entries, votes, submissions, events, and event_slots load correctly.
+
+────────────────────────────────────────
+5. RETURN A SUMMARY
+────────────────────────────────────────
+Return a complete summary of:
+- All fixes applied
+- All contests inserted
+- All login/auth issues resolved
+- All UI fixes
+- All performance improvements

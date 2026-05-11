@@ -10,21 +10,21 @@ export default function CreateSessionModal({ creatorId, onClose, onCreated }) {
   const [startTime, setStartTime] = useState('');
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
 
   async function handleCreate() {
+    setError('');
     try {
       setLoading(true);
 
-      // Step 1 — create session without thumbnail
       const session = await createSession({
-        creator_id: creatorId,
+        creator_id:     creatorId,
         title,
         description,
         livestream_url: livestreamUrl,
-        start_time: startTime,
+        start_time:     startTime,
       });
 
-      // Step 2 — upload thumbnail if present
       let thumbnailUrl = null;
       if (thumbnailFile) {
         thumbnailUrl = await uploadSessionThumbnail(thumbnailFile, session.id);
@@ -34,7 +34,7 @@ export default function CreateSessionModal({ creatorId, onClose, onCreated }) {
       onCreated({ ...session, thumbnail_url: thumbnailUrl });
       onClose();
     } catch (err) {
-      console.error('Error creating session:', err);
+      setError(err.message || 'Failed to create session.');
     } finally {
       setLoading(false);
     }
@@ -76,6 +76,10 @@ export default function CreateSessionModal({ creatorId, onClose, onCreated }) {
 
         <label>Thumbnail</label>
         <ThumbnailPicker onThumbnailSelected={setThumbnailFile} />
+
+        {error && (
+          <p style={{ color: '#f87171', fontSize: '0.85rem', margin: '0.25rem 0' }}>{error}</p>
+        )}
 
         <div className="cinematic-modal-actions">
           <button className="cinematic-button" onClick={onClose}>Cancel</button>

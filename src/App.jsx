@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Feed from './pages/Feed';
-import ProfilePage from './pages/Profile';
 import SessionPage from './pages/SessionPage';
 import Studio from './pages/Studio';
 import StudioSessions from './pages/StudioSessions';

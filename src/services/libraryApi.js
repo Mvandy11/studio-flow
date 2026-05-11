@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../lib/supabase';
 
 /**
  * Fetch AI output records from the ai_outputs table, optionally filtered by tool.
@@ -34,11 +29,15 @@ export async function fetchAiOutputs({
  * Delete a single AI output record and its storage file.
  */
 export async function deleteAiOutput(id, storagePath) {
+  const bucket = import.meta.env.VITE_SUPABASE_BUCKET || 'studio-flow-library';
+
   const { error: storageErr } = await supabase.storage
-    .from(import.meta.env.VITE_SUPABASE_BUCKET || 'studio-flow-library')
+    .from(bucket)
     .remove([storagePath]);
 
-  if (storageErr) console.warn('[libraryApi] Storage delete warning:', storageErr.message);
+  if (storageErr) {
+    console.warn('[libraryApi] Storage delete warning:', storageErr.message);
+  }
 
   const { error: dbErr } = await supabase.from('ai_outputs').delete().eq('id', id);
 
