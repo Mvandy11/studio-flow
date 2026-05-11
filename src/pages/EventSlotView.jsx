@@ -88,7 +88,7 @@ export default function EventSlotView() {
 
       const json = await api('/api/payments/create-event-payment', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer session.access_token` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body:    JSON.stringify({ event_slot_id: slotId, amount: slot.price }),
       });
 

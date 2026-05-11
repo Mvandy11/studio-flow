@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
+import { api } from '../../lib/api.js';
 import HomeTab       from './tabs/HomeTab.jsx';
 import ContestsTab   from './tabs/ContestsTab.jsx';
 import EventsTab     from './tabs/EventsTab.jsx';
@@ -27,6 +28,22 @@ export default function StudioFlowHub() {
     totalMembers:   0,
   });
 
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const [contData, evData] = await Promise.all([
+          api('/api/contests?status=active&limit=1'),
+          api('/api/events?type=upcoming'),
+        ]);
+        setStats({
+          activeContests: contData.count  ?? (contData.data?.length  ?? 0),
+          upcomingEvents: evData.data?.length ?? 0,
+          totalMembers:   0,
+        });
+      } catch (_) {}
+    }
+    loadStats();
+  }, []);
 
   return (
     <div className="hub">

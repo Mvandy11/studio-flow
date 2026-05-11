@@ -20,10 +20,9 @@ export default function EducationTab() {
 
     setRegistering(session.id);
     try {
-      const { error } = await supabase.from('hub_tickets').insert({
+      const { error } = await supabase.from('event_tickets').insert({
         user_id:     user.id,
         event_id:    session.id,
-        event_title: session.title,
         ticket_type: 'paid',
         amount:      session.price,
         status:      'upcoming',

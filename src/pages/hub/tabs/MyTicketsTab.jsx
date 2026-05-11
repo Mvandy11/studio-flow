@@ -13,12 +13,35 @@ export default function MyTicketsTab({ refreshKey }) {
     async function load() {
       setLoading(true);
       try {
-        const { data } = await supabase
-          .from('hub_tickets')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('purchased_at', { ascending: false });
-        setTickets(data || []);
+        const [{ data: paid }, { data: free }] = await Promise.all([
+          supabase
+            .from('event_tickets')
+            .select('id, event_id, ticket_type, amount, status, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('free_tickets')
+            .select('id, event_id, ticket_type, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+        ]);
+
+        const paidRows = (paid || []).map((t) => ({
+          ...t,
+          ticket_type:  t.ticket_type || 'paid',
+          event_title:  t.event_id    || 'Event',
+          purchased_at: t.created_at,
+          status:       t.status      || 'upcoming',
+        }));
+        const freeRows = (free || []).map((t) => ({
+          ...t,
+          ticket_type:  'free',
+          event_title:  t.event_id || 'Event',
+          amount:       0,
+          purchased_at: t.created_at,
+          status:       'upcoming',
+        }));
+        setTickets([...paidRows, ...freeRows]);
       } catch (_) {
         setTickets([]);
       }

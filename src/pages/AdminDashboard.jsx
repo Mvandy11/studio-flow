@@ -42,7 +42,7 @@ export default function AdminDashboard() {
     if (authLoading) return;
     if (!isCreatorAdmin(role)) { navigate('/'); return; }
     loadAll();
-  }, [authLoading, role]);
+  }, [authLoading, role, navigate]);
 
   async function getToken() {
     const { data: { session } } = await supabase.auth.getSession();

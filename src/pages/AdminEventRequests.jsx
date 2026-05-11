@@ -25,7 +25,7 @@ export default function AdminEventRequests() {
     if (authLoading) return;
     if (!isCreatorAdmin(role)) { navigate('/'); return; }
     load();
-  }, [authLoading, role]);
+  }, [authLoading, role, navigate]);
 
   async function load() {
     setLoading(true);

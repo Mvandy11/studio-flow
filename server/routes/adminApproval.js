@@ -182,6 +182,9 @@ router.get('/subscription', async (req, res) => {
 // POST /api/admin/approve
 router.post('/approve', async (req, res) => {
   try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
     const { submission_id, user_id, title, password, request_id } = req.body;
 
     if (!submission_id || !title || !password) {
@@ -248,6 +251,9 @@ Use this password to upload your content to your event slot.
 // POST /api/admin/reject
 router.post('/reject', async (req, res) => {
   try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
     const { submission_id, reason } = req.body;
 
     if (!submission_id) {

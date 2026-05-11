@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { api } from '../lib/api.js';
 import { format } from 'date-fns';
+import { supabase } from '../lib/supabase';
 
 export default function AnnouncementsPage() {
   const { user, role } = useAuth();
@@ -40,7 +41,7 @@ export default function AnnouncementsPage() {
   useEffect(() => { load(); }, []);
 
   async function getToken() {
-    const { data: { session } } = await import('../lib/supabase').then(m => m.supabase.auth.getSession());
+    const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token;
   }
 
@@ -52,10 +53,7 @@ export default function AnnouncementsPage() {
     setSaving(true);
     setFormError('');
     try {
-      const { supabase: sb } = await import('../lib/supabase');
-      const { data: { session } } = await sb.auth.getSession();
-      const token = session?.access_token;
-
+      const token  = await getToken();
       const path   = editingId ? `/api/announcements/${editingId}` : '/api/announcements';
       const method = editingId ? 'PATCH' : 'POST';
 
@@ -76,9 +74,7 @@ export default function AnnouncementsPage() {
   async function handleDelete(id) {
     if (!confirm('Delete this announcement?')) return;
     try {
-      const { supabase: sb } = await import('../lib/supabase');
-      const { data: { session } } = await sb.auth.getSession();
-      const token = session?.access_token;
+      const token = await getToken();
       await api(`/api/announcements/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },

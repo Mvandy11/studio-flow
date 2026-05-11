@@ -39,7 +39,6 @@ import SubmissionsPage from './pages/SubmissionsPage';
 import EventSlotView from './pages/EventSlotView';
 import SubscriptionPage from './pages/Subscription';
 import AdminEventRequests from './pages/AdminEventRequests';
-// Dev-mode pages (TypeScript, mock data, no real Supabase)
 import Dashboard from './pages/Dashboard.tsx';
 import DevSessionEditor from './pages/SessionEditor.tsx';
 import DevFeed from './pages/Feed.tsx';
