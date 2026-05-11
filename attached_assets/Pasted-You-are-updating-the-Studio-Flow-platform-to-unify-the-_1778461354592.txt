@@ -1,0 +1,179 @@
+You are updating the Studio Flow platform to unify the Supabase schema, fix all Events and Contests functionality, remove dashboard errors, and ensure the creator-admin role has full platform control.
+
+Perform the following tasks:
+
+────────────────────────────────────────
+1. SUPABASE SCHEMA — APPLY CORRECT STRUCTURE
+────────────────────────────────────────
+
+A. EVENTS TABLE
+Ensure the events table contains the following columns:
+
+- id (uuid)
+- title (text)
+- description (text)
+- event_date (timestamp)
+- event_mode (text)  -- 'live' or 'recorded'
+- created_by (uuid)
+- created_at (timestamp)
+- updated_at (timestamp)
+- video_url (text)      -- for recorded events
+- stream_key (text)     -- for live events
+- stream_url (text)     -- for live events
+
+If any are missing, generate SQL migrations and apply them.
+
+IMPORTANT:
+- Remove all references to the old "event_type" column.
+- If the migration file server/db/migrations/add_event_type_columns.sql exists, run its SQL in Supabase or update it to create "event_mode" instead of "event_type".
+
+B. CONTESTS TABLE
+Ensure contests table includes:
+
+- id
+- title
+- description
+- category
+- entry_fee
+- start_date
+- end_date
+- created_at
+- updated_at
+
+Ensure contest_entries and contest_votes tables exist and match expected schema.
+
+C. ANNOUNCEMENTS TABLE
+Ensure announcements table includes:
+
+- id
+- title
+- body
+- created_at
+- pinned (boolean)
+
+D. SUBMISSIONS TABLE
+Ensure submissions table includes:
+
+- id
+- user_id
+- contest_id (nullable)
+- event_id (nullable)
+- video_url
+- created_at
+- status ('pending', 'approved', 'rejected')
+
+────────────────────────────────────────
+2. BACKEND ROUTES — FIX EVENTS, CONTESTS, ANNOUNCEMENTS
+────────────────────────────────────────
+
+A. EVENTS ROUTES
+Update all backend routes that query events:
+
+- Replace all "event_type" references with "event_mode".
+- Support filtering:
+    ?type=live → event_mode = 'live'
+    ?type=recorded → event_mode = 'recorded'
+    ?type=upcoming → event_date > now()
+    ?type=ended → event_date < now()
+
+Fix any errors appearing in the Events dashboard.
+
+B. EVENT APPROVAL WORKFLOW
+When an admin approves an event request:
+- Create a new event row
+- Set event_mode = null initially
+- Generate stream_key and stream_url for live events
+- Allow customer to choose:
+    "Start Live Event" → set event_mode = 'live'
+    "Upload Recorded Event" → set event_mode = 'recorded'
+
+C. CONTEST ROUTES
+Ensure creator-admin can:
+- Create contests
+- Edit contests
+- Delete contests
+- Approve contest submissions
+- View all submissions
+
+Fix any missing or broken routes.
+
+D. ANNOUNCEMENT ROUTES
+Ensure creator-admin can:
+- Create announcements
+- Edit announcements
+- Delete announcements
+- Pin announcements
+
+E. SUBMISSION ROUTES
+Ensure creator-admin can:
+- View all submissions
+- Approve or reject submissions
+- Feature submissions
+
+────────────────────────────────────────
+3. FRONTEND FIXES — DASHBOARD + ADMIN UI
+────────────────────────────────────────
+
+A. EVENTS DASHBOARD
+Fix the Events tab so:
+- No Supabase errors appear
+- Filters work correctly
+- Live and Recorded events display
+- “No events scheduled yet” only appears when appropriate
+
+B. CREATOR-ADMIN UI
+Ensure admin-only buttons appear for:
+- Creating contests
+- Creating announcements
+- Approving events
+- Managing submissions
+- Managing categories
+- Managing academy content
+
+C. CUSTOMER EVENT SLOT
+Ensure customers see:
+- “Start Live Event”
+- “Upload Recorded Event”
+after their event request is approved.
+
+────────────────────────────────────────
+4. AUTH & PERMISSIONS — CREATOR-ADMIN
+────────────────────────────────────────
+
+Ensure the creator-admin role is enforced consistently across:
+
+- Supabase auth metadata
+- Supabase RLS policies
+- Backend middleware
+- Frontend UI checks
+
+Only creator-admin should access admin routes.
+
+────────────────────────────────────────
+5. CLEANUP
+────────────────────────────────────────
+
+- Remove all references to deprecated event_type.
+- Remove any unused legacy event code.
+- Ensure no backend code references missing columns.
+- Remove any leftover errors in the Events dashboard.
+
+────────────────────────────────────────
+6. VALIDATION
+────────────────────────────────────────
+
+Confirm:
+
+- Events dashboard loads with no errors.
+- Live/Recorded event creation works.
+- Admin can create contests.
+- Admin can create announcements.
+- Admin can approve events.
+- Admin can manage submissions.
+- No Supabase errors appear anywhere.
+
+────────────────────────────────────────
+7. COMMIT & PUSH
+────────────────────────────────────────
+
+Commit all changes and push to GitHub.

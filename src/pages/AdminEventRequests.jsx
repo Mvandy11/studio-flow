@@ -120,7 +120,7 @@ export default function AdminEventRequests() {
           <div style={modalCard}>
             <h3 style={{ margin: '0 0 0.25rem', fontWeight: 700 }}>Approve: {approving.title}</h3>
             <p style={{ color: 'rgba(200,200,215,0.55)', fontSize: '0.85rem', margin: '0 0 1.25rem' }}>
-              Set the slot title and a unique upload password for this creator.
+              This will create an event slot <strong>and</strong> a draft event row. The creator will then choose "Start Live Event" or "Upload Recorded Video" from their slot page.
             </p>
 
             <label style={label}>Slot Title</label>
@@ -139,6 +139,10 @@ export default function AdminEventRequests() {
               onChange={(e) => setSlotPassword(e.target.value)}
               style={input}
             />
+
+            <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.875rem', background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '8px', fontSize: '0.78rem', color: 'rgba(200,200,215,0.55)' }}>
+              🔑 A unique stream key will be auto-generated for the creator's live events.
+            </div>
 
             {saveError && <div style={errorBox}>{saveError}</div>}
 

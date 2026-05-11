@@ -149,10 +149,14 @@ router.post('/create-slot', async (req, res) => {
       return res.status(400).json({ error: 'user_id, title, and password are required.' });
     }
 
-    const { data, error } = await supabase
+    const slotId    = randomUUID();
+    const streamKey = `sf-${randomUUID()}`;
+
+    // 1. Create the event_slot
+    const { data: slot, error: slotErr } = await supabase
       .from('event_slots')
       .insert({
-        id:         randomUUID(),
+        id:         slotId,
         user_id,
         request_id: request_id || null,
         title:      title.trim(),
@@ -161,8 +165,32 @@ router.post('/create-slot', async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
-    res.status(201).json({ slot: data });
+    if (slotErr) throw slotErr;
+
+    // 2. Pre-create an events row linked to this slot via live_room_id.
+    //    event_mode is null — the creator will choose Live or Recorded later.
+    const { data: event, error: eventErr } = await supabase
+      .from('events')
+      .insert({
+        id:            randomUUID(),
+        title:         title.trim(),
+        created_by:    user_id,
+        creator_id:    user_id,
+        event_mode:    null,
+        stream_key:    streamKey,
+        live_room_id:  slotId,  // links back to the slot
+        stage_room_id: slotId,
+        status:        'upcoming',
+      })
+      .select()
+      .single();
+
+    // Non-fatal if events row creation fails (migration may not have run yet)
+    if (eventErr) {
+      console.error('[create-slot] events row error (run unify_schema_v2.sql migration):', eventErr.message);
+    }
+
+    res.status(201).json({ slot, event: event || null, stream_key: streamKey });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
