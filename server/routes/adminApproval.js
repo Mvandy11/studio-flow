@@ -99,13 +99,9 @@ router.get('/submissions', async (req, res) => {
       .order('created_at', { ascending: false })
       .limit(200);
 
-    const subs    = (allSubs || []).filter((s) => !s.contest_id);
-    const entries = (allSubs || []).filter((s) => !!s.contest_id);
-
     res.json({
       data: {
-        submissions:     subs,
-        contest_entries: entries,
+        submissions: allSubs || [],
       },
     });
   } catch (err) {

@@ -46,8 +46,9 @@ export default function AdminTab() {
 
       setContests(contResult.data || []);
       setEvents(evResult.data || []);
-      setSubmissions(subResult.data?.submissions || []);
-      setEntries(subResult.data?.contest_entries || subResult.data?.submissions?.filter(s => s.contest_id) || []);
+      const allSubs = subResult.data?.submissions || [];
+      setSubmissions(allSubs.filter((s) => !s.contest_id));
+      setEntries(allSubs.filter((s) => !!s.contest_id));
 
       // Announcements
       const annResult = await api('/api/announcements');

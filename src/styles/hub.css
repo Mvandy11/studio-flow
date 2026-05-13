@@ -249,12 +249,6 @@
   font-weight: 700;
   color: var(--hub-text);
 }
-.contest-card-hub__countdown {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--hub-gold);
-}
-
 /* Payout section */
 .payout-section {
   padding: 1rem 1.25rem;
