@@ -138,7 +138,6 @@ export default function AdminTab() {
   // ── Stats ──
   const pendingSubs  = submissions.filter((s) => !s.status || s.status === 'pending').length;
   const activeEvents = events.filter((e) => e.status === 'upcoming' || !e.status).length;
-  const totalVotes   = entries.reduce((sum, e) => sum + (e.vote_count || 0), 0);
 
   return (
     <div className="hub-content hub-content--wide">
@@ -186,7 +185,7 @@ export default function AdminTab() {
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{contests.length}</div><div className="admin-hub-stat__label">Contests</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{activeEvents}</div><div className="admin-hub-stat__label">Active Events</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{submissions.length}</div><div className="admin-hub-stat__label">Submissions</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{totalVotes}</div><div className="admin-hub-stat__label">Contest Votes</div></div>
+                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{entries.length}</div><div className="admin-hub-stat__label">Contest Entries</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{pendingSubs}</div><div className="admin-hub-stat__label">Pending Review</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{announcements.length}</div><div className="admin-hub-stat__label">Announcements</div></div>
               </div>
@@ -240,24 +239,26 @@ export default function AdminTab() {
                 <div className="hub-table-wrap">
                   <table className="hub-table">
                     <thead>
-                      <tr><th>Title</th><th>Status</th><th>Prize</th><th>Actions</th></tr>
+                      <tr><th>Title</th><th>Category</th><th>Prize</th><th>Actions</th></tr>
                     </thead>
                     <tbody>
                       {contests.map((c) => (
                         <tr key={c.id}>
                           <td>
                             <Link to={`/contests/${c.id}`} style={{ color: 'var(--hub-gold)', textDecoration: 'none' }}>{c.title}</Link>
+                            {c.status === 'draft' && (
+                              <span style={{ marginLeft: '0.5rem', fontSize: '0.68rem', color: 'var(--hub-muted)', fontStyle: 'italic' }}>draft</span>
+                            )}
                           </td>
-                          <td><span className={`hub-badge hub-badge--${c.status || 'active'}`}>{c.status || 'active'}</span></td>
+                          <td style={{ color: 'var(--hub-muted)', fontSize: '0.82rem' }}>{c.category || '—'}</td>
                           <td style={{ color: 'var(--hub-gold)', fontWeight: 700 }}>
                             {c.prize_pool > 0 ? `$${Number(c.prize_pool).toLocaleString()}` : '—'}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                              {c.status === 'draft'     && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'active')}>Publish</button>}
-                              {c.status === 'active'    && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'voting')}>Open Voting</button>}
-                              {c.status === 'voting'    && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'completed')}>End</button>}
-                              <button className="admin-action-btn admin-action-btn--danger" onClick={() => updateContestStatus(c.id, 'archived')}>Archive</button>
+                              {c.status === 'draft' && (
+                                <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'active')}>Publish</button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -356,14 +357,13 @@ export default function AdminTab() {
               ) : (
                 <div className="hub-table-wrap">
                   <table className="hub-table">
-                    <thead><tr><th>Entry</th><th>Contest</th><th>Votes</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Entry</th><th>Contest</th><th>Status</th></tr></thead>
                     <tbody>
                       {entries.slice(0, 50).map((e) => (
                         <tr key={e.id}>
-                          <td style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title || e.submitter_email || '—'}</td>
+                          <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title || e.user_name || '—'}</td>
                           <td style={{ color: 'var(--hub-muted)', fontSize: '0.82rem' }}>{e.contests?.title || '—'}</td>
-                          <td style={{ fontWeight: 700, color: 'var(--hub-gold)' }}>{e.vote_count || 0}</td>
-                          <td><span className={`hub-badge hub-badge--${e.is_winner ? 'active' : 'open'}`}>{e.is_winner ? '🏆 Winner' : 'Entered'}</span></td>
+                          <td><span className={`hub-badge hub-badge--${e.status === 'approved' ? 'active' : 'open'}`}>{e.status || 'pending'}</span></td>
                         </tr>
                       ))}
                     </tbody>

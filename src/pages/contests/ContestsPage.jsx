@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
+import { supabase } from '../../lib/supabase.js';
 import ContestCard from '../../components/contests/ContestCard';
 import DonationButton from '../../components/DonationButton';
 import '../../styles/contests.css';
 import '../../styles/library-ai-grid.css';
-import { api } from '../../lib/api.js';
 
 const CATEGORY_FILTERS = [
   { value: '',          label: 'All Categories' },
@@ -31,10 +31,23 @@ export default function ContestsPage() {
       setLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ limit: '50', status: 'active' });
-        if (category) params.set('category', category);
-        const { data } = await api(`/api/contests?${params}`);
-        setContests(data);
+        let query = supabase
+          .from('contest_leaderboard')
+          .select('*')
+          .order('submission_count', { ascending: false })
+          .limit(100);
+
+        if (category) query = query.eq('category', category);
+
+        const { data, error: qErr } = await query;
+        if (qErr) throw new Error(qErr.message);
+
+        // Normalise: some views expose `contest_id` rather than `id`
+        const rows = (data || []).map((r) => ({
+          ...r,
+          id: r.id ?? r.contest_id,
+        }));
+        setContests(rows);
       } catch (err) {
         setError(err.message);
       } finally {
