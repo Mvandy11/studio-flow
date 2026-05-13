@@ -32,8 +32,9 @@ export default function ContestsPage() {
       setError(null);
       try {
         let query = supabase
-          .from('admin_contest_dashboard')
+          .from('contests')
           .select('*')
+          .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(100);
 
@@ -42,12 +43,7 @@ export default function ContestsPage() {
         const { data, error: qErr } = await query;
         if (qErr) throw new Error(qErr.message);
 
-        // Normalise: some views expose `contest_id` rather than `id`
-        const rows = (data || []).map((r) => ({
-          ...r,
-          id: r.id ?? r.contest_id,
-        }));
-        setContests(rows);
+        setContests(data || []);
       } catch (err) {
         setError(err.message);
       } finally {

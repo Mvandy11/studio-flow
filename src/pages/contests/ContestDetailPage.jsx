@@ -38,23 +38,20 @@ export default function ContestDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      // Load contest metadata + enriched stats in parallel
+      // Load contest metadata, submissions, and winners in parallel
       const [
         { data: contestRow, error: contestErr },
-        { data: dashRow },
         { data: feed, error: feedErr },
         { data: w },
       ] = await Promise.all([
         supabase.from('contests').select('*').eq('id', id).single(),
-        supabase.from('admin_contest_dashboard').select('*').eq('contest_id', id).maybeSingle(),
         supabase.from('contest_submission_feed').select('*').eq('contest_id', id).order('like_count', { ascending: false }),
         supabase.from('winners').select('submission_id, rank').eq('contest_id', id),
       ]);
 
       if (contestErr || !contestRow) throw new Error(contestErr?.message || 'Contest not found.');
 
-      // Merge enriched dashboard stats into the contest object
-      setContest({ ...contestRow, ...(dashRow || {}) });
+      setContest(contestRow);
 
       // Entries: use feed if available, otherwise fall back to submissions table
       let loadedEntries = [];
