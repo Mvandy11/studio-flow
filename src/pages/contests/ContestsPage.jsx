@@ -8,13 +8,6 @@ import '../../styles/contests.css';
 import '../../styles/library-ai-grid.css';
 import { api } from '../../lib/api.js';
 
-const STATUS_FILTERS = [
-  { value: '',          label: 'All' },
-  { value: 'active',    label: 'Open' },
-  { value: 'voting',    label: 'Voting' },
-  { value: 'completed', label: 'Ended' },
-];
-
 const CATEGORY_FILTERS = [
   { value: '',          label: 'All Categories' },
   { value: 'creative',  label: 'Creative' },
@@ -31,7 +24,6 @@ export default function ContestsPage() {
   const [contests,  setContests]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
-  const [filter,    setFilter]    = useState('');
   const [category,  setCategory]  = useState('');
 
   useEffect(() => {
@@ -39,8 +31,7 @@ export default function ContestsPage() {
       setLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ limit: '50' });
-        if (filter)   params.set('status', filter);
+        const params = new URLSearchParams({ limit: '50', status: 'active' });
         if (category) params.set('category', category);
         const { data } = await api(`/api/contests?${params}`);
         setContests(data);
@@ -51,32 +42,20 @@ export default function ContestsPage() {
       }
     }
     load();
-  }, [filter, category]);
+  }, [category]);
 
   return (
     <div className="page-container">
       <div className="page-header" style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1rem', flexWrap:'wrap' }}>
         <div>
           <h1 className="page-title">🏆 Contests</h1>
-          <p className="page-subtitle">Submit your work, like your favorites, and win prizes. Winners are selected by the admin based on likes and quality.</p>
+          <p className="page-subtitle">Submit your work, like your favorites, and win prizes. Contests never close — winners are selected by the admin based on likes and quality.</p>
         </div>
         {isCreatorAdmin(role) && (
           <Link to="/contests/create" className="btn btn--primary" style={{ textDecoration:'none' }}>
             + Create Contest
           </Link>
         )}
-      </div>
-
-      <div className="ai-grid__filters" style={{ marginBottom:'0.75rem' }}>
-        {STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            className={`ai-grid__filter${filter === f.value ? ' ai-grid__filter--active' : ''}`}
-            onClick={() => setFilter(f.value)}
-          >
-            {f.label}
-          </button>
-        ))}
       </div>
 
       <div className="ai-grid__filters" style={{ marginBottom:'1.5rem' }}>
@@ -119,7 +98,6 @@ export default function ContestsPage() {
         </div>
       )}
 
-      {/* Donation section */}
       {!loading && (
         <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
           <p style={{ textAlign: 'center', color: 'rgba(200,200,215,0.5)', fontSize: '0.9rem', maxWidth: '400px' }}>

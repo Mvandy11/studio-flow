@@ -4,7 +4,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
 import { supabase } from '../../lib/supabase';
 import { api } from '../../lib/api.js';
-import { format } from 'date-fns';
 import '../../styles/contests.css';
 import '../../styles/portfolio.css';
 
@@ -14,12 +13,12 @@ export default function ContestDetailPage() {
   const { user, role } = useAuth();
   const isAdmin = isCreatorAdmin(role);
 
-  const [contest,   setContest]   = useState(null);
-  const [entries,   setEntries]   = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(null);
+  const [contest,       setContest]       = useState(null);
+  const [entries,       setEntries]       = useState([]);
+  const [winners,       setWinners]       = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState(null);
 
-  // submission form
   const [subTitle,    setSubTitle]    = useState('');
   const [subDesc,     setSubDesc]     = useState('');
   const [subFile,     setSubFile]     = useState(null);
@@ -28,21 +27,63 @@ export default function ContestDetailPage() {
   const [subSuccess,  setSubSuccess]  = useState(false);
   const fileRef = useRef(null);
 
-  // likes state: { [entryId]: count }
-  const [likeCounts,   setLikeCounts]   = useState({});
   const [likedEntries, setLikedEntries] = useState(new Set());
   const [liking,       setLiking]       = useState(null);
-
-  // admin winner marking
-  const [markingWinner, setMarkingWinner] = useState(null); // entryId being updated
+  const [markingWinner, setMarkingWinner] = useState(null);
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
-      const { contest: c, entries: e } = await api(`/api/contests/${id}`);
+      const { contest: c } = await api(`/api/contests/${id}`);
       setContest(c);
-      setEntries(e);
+
+      // Load entries: prefer contest_submission_feed (has like_count pre-aggregated)
+      let loadedEntries = [];
+      const { data: feed, error: feedErr } = await supabase
+        .from('contest_submission_feed')
+        .select('*')
+        .eq('contest_id', id)
+        .order('like_count', { ascending: false });
+
+      if (!feedErr && feed && feed.length > 0) {
+        loadedEntries = feed;
+      } else {
+        // Fallback: load from submissions, compute like_count from likes
+        const [{ data: subs }, { data: likeCounts }] = await Promise.all([
+          supabase.from('submissions').select('*').eq('contest_id', id).order('created_at', { ascending: false }),
+          supabase.from('likes').select('entry_id').in('entry_id',
+            (await supabase.from('submissions').select('id').eq('contest_id', id)).data?.map(s => s.id) || []
+          ),
+        ]);
+        const countMap = {};
+        for (const row of (likeCounts || [])) {
+          countMap[row.entry_id] = (countMap[row.entry_id] || 0) + 1;
+        }
+        loadedEntries = (subs || []).map(s => ({ ...s, like_count: countMap[s.id] || 0 }))
+          .sort((a, b) => b.like_count - a.like_count);
+      }
+      setEntries(loadedEntries);
+
+      // Load winners
+      const { data: w } = await supabase
+        .from('winners')
+        .select('submission_id, rank')
+        .eq('contest_id', id);
+      setWinners(w || []);
+
+      // Load user's likes
+      if (user) {
+        const entryIds = loadedEntries.map(e => e.id);
+        if (entryIds.length > 0) {
+          const { data: myLikes } = await supabase
+            .from('likes')
+            .select('entry_id')
+            .eq('user_id', user.id)
+            .in('entry_id', entryIds);
+          if (myLikes) setLikedEntries(new Set(myLikes.map(r => r.entry_id)));
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,40 +91,7 @@ export default function ContestDetailPage() {
     }
   }
 
-  useEffect(() => { load(); }, [id]);
-
-  // Load like counts for all entries
-  useEffect(() => {
-    if (entries.length === 0) return;
-    const ids = entries.map((e) => e.id);
-
-    supabase
-      .from('likes')
-      .select('entry_id')
-      .in('entry_id', ids)
-      .then(({ data }) => {
-        if (!data) return;
-        const counts = {};
-        for (const row of data) {
-          counts[row.entry_id] = (counts[row.entry_id] || 0) + 1;
-        }
-        setLikeCounts(counts);
-        setEntries((prev) =>
-          [...prev].sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))
-        );
-      });
-
-    if (user) {
-      supabase
-        .from('likes')
-        .select('entry_id')
-        .in('entry_id', ids)
-        .eq('user_id', user.id)
-        .then(({ data }) => {
-          if (data) setLikedEntries(new Set(data.map((r) => r.entry_id)));
-        });
-    }
-  }, [entries.length, user]);
+  useEffect(() => { load(); }, [id, user?.id]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -135,16 +143,11 @@ export default function ContestDetailPage() {
         if (isLiked) next.delete(entryId); else next.add(entryId);
         return next;
       });
-      setLikeCounts((prev) => ({
-        ...prev,
-        [entryId]: Math.max(0, (prev[entryId] || 0) + (isLiked ? -1 : 1)),
-      }));
       setEntries((prev) =>
-        [...prev].sort((a, b) => {
-          const ca = (likeCounts[b.id] || 0) + (b.id === entryId && !isLiked ? 1 : b.id === entryId && isLiked ? -1 : 0);
-          const cb = (likeCounts[a.id] || 0) + (a.id === entryId && !isLiked ? 1 : a.id === entryId && isLiked ? -1 : 0);
-          return ca - cb;
-        })
+        prev.map((e) => e.id === entryId
+          ? { ...e, like_count: Math.max(0, (e.like_count || 0) + (isLiked ? -1 : 1)) }
+          : e
+        ).sort((a, b) => (b.like_count || 0) - (a.like_count || 0))
       );
     } catch (err) {
       alert(err.message);
@@ -158,12 +161,13 @@ export default function ContestDetailPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const isAlreadyWinner = entry.is_winner && entry.winner_rank === rank;
+      const existingWinner = winners.find(w => w.submission_id === entry.id);
+      const isAlreadyThisRank = existingWinner?.rank === rank;
       await api(`/api/contests/${id}/entries/${entry.id}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          isAlreadyWinner
+          isAlreadyThisRank
             ? { is_winner: false, winner_rank: null }
             : { is_winner: true,  winner_rank: rank }
         ),
@@ -189,9 +193,6 @@ export default function ContestDetailPage() {
     </div>
   );
 
-  const canSubmit  = contest.status === 'active' || contest.status === 'draft';
-  const isCompleted = contest.status === 'completed' || contest.status === 'voting';
-
   return (
     <div className="page-container">
       {contest.thumbnail_url && (
@@ -200,14 +201,13 @@ export default function ContestDetailPage() {
 
       <h1 className="page-title">{contest.title}</h1>
 
-      {/* Admin badge */}
       {isAdmin && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#f2c98f', background: 'rgba(242,201,143,0.1)', border: '1px solid rgba(242,201,143,0.25)', borderRadius: '4px', padding: '0.2rem 0.55rem' }}>
             🛡 Admin View
           </span>
           <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.45)' }}>
-            Click 🥇 🥈 🥉 on any entry to toggle its winner status.
+            Click 🥇 🥈 🥉 on any submission to set its winner rank.
           </span>
         </div>
       )}
@@ -222,7 +222,7 @@ export default function ContestDetailPage() {
           </div>
         )}
         <div className="contest-detail__stat">
-          <div className="contest-detail__stat-label">Entries</div>
+          <div className="contest-detail__stat-label">Submissions</div>
           <div className="contest-detail__stat-value">{entries.length}</div>
         </div>
         {contest.winner_count > 1 && (
@@ -231,14 +231,10 @@ export default function ContestDetailPage() {
             <div className="contest-detail__stat-value">Top {contest.winner_count}</div>
           </div>
         )}
-        {contest.submission_end && (
-          <div className="contest-detail__stat">
-            <div className="contest-detail__stat-label">Submissions Close</div>
-            <div className="contest-detail__stat-value">
-              {format(new Date(contest.submission_end), 'MMM d, yyyy')}
-            </div>
-          </div>
-        )}
+        <div className="contest-detail__stat">
+          <div className="contest-detail__stat-label">Status</div>
+          <div className="contest-detail__stat-value" style={{ color: '#86efac', fontWeight: 700 }}>Always Open</div>
+        </div>
       </div>
 
       {contest.description && (
@@ -246,7 +242,7 @@ export default function ContestDetailPage() {
       )}
 
       {/* ── Submission Form ── */}
-      {canSubmit && user && !subSuccess && (
+      {user && !subSuccess && (
         <div className="contest-submit-form">
           <h2 className="contest-submit-form__title">Submit Your Entry</h2>
           {subError && <p style={{ color:'#fca5a5', margin:0 }}>{subError}</p>}
@@ -308,53 +304,64 @@ export default function ContestDetailPage() {
         </div>
       )}
 
-      {canSubmit && !user && (
+      {!user && (
         <div style={{ padding:'1rem', borderRadius:'12px', background:'rgba(110,168,255,0.08)', border:'1px solid rgba(110,168,255,0.2)', color:'var(--accent-blue)', marginBottom:'1.5rem', textAlign:'center' }}>
           Log in to submit your entry.
         </div>
       )}
 
-      {/* ── Entries (sorted by likes) ── */}
+      {/* ── Submissions (sorted by likes) ── */}
       {entries.length > 0 && (
         <div className="portfolio-section">
           <h2 className="portfolio-section-title">
-            {isCompleted ? '🥇 Results' : `Entries (${entries.length})`}
+            Submissions ({entries.length})
           </h2>
-          {!isCompleted && (
-            <p style={{ fontSize:'0.82rem', color:'rgba(200,200,215,0.5)', marginBottom:'1rem' }}>
-              Sorted by most liked. Winners are selected by the admin based on likes and quality.
-            </p>
-          )}
+          <p style={{ fontSize:'0.82rem', color:'rgba(200,200,215,0.5)', marginBottom:'1rem' }}>
+            Sorted by most liked. Winners are selected by the admin based on likes and quality.
+          </p>
           <div className="contest-entries-grid">
             {entries.map((entry) => {
-              const count   = likeCounts[entry.id] || 0;
-              const isLiked = likedEntries.has(entry.id);
-              const isBusy  = markingWinner === entry.id;
+              const count        = entry.like_count || 0;
+              const isLiked      = likedEntries.has(entry.id);
+              const isBusy       = markingWinner === entry.id;
+              const entryWinner  = winners.find(w => w.submission_id === entry.id);
+              const isWinner     = !!entryWinner;
+              const winnerRank   = entryWinner?.rank;
+              const mediaUrl     = entry.media_url || entry.video_url;
+
               return (
-                <div key={entry.id} className="contest-entry-card" style={entry.is_winner ? { border: '1px solid rgba(242,201,143,0.35)', background: 'rgba(242,201,143,0.04)' } : undefined}>
-                  {entry.file_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(entry.file_url) && (
-                    <img src={entry.file_url} alt={entry.title} className="contest-entry-card__thumb" loading="lazy" />
+                <div
+                  key={entry.id}
+                  className="contest-entry-card"
+                  style={isWinner ? { border: '1px solid rgba(242,201,143,0.35)', background: 'rgba(242,201,143,0.04)' } : undefined}
+                >
+                  {mediaUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(mediaUrl) && (
+                    <img src={mediaUrl} alt={entry.title} className="contest-entry-card__thumb" loading="lazy" />
                   )}
-                  {entry.file_url && /\.(mp4|mov|webm)$/i.test(entry.file_url) && (
-                    <video src={entry.file_url} className="contest-entry-card__thumb" controls preload="metadata" />
+                  {mediaUrl && /\.(mp4|mov|webm)$/i.test(mediaUrl) && (
+                    <video src={mediaUrl} className="contest-entry-card__thumb" controls preload="metadata" />
                   )}
                   <div className="contest-entry-card__body">
                     <h3 className="contest-entry-card__title">{entry.title}</h3>
                     {entry.description && (
                       <p className="contest-entry-card__desc">{entry.description}</p>
                     )}
-                    {entry.is_winner && (
+                    {entry.user_name && (
+                      <p style={{ fontSize:'0.75rem', color:'rgba(200,200,215,0.4)', margin:'0.25rem 0 0' }}>
+                        by {entry.user_name}
+                      </p>
+                    )}
+                    {isWinner && (
                       <span className="contest-winner-badge">
-                        {entry.winner_rank === 1 ? '🥇' : entry.winner_rank === 2 ? '🥈' : '🥉'} Winner
+                        {winnerRank === 1 ? '🥇' : winnerRank === 2 ? '🥈' : '🥉'} Winner
                       </span>
                     )}
 
-                    {/* ── Admin winner controls ── */}
                     {isAdmin && (
                       <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
                         {[1, 2, 3].map((rank) => {
                           const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
-                          const isSet = entry.is_winner && entry.winner_rank === rank;
+                          const isSet = entryWinner?.rank === rank;
                           return (
                             <button
                               key={rank}
@@ -377,9 +384,9 @@ export default function ContestDetailPage() {
                             </button>
                           );
                         })}
-                        {entry.is_winner && (
+                        {isWinner && (
                           <button
-                            onClick={() => handleMarkWinner(entry, entry.winner_rank)}
+                            onClick={() => handleMarkWinner(entry, winnerRank)}
                             disabled={isBusy}
                             style={{ padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', cursor: isBusy ? 'not-allowed' : 'pointer', border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: '#fca5a5' }}
                           >
@@ -398,9 +405,9 @@ export default function ContestDetailPage() {
                       onClick={() => handleLike(entry.id)}
                       disabled={liking === entry.id}
                       style={{
-                        background: isLiked ? 'rgba(239,68,68,0.15)' : undefined,
-                        borderColor: isLiked ? 'rgba(239,68,68,0.4)' : undefined,
-                        color: isLiked ? '#fca5a5' : undefined,
+                        background:  isLiked ? 'rgba(239,68,68,0.15)' : undefined,
+                        borderColor: isLiked ? 'rgba(239,68,68,0.4)'  : undefined,
+                        color:       isLiked ? '#fca5a5'               : undefined,
                       }}
                     >
                       {liking === entry.id ? '…' : isLiked ? '♥ Liked' : '♡ Like'}
@@ -413,9 +420,9 @@ export default function ContestDetailPage() {
         </div>
       )}
 
-      {entries.length === 0 && !canSubmit && (
+      {entries.length === 0 && (
         <div className="ai-grid__empty">
-          <p>No entries yet.</p>
+          <p>No submissions yet. Be the first to enter!</p>
         </div>
       )}
     </div>

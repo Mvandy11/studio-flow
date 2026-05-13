@@ -21,20 +21,13 @@ export default function CreateContestPage() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    title:            '',
-    description:      '',
-    thumbnail_url:    '',
-    prize_pool:       '',
-    entry_fee:        '0',
-    winner_count:     '1',
-    status:           'draft',
-    category:         'general',
-    submission_start: '',
-    submission_end:   '',
-    voting_start:     '',
-    voting_end:       '',
-    start_date:       '',
-    end_date:         '',
+    title:         '',
+    description:   '',
+    thumbnail_url: '',
+    prize_pool:    '',
+    winner_count:  '1',
+    status:        'active',
+    category:      'general',
   });
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState(null);
@@ -65,17 +58,13 @@ export default function CreateContestPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          ...form,
-          prize_pool:   Number(form.prize_pool)   || 0,
-          entry_fee:    Number(form.entry_fee)    || 0,
-          winner_count: Number(form.winner_count) || 1,
-          submission_start: form.submission_start || null,
-          submission_end:   form.submission_end   || null,
-          voting_start:     form.voting_start     || null,
-          voting_end:       form.voting_end       || null,
-          start_date:       form.start_date       || null,
-          end_date:         form.end_date         || null,
-          thumbnail_url:    form.thumbnail_url    || null,
+          title:         form.title.trim(),
+          description:   form.description.trim() || null,
+          thumbnail_url: form.thumbnail_url.trim() || null,
+          prize_pool:    Number(form.prize_pool)   || 0,
+          winner_count:  Number(form.winner_count) || 1,
+          status:        form.status,
+          category:      form.category,
         }),
       });
       navigate(`/contests/${json.contest.id}`);
@@ -90,7 +79,7 @@ export default function CreateContestPage() {
     <div className="page-container page-container--narrow">
       <div className="page-header">
         <h1 className="page-title">Create Contest</h1>
-        <p className="page-subtitle">Set up a new contest for the Studio Flow community.</p>
+        <p className="page-subtitle">Set up a new open contest for the Studio Flow community.</p>
       </div>
 
       {error && (
@@ -125,13 +114,10 @@ export default function CreateContestPage() {
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label">Status</label>
+            <label className="form-label">Visibility</label>
             <select className="form-select" value={form.status} onChange={set('status')}>
-              <option value="draft">Draft</option>
-              <option value="active">Active (Open)</option>
-              <option value="voting">Voting</option>
-              <option value="completed">Completed</option>
-              <option value="archived">Archived</option>
+              <option value="active">Active (Visible)</option>
+              <option value="draft">Draft (Hidden)</option>
             </select>
           </div>
         </div>
@@ -142,46 +128,17 @@ export default function CreateContestPage() {
             <input className="form-input" type="number" min="0" value={form.prize_pool} onChange={set('prize_pool')} placeholder="0" />
           </div>
           <div className="form-group">
-            <label className="form-label">Entry Fee ($)</label>
-            <input className="form-input" type="number" min="0" value={form.entry_fee} onChange={set('entry_fee')} placeholder="0" />
+            <label className="form-label">Number of Winners</label>
+            <select className="form-select" value={form.winner_count} onChange={set('winner_count')}>
+              <option value="1">1 Winner</option>
+              <option value="2">2 Winners</option>
+              <option value="3">3 Winners</option>
+            </select>
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Number of Winners</label>
-          <select className="form-select" value={form.winner_count} onChange={set('winner_count')}>
-            <option value="1">1 Winner</option>
-            <option value="2">2 Winners</option>
-            <option value="3">3 Winners</option>
-          </select>
-        </div>
-
-        <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:'1.25rem' }}>
-          <p className="form-label" style={{ marginBottom:'0.75rem' }}>Submission Window</p>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Opens</label>
-              <input className="form-input" type="datetime-local" value={form.submission_start} onChange={set('submission_start')} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Closes</label>
-              <input className="form-input" type="datetime-local" value={form.submission_end} onChange={set('submission_end')} />
-            </div>
-          </div>
-        </div>
-
-        <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:'1.25rem' }}>
-          <p className="form-label" style={{ marginBottom:'0.75rem' }}>Voting Window</p>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Voting Opens</label>
-              <input className="form-input" type="datetime-local" value={form.voting_start} onChange={set('voting_start')} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Voting Closes</label>
-              <input className="form-input" type="datetime-local" value={form.voting_end} onChange={set('voting_end')} />
-            </div>
-          </div>
+        <div style={{ padding:'0.75rem 1rem', borderRadius:'10px', background:'rgba(110,168,255,0.06)', border:'1px solid rgba(110,168,255,0.15)', color:'rgba(200,200,215,0.6)', fontSize:'0.82rem', marginBottom:'0.5rem' }}>
+          Contests on Studio Flow are always open — there are no submission deadlines or voting windows. Winners are selected manually by you from the contest detail page.
         </div>
 
         <div style={{ display:'flex', gap:'0.75rem', paddingTop:'0.5rem' }}>

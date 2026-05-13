@@ -207,17 +207,6 @@ router.post('/:id/entries', upload.single('file'), async (req, res) => {
 
     if (!contest) return res.status(404).json({ error: 'Contest not found.' });
 
-    const now = new Date();
-    const subStart = contest.submission_start ? new Date(contest.submission_start) : null;
-    const subEnd   = contest.submission_end   ? new Date(contest.submission_end)   : null;
-
-    if (subStart && now < subStart) {
-      return res.status(400).json({ error: 'Submissions have not opened yet.' });
-    }
-    if (subEnd && now > subEnd) {
-      return res.status(400).json({ error: 'Submission window has closed.' });
-    }
-
     const { title, description } = req.body;
     if (!title) return res.status(400).json({ error: 'Entry title is required.' });
 
@@ -284,22 +273,11 @@ router.post('/:id/entries/:entryId/vote', async (req, res) => {
 
     const { data: contest } = await supabase
       .from('contests')
-      .select('voting_start, voting_end, status')
+      .select('id')
       .eq('id', req.params.id)
       .single();
 
     if (!contest) return res.status(404).json({ error: 'Contest not found.' });
-
-    const now = new Date();
-    const voteStart = contest.voting_start ? new Date(contest.voting_start) : null;
-    const voteEnd   = contest.voting_end   ? new Date(contest.voting_end)   : null;
-
-    if (voteStart && now < voteStart) {
-      return res.status(400).json({ error: 'Voting has not started yet.' });
-    }
-    if (voteEnd && now > voteEnd) {
-      return res.status(400).json({ error: 'Voting has closed.' });
-    }
 
     // Insert like/vote (unique constraint handles anti-spam)
     const { error: voteErr } = await supabase
@@ -436,11 +414,6 @@ router.post('/:id/payout', async (req, res) => {
     );
 
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-
-    await supabase
-      .from('contests')
-      .update({ status: 'completed' })
-      .eq('id', req.params.id);
 
     res.json({ success: true, winners: succeeded, prizeShare, total: prizePool });
   } catch (err) {

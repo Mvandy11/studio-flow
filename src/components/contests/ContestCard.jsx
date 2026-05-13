@@ -1,13 +1,5 @@
 import { Link } from 'react-router-dom';
 
-const STATUS_LABELS = {
-  draft:     'Draft',
-  active:    'Open',
-  voting:    'Voting',
-  completed: 'Ended',
-  archived:  'Archived',
-};
-
 const CATEGORY_LABELS = {
   general:   'General',
   creative:  'Creative',
@@ -19,10 +11,12 @@ const CATEGORY_LABELS = {
 };
 
 export default function ContestCard({ contest }) {
-  const statusClass   = `contest-card__status contest-card__status--${contest.status}`;
   const categoryLabel = contest.category
     ? (CATEGORY_LABELS[contest.category] ?? contest.category)
     : null;
+
+  const submissionCount = contest.submission_count ?? null;
+  const totalLikes      = contest.total_like_count  ?? null;
 
   return (
     <Link to={`/contests/${contest.id}`} className="contest-card">
@@ -48,7 +42,7 @@ export default function ContestCard({ contest }) {
           <p className="contest-card__desc">{contest.description}</p>
         )}
         <div className="contest-card__meta">
-          <span className={statusClass}>{STATUS_LABELS[contest.status] ?? contest.status}</span>
+          <span className="contest-card__status contest-card__status--active">Active</span>
           {categoryLabel && (
             <span className="contest-card__category">{categoryLabel}</span>
           )}
@@ -61,7 +55,11 @@ export default function ContestCard({ contest }) {
       </div>
 
       <div className="contest-card__footer">
-        <span>View entries →</span>
+        <span style={{ display:'flex', gap:'0.75rem', color:'rgba(200,200,215,0.5)', fontSize:'0.78rem' }}>
+          {submissionCount !== null && <span>📥 {submissionCount}</span>}
+          {totalLikes      !== null && <span>❤️ {totalLikes}</span>}
+        </span>
+        <span>View →</span>
       </div>
     </Link>
   );

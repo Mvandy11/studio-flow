@@ -15,9 +15,10 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('Overview');
 
   const [contests,        setContests]        = useState([]);
+  const [contestDash,     setContestDash]     = useState([]);
   const [events,          setEvents]          = useState([]);
-  const [submissions,     setSubmissions]     = useState([]); // contest_entries
-  const [genSubmissions,  setGenSubmissions]  = useState([]); // submissions table
+  const [submissions,     setSubmissions]     = useState([]);
+  const [genSubmissions,  setGenSubmissions]  = useState([]);
   const [announcements,   setAnnouncements]   = useState([]);
   const [stats, setStats] = useState({ contests: 0, events: 0, submissions: 0, announcements: 0 });
   const [loading, setLoading] = useState(true);
@@ -55,10 +56,12 @@ export default function AdminDashboard() {
       { data: c },
       { data: e },
       { data: s },
+      { data: dash },
     ] = await Promise.all([
       supabase.from('contests').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('events').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('submissions').select('*, contests(title)').not('contest_id', 'is', null).order('created_at', { ascending: false }).limit(100),
+      supabase.from('admin_contest_dashboard').select('*').limit(100).then(r => r).catch(() => ({ data: [] })),
     ]);
 
     let anns = [];
@@ -74,6 +77,7 @@ export default function AdminDashboard() {
     } catch (_) {}
 
     setContests(c || []);
+    setContestDash(dash || []);
     setEvents(e || []);
     setSubmissions(s || []);
     setGenSubmissions(genSubs);
@@ -384,32 +388,37 @@ export default function AdminDashboard() {
                 <div className="admin-table-wrap">
                   <table className="admin-table">
                     <thead>
-                      <tr><th>Title</th><th>Status</th><th>Prize</th><th>Entries</th><th>Actions</th></tr>
+                      <tr><th>Title</th><th>Category</th><th>Prize</th><th>Submissions</th><th>Likes</th><th>Actions</th></tr>
                     </thead>
                     <tbody>
                       {contests.map((c) => {
-                        const entryCount = submissions.filter((s) => s.contest_id === c.id).length;
+                        const dash = contestDash.find(d => d.contest_id === c.id || d.id === c.id);
+                        const subCount   = dash?.submission_count  ?? submissions.filter((s) => s.contest_id === c.id).length;
+                        const likeCount  = dash?.total_like_count  ?? '—';
                         return (
                           <tr key={c.id}>
                             <td>
                               <Link to={`/contests/${c.id}`} style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>
                                 {c.title}
                               </Link>
+                              {c.status === 'draft' && (
+                                <span style={{ marginLeft: '0.5rem', fontSize: '0.68rem', color: 'rgba(200,200,215,0.4)', fontStyle: 'italic' }}>draft</span>
+                              )}
                             </td>
-                            <td><span className={`admin-badge admin-badge--${c.status}`}>{c.status}</span></td>
+                            <td style={{ color: 'rgba(200,200,215,0.55)', fontSize: '0.82rem' }}>{c.category || '—'}</td>
                             <td>{c.prize_pool > 0 ? `$${Number(c.prize_pool).toLocaleString()}` : '—'}</td>
-                            <td style={{ color: 'rgba(200,200,215,0.55)', fontSize: '0.82rem' }}>{entryCount}</td>
+                            <td style={{ color: 'rgba(200,200,215,0.55)', fontSize: '0.82rem' }}>{subCount}</td>
+                            <td style={{ color: 'rgba(200,200,215,0.55)', fontSize: '0.82rem' }}>{likeCount}</td>
                             <td>
                               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                {c.status === 'draft'     && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'active')}>Publish</button>}
-                                {c.status === 'active'    && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'voting')}>Open Voting</button>}
-                                {c.status === 'voting'    && <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'completed')}>End Contest</button>}
-                                {c.status === 'completed' && c.prize_pool > 0 && (
+                                {c.status === 'draft' && (
+                                  <button className="admin-action-btn" onClick={() => updateContestStatus(c.id, 'active')}>Publish</button>
+                                )}
+                                {c.prize_pool > 0 && (
                                   <button className="admin-action-btn" style={{ borderColor: 'rgba(134,239,172,0.3)', color: '#86efac' }} onClick={() => triggerPayout(c.id)}>
-                                    Payout
+                                    Payout Winners
                                   </button>
                                 )}
-                                <button className="admin-action-btn admin-action-btn--danger" onClick={() => updateContestStatus(c.id, 'archived')}>Archive</button>
                               </div>
                             </td>
                           </tr>
