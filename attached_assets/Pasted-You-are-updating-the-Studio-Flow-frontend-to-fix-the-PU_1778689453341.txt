@@ -1,0 +1,74 @@
+You are updating the Studio Flow frontend to fix the PUBLIC submission upload flow so customers can upload videos/photos to contests using the new Supabase schema.
+
+GOAL:
+Ensure authenticated users can upload a submission to any contest using the new submissions table and the new contest_submission_feed view.
+
+---------------------------------------
+STEP 1 — FIX SUBMISSION INSERT LOGIC
+---------------------------------------
+
+Search the entire codebase for any submission logic using:
+- contest_entries
+- contest_votes
+- old submission tables
+- old upload endpoints
+- ticket-based submission logic
+
+Replace ALL submission creation logic with:
+
+supabase.from('submissions').insert({
+  contest_id,
+  user_id,
+  user_name,
+  user_email,
+  media_url,
+  description,
+  status: 'active',
+  created_at: new Date().toISOString()
+})
+
+---------------------------------------
+STEP 2 — FIX FILE UPLOAD FLOW
+---------------------------------------
+
+Ensure the upload flow:
+1. Uploads the file to storage (supabase.storage)
+2. Retrieves the public URL
+3. Inserts the submission row using the new schema
+
+Remove any references to:
+- old storage buckets
+- old file paths
+- old upload endpoints
+
+---------------------------------------
+STEP 3 — FIX PUBLIC UI
+---------------------------------------
+
+Ensure the “Submit” button:
+- only appears for authenticated users
+- opens the upload modal
+- uses the new submission insert logic
+
+Remove:
+- ticket gating
+- entry limits
+- voting mode restrictions
+
+---------------------------------------
+STEP 4 — VALIDATION
+---------------------------------------
+
+- Ensure the submission appears in contest_submission_feed
+- Ensure the submission appears in contest_leaderboard
+- Ensure the page refreshes after upload
+- Ensure no TypeScript errors remain
+
+---------------------------------------
+FINAL OUTPUT
+---------------------------------------
+
+Print:
+- All modified files
+- All updated submission logic
+- Any remaining issues requiring manual review

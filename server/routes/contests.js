@@ -242,7 +242,7 @@ router.post('/:id/entries', upload.single('file'), async (req, res) => {
       description,
       media_url:   file_url,
       video_url:   file_url,
-      status:      'pending',
+      status:      'active',
     };
 
     const { data: inserted, error: dbErr } = await supabase

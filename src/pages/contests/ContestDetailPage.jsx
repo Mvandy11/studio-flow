@@ -109,19 +109,41 @@ export default function ContestDetailPage() {
     setSubmitting(true);
     setSubError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      let media_url = null;
 
-      const form = new FormData();
-      form.append('title', subTitle);
-      form.append('description', subDesc);
-      if (subFile) form.append('file', subFile);
+      // 1. Upload file directly to Supabase storage (if provided)
+      if (subFile) {
+        const ext = subFile.name.split('.').pop();
+        const filename = `${crypto.randomUUID()}.${ext}`;
+        const storagePath = `contest-entries/${id}/${filename}`;
 
-      await api(`/api/contests/${id}/entries`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
+        const { error: uploadErr } = await supabase.storage
+          .from('studio-flow-library')
+          .upload(storagePath, subFile, { contentType: subFile.type, upsert: false });
+
+        if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
+
+        const { data: urlData } = supabase.storage
+          .from('studio-flow-library')
+          .getPublicUrl(storagePath);
+        media_url = urlData?.publicUrl || null;
+      }
+
+      // 2. Insert submission row directly via Supabase client
+      const { error: insertErr } = await supabase.from('submissions').insert({
+        contest_id:  id,
+        user_id:     user.id,
+        user_name:   user.user_metadata?.name || user.email?.split('@')[0] || 'Creator',
+        user_email:  user.email,
+        title:       subTitle.trim(),
+        description: subDesc.trim() || null,
+        media_url,
+        video_url:   media_url,
+        status:      'active',
       });
+
+      if (insertErr) throw new Error(insertErr.message);
+
       setSubSuccess(true);
       setSubTitle(''); setSubDesc(''); setSubFile(null);
       load();
