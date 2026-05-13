@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
-import { supabase } from '../../lib/supabase.js';
+import { api } from '../../lib/api.js';
 import ContestCard from '../../components/contests/ContestCard';
 import DonationButton from '../../components/DonationButton';
 import '../../styles/contests.css';
@@ -31,15 +31,8 @@ export default function ContestsPage() {
       setLoading(true);
       setError(null);
       try {
-        const { data, error: qErr } = await supabase
-          .from('contests')
-          .select('*')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(100);
-
-        if (qErr) throw new Error(qErr.message);
-        setContests(data || []);
+        const json = await api('/api/contests?status=active&limit=100');
+        setContests(json.data || []);
       } catch (err) {
         setError(err.message);
       } finally {

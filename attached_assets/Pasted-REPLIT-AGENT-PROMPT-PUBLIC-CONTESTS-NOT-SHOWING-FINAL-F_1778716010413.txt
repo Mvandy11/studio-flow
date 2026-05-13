@@ -1,0 +1,105 @@
+REPLIT AGENT PROMPT — PUBLIC CONTESTS NOT SHOWING (FINAL FIX)
+Code
+You are fixing the Studio Flow PUBLIC contests page. The contests are visible in the admin dashboard but NOT visible in the public view. This means the public page is querying the wrong table/view or the wrong component is being edited.
+
+GOAL:
+Ensure the public-facing /contests page ALWAYS loads contests from the `contests` table and NEVER from admin-only or broken views.
+
+------------------------------------------------
+STEP 1 — SEARCH ENTIRE CODEBASE FOR ALL CONTEST QUERIES
+------------------------------------------------
+
+Search for ALL occurrences of:
+
+- admin_contest_dashboard
+- contest_leaderboard
+- contest_submission_feed
+- public_contests_view
+- is_admin
+- rpc('is_admin')
+- from('contests')  ← verify each one
+- useContests
+- getContests
+- fetchContests
+
+Print the list of files where these appear.
+
+------------------------------------------------
+STEP 2 — IDENTIFY THE PUBLIC CONTESTS PAGE
+------------------------------------------------
+
+Find the component that renders the PUBLIC contests list. It may be named:
+
+- ContestsPage
+- PublicContests
+- ContestsList
+- ContestIndex
+- Contests/index
+- useContests hook
+
+Print the file path.
+
+------------------------------------------------
+STEP 3 — REPLACE THE QUERY WITH THE ONLY CORRECT PUBLIC QUERY
+------------------------------------------------
+
+Replace ANY query found in that file with:
+
+```ts
+const { data: contests, error } = await supabase
+  .from('contests')
+  .select('*')
+  .eq('is_public', true)
+  .eq('is_active', true)
+  .order('created_at', { ascending: false });
+REMOVE any usage of:
+
+admin_contest_dashboard
+
+contest_leaderboard
+
+contest_submission_feed
+
+public_contests_view
+
+is_admin()
+
+joins
+
+filters BEFORE data loads
+
+STEP 4 — FIX CATEGORY FILTER
+
+After data loads, apply this filter:
+
+ts
+let filtered = contests;
+
+if (selectedCategory !== "All Categories") {
+  filtered = contests.filter(c =>
+    c.category?.toLowerCase().includes(selectedCategory.toLowerCase())
+  );
+}
+
+setFilteredContests(filtered);
+STEP 5 — CLEANUP
+
+Remove unused imports
+
+Remove old contest logic
+
+Remove admin-only logic from public pages
+
+Ensure the component compiles with zero TypeScript errors
+
+FINAL OUTPUT
+
+Print:
+
+All files modified
+
+The final public query
+
+The final category filter
+
+Any remaining issues requiring manual review
