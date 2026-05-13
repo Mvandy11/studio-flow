@@ -1,23 +1,26 @@
+const REWARD_POOL_STRIPE_LINK = 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08';
+
 export default function DonationButton({ compact = false }) {
   return (
     <a
-      href="https://buy.stripe.com/dRmaEZehf3JSfnm84Rb7y0p"
+      href={REWARD_POOL_STRIPE_LINK}
       target="_blank"
       rel="noopener noreferrer"
       style={{
-        padding: '0.45rem 1rem',
+        padding: compact ? '0.35rem 0.85rem' : '0.5rem 1.25rem',
         borderRadius: '8px',
         background: 'rgba(245, 166, 35, 0.12)',
         border: '1px solid rgba(245, 166, 35, 0.3)',
         color: 'var(--accent-gold, #f5a623)',
         fontWeight: 600,
-        fontSize: '0.85rem',
+        fontSize: compact ? '0.8rem' : '0.875rem',
         cursor: 'pointer',
         display: 'inline-block',
         textDecoration: 'none',
+        transition: 'background 0.15s, border-color 0.15s',
       }}
     >
-      💖 Donate
+      💝 {compact ? 'Donate' : 'Donate to Reward Pool'}
     </a>
   );
 }
