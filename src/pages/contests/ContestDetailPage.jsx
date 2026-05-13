@@ -34,6 +34,14 @@ export default function ContestDetailPage() {
   const [payingOut,      setPayingOut]      = useState(false);
   const [payoutMsg,      setPayoutMsg]      = useState(null);
 
+  // ── Comments ──
+  const [entryComments,    setEntryComments]    = useState({});   // { [entryId]: Comment[] }
+  const [openComments,     setOpenComments]     = useState(new Set()); // which panels are open
+  const [commentInputs,    setCommentInputs]    = useState({});   // { [entryId]: string }
+  const [loadingComments,  setLoadingComments]  = useState(new Set());
+  const [submittingComment, setSubmittingComment] = useState(null);
+  const [deletingComment,  setDeletingComment]  = useState(null);
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -196,6 +204,67 @@ export default function ContestDetailPage() {
       setLiking(null);
     }
   }
+
+  // ── Comment helpers ──────────────────────────────────────────
+  async function loadComments(entryId) {
+    setLoadingComments((prev) => new Set([...prev, entryId]));
+    const { data } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('submission_id', entryId)
+      .order('created_at', { ascending: true });
+    setEntryComments((prev) => ({ ...prev, [entryId]: data || [] }));
+    setLoadingComments((prev) => { const s = new Set(prev); s.delete(entryId); return s; });
+  }
+
+  function toggleComments(entryId) {
+    setOpenComments((prev) => {
+      const s = new Set(prev);
+      if (s.has(entryId)) {
+        s.delete(entryId);
+      } else {
+        s.add(entryId);
+        if (!entryComments[entryId]) loadComments(entryId);
+      }
+      return s;
+    });
+  }
+
+  async function handleComment(entryId) {
+    const text = (commentInputs[entryId] || '').trim();
+    if (!text || !user) return;
+    setSubmittingComment(entryId);
+    const { error } = await supabase.from('comments').insert({
+      submission_id: entryId,
+      user_id:       user.id,
+      user_name:     user.user_metadata?.name || user.email?.split('@')[0] || 'Creator',
+      user_email:    user.email,
+      text,
+    });
+    if (!error) {
+      setCommentInputs((prev) => ({ ...prev, [entryId]: '' }));
+      loadComments(entryId);
+    }
+    setSubmittingComment(null);
+  }
+
+  async function handleDeleteComment(entryId, commentId) {
+    if (!user) return;
+    setDeletingComment(commentId);
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', user.id);
+    if (!error) {
+      setEntryComments((prev) => ({
+        ...prev,
+        [entryId]: (prev[entryId] || []).filter((c) => c.id !== commentId),
+      }));
+    }
+    setDeletingComment(null);
+  }
+  // ─────────────────────────────────────────────────────────────
 
   async function handleMarkWinner(entry, rank) {
     setMarkingWinner(entry.id);
@@ -543,6 +612,14 @@ export default function ContestDetailPage() {
                       ❤️ {count} {count === 1 ? 'like' : 'likes'}
                     </span>
                     <button
+                      className="contest-comment-toggle"
+                      onClick={() => toggleComments(entry.id)}
+                    >
+                      💬 {(entryComments[entry.id] || []).length > 0
+                          ? `${(entryComments[entry.id] || []).length} comment${(entryComments[entry.id] || []).length !== 1 ? 's' : ''}`
+                          : 'Comment'}
+                    </button>
+                    <button
                       className={`contest-vote-btn${isLiked ? ' contest-vote-btn--voted' : ''}`}
                       onClick={() => handleLike(entry.id)}
                       disabled={liking === entry.id}
@@ -555,6 +632,66 @@ export default function ContestDetailPage() {
                       {liking === entry.id ? '…' : isLiked ? '♥ Liked' : '♡ Like'}
                     </button>
                   </div>
+
+                  {/* ── Comment panel ── */}
+                  {openComments.has(entry.id) && (
+                    <div className="contest-comments">
+                      {loadingComments.has(entry.id) ? (
+                        <p className="contest-comments__empty">Loading…</p>
+                      ) : (entryComments[entry.id] || []).length === 0 ? (
+                        <p className="contest-comments__empty">No comments yet. Be the first!</p>
+                      ) : (
+                        <div className="contest-comments__list">
+                          {(entryComments[entry.id] || []).map((c) => (
+                            <div key={c.id} className="contest-comment">
+                              <div className="contest-comment__meta">
+                                <span className="contest-comment__author">{c.user_name || 'Creator'}</span>
+                                <span className="contest-comment__time">
+                                  {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                </span>
+                                {user?.id === c.user_id && (
+                                  <button
+                                    className="contest-comment__delete"
+                                    onClick={() => handleDeleteComment(entry.id, c.id)}
+                                    disabled={deletingComment === c.id}
+                                    title="Delete comment"
+                                  >
+                                    {deletingComment === c.id ? '…' : '✕'}
+                                  </button>
+                                )}
+                              </div>
+                              <p className="contest-comment__text">{c.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {user ? (
+                        <div className="contest-comments__input-row">
+                          <input
+                            className="contest-comments__input"
+                            placeholder="Add a comment…"
+                            value={commentInputs[entry.id] || ''}
+                            onChange={(e) => setCommentInputs((prev) => ({ ...prev, [entry.id]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(entry.id); } }}
+                            disabled={submittingComment === entry.id}
+                            maxLength={500}
+                          />
+                          <button
+                            className="contest-comments__submit"
+                            onClick={() => handleComment(entry.id)}
+                            disabled={submittingComment === entry.id || !(commentInputs[entry.id] || '').trim()}
+                          >
+                            {submittingComment === entry.id ? '…' : 'Post'}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="contest-comments__empty" style={{ marginTop: '0.5rem' }}>
+                          Log in to comment.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

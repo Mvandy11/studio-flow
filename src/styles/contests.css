@@ -343,3 +343,131 @@
   cursor: pointer;
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* ── Comment toggle button ─────────────────────────────────── */
+.contest-comment-toggle {
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(200, 200, 215, 0.55);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.contest-comment-toggle:hover {
+  border-color: rgba(110, 168, 255, 0.35);
+  color: rgba(200, 200, 215, 0.85);
+}
+
+/* ── Comment panel ─────────────────────────────────────────── */
+.contest-comments {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.875rem 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contest-comments__empty {
+  font-size: 0.78rem;
+  color: rgba(200, 200, 215, 0.4);
+  margin: 0;
+}
+
+.contest-comments__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* ── Individual comment ──────────────────────────────────────── */
+.contest-comment {
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+}
+
+.contest-comment__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.contest-comment__author {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(200, 200, 215, 0.8);
+}
+
+.contest-comment__time {
+  font-size: 0.7rem;
+  color: rgba(200, 200, 215, 0.35);
+}
+
+.contest-comment__delete {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: rgba(239, 68, 68, 0.45);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.contest-comment__delete:hover { color: #fca5a5; }
+
+.contest-comment__text {
+  font-size: 0.82rem;
+  color: rgba(200, 200, 215, 0.75);
+  margin: 0;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+/* ── Comment input row ───────────────────────────────────────── */
+.contest-comments__input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.contest-comments__input {
+  flex: 1;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-soft, #c7c7d1);
+  font-size: 0.83rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.contest-comments__input:focus { border-color: rgba(110, 168, 255, 0.4); }
+.contest-comments__input::placeholder { color: rgba(200, 200, 215, 0.3); }
+
+.contest-comments__submit {
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(110, 168, 255, 0.3);
+  background: rgba(110, 168, 255, 0.1);
+  color: rgba(110, 168, 255, 0.9);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.contest-comments__submit:hover:not(:disabled) {
+  background: rgba(110, 168, 255, 0.18);
+  border-color: rgba(110, 168, 255, 0.5);
+}
+.contest-comments__submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
