@@ -35,54 +35,62 @@ export default function ContestDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const { contest: c } = await api(`/api/contests/${id}`);
-      setContest(c);
+      // Load contest metadata + enriched stats in parallel
+      const [
+        { data: contestRow, error: contestErr },
+        { data: dashRow },
+        { data: feed, error: feedErr },
+        { data: w },
+      ] = await Promise.all([
+        supabase.from('contests').select('*').eq('id', id).single(),
+        supabase.from('admin_contest_dashboard').select('*').eq('contest_id', id).maybeSingle(),
+        supabase.from('contest_submission_feed').select('*').eq('contest_id', id).order('like_count', { ascending: false }),
+        supabase.from('winners').select('submission_id, rank').eq('contest_id', id),
+      ]);
 
-      // Load entries: prefer contest_submission_feed (has like_count pre-aggregated)
+      if (contestErr || !contestRow) throw new Error(contestErr?.message || 'Contest not found.');
+
+      // Merge enriched dashboard stats into the contest object
+      setContest({ ...contestRow, ...(dashRow || {}) });
+
+      // Entries: use feed if available, otherwise fall back to submissions table
       let loadedEntries = [];
-      const { data: feed, error: feedErr } = await supabase
-        .from('contest_submission_feed')
-        .select('*')
-        .eq('contest_id', id)
-        .order('like_count', { ascending: false });
-
       if (!feedErr && feed && feed.length > 0) {
         loadedEntries = feed;
       } else {
-        // Fallback: load from submissions, compute like_count from likes
-        const [{ data: subs }, { data: likeCounts }] = await Promise.all([
-          supabase.from('submissions').select('*').eq('contest_id', id).order('created_at', { ascending: false }),
-          supabase.from('likes').select('entry_id').in('entry_id',
-            (await supabase.from('submissions').select('id').eq('contest_id', id)).data?.map(s => s.id) || []
-          ),
-        ]);
-        const countMap = {};
-        for (const row of (likeCounts || [])) {
-          countMap[row.entry_id] = (countMap[row.entry_id] || 0) + 1;
-        }
-        loadedEntries = (subs || []).map(s => ({ ...s, like_count: countMap[s.id] || 0 }))
-          .sort((a, b) => b.like_count - a.like_count);
-      }
-      setEntries(loadedEntries);
+        const { data: subs } = await supabase
+          .from('submissions')
+          .select('*')
+          .eq('contest_id', id)
+          .order('created_at', { ascending: false });
 
-      // Load winners
-      const { data: w } = await supabase
-        .from('winners')
-        .select('submission_id, rank')
-        .eq('contest_id', id);
-      setWinners(w || []);
-
-      // Load user's likes
-      if (user) {
-        const entryIds = loadedEntries.map(e => e.id);
-        if (entryIds.length > 0) {
-          const { data: myLikes } = await supabase
+        if (subs && subs.length > 0) {
+          const subIds = subs.map(s => s.id);
+          const { data: likeCounts } = await supabase
             .from('likes')
             .select('entry_id')
-            .eq('user_id', user.id)
-            .in('entry_id', entryIds);
-          if (myLikes) setLikedEntries(new Set(myLikes.map(r => r.entry_id)));
+            .in('entry_id', subIds);
+          const countMap = {};
+          for (const row of (likeCounts || [])) {
+            countMap[row.entry_id] = (countMap[row.entry_id] || 0) + 1;
+          }
+          loadedEntries = subs
+            .map(s => ({ ...s, like_count: countMap[s.id] || 0 }))
+            .sort((a, b) => b.like_count - a.like_count);
         }
+      }
+      setEntries(loadedEntries);
+      setWinners(w || []);
+
+      // Load user's existing likes
+      if (user && loadedEntries.length > 0) {
+        const entryIds = loadedEntries.map(e => e.id);
+        const { data: myLikes } = await supabase
+          .from('likes')
+          .select('entry_id')
+          .eq('user_id', user.id)
+          .in('entry_id', entryIds);
+        if (myLikes) setLikedEntries(new Set(myLikes.map(r => r.entry_id)));
       }
     } catch (err) {
       setError(err.message);

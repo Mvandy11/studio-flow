@@ -1,0 +1,79 @@
+You are updating the Studio Flow frontend to fix the Contest Detail Page so it works with the new Supabase contest engine.
+
+GOAL:
+Ensure the Contest Detail Page loads a single contest and its submissions using the new schema and views.
+
+---------------------------------------
+STEP 1 — FIX DATA SOURCE
+---------------------------------------
+
+Replace any old queries using:
+- contest_entries
+- contest_votes
+- free_tickets
+- old contest_winners
+- start_date / end_date
+- voting / archived / completed states
+
+With the correct new sources:
+
+1. Contest metadata:
+   supabase.from('admin_contest_dashboard').select('*').eq('contest_id', id)
+
+2. Submissions for this contest:
+   supabase.from('contest_submission_feed')
+           .select('*')
+           .eq('contest_id', id)
+
+3. Leaderboard:
+   supabase.from('contest_leaderboard')
+           .select('*')
+           .eq('contest_id', id)
+
+---------------------------------------
+STEP 2 — FIX UI EXPECTATIONS
+---------------------------------------
+
+Remove UI elements expecting:
+- voting state
+- countdown timers
+- archive state
+- entry limits
+- ticket gating
+- “End Contest”
+- “Archive Contest”
+
+Replace with:
+- submissions sorted by like_count
+- total likes
+- submission_count
+- winner preview (if exists)
+
+---------------------------------------
+STEP 3 — FIX ROUTING
+---------------------------------------
+
+Ensure the page route is:
+/contests/[id]
+
+Remove any legacy routes under:
+/subscription/*
+
+---------------------------------------
+STEP 4 — CLEANUP
+---------------------------------------
+
+- Remove unused imports
+- Remove unused types
+- Remove unused components tied to old contest logic
+- Ensure the page compiles with zero TypeScript errors
+
+---------------------------------------
+FINAL OUTPUT
+---------------------------------------
+
+Print:
+- All modified files
+- All updated queries
+- All removed legacy logic
+- Any remaining issues requiring manual review
