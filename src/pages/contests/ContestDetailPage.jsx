@@ -159,25 +159,36 @@ export default function ContestDetailPage() {
     setLiking(entryId);
     const isLiked = likedEntries.has(entryId);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      if (isLiked) {
+        const { error } = await supabase
+          .from('likes')
+          .delete()
+          .eq('entry_id', entryId)
+          .eq('user_id', user.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabase
+          .from('likes')
+          .insert({ entry_id: entryId, user_id: user.id });
+        // Ignore unique-constraint errors (already liked)
+        if (error && !error.message?.includes('unique') && error.code !== '23505') {
+          throw new Error(error.message);
+        }
+      }
 
-      await api('/api/likes', {
-        method: isLiked ? 'DELETE' : 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entry_id: entryId }),
-      });
-
+      // Optimistic UI — update liked set and re-sort by like_count
       setLikedEntries((prev) => {
         const next = new Set(prev);
         if (isLiked) next.delete(entryId); else next.add(entryId);
         return next;
       });
       setEntries((prev) =>
-        prev.map((e) => e.id === entryId
-          ? { ...e, like_count: Math.max(0, (e.like_count || 0) + (isLiked ? -1 : 1)) }
-          : e
-        ).sort((a, b) => (b.like_count || 0) - (a.like_count || 0))
+        prev
+          .map((e) => e.id === entryId
+            ? { ...e, like_count: Math.max(0, (e.like_count || 0) + (isLiked ? -1 : 1)) }
+            : e
+          )
+          .sort((a, b) => (b.like_count || 0) - (a.like_count || 0))
       );
     } catch (err) {
       alert(err.message);
