@@ -101,10 +101,10 @@ router.get('/:id', async (req, res) => {
     if (cErr || !contest) return res.status(404).json({ error: 'Contest not found.' });
 
     const { data: entries, error: eErr } = await supabase
-      .from('contest_entries')
+      .from('submissions')
       .select('*')
       .eq('contest_id', req.params.id)
-      .order('vote_count', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (eErr) throw eErr;
 
@@ -245,19 +245,19 @@ router.post('/:id/entries', upload.single('file'), async (req, res) => {
     }
 
     const entry = {
-      id:              randomUUID(),
-      contest_id:      req.params.id,
-      user_id:         user.id,
+      contest_id:  req.params.id,
+      user_id:     user.id,
+      user_name:   user.user_metadata?.name || user.email?.split('@')[0] || 'Creator',
+      user_email:  user.email,
       title,
       description,
-      file_url,
-      storage_path,
-      submitter_email: user.email,
-      created_at:      new Date().toISOString(),
+      media_url:   file_url,
+      video_url:   file_url,
+      status:      'pending',
     };
 
     const { data: inserted, error: dbErr } = await supabase
-      .from('contest_entries')
+      .from('submissions')
       .insert(entry)
       .select()
       .single();
@@ -301,40 +301,20 @@ router.post('/:id/entries/:entryId/vote', async (req, res) => {
       return res.status(400).json({ error: 'Voting has closed.' });
     }
 
-    // Insert vote (unique constraint handles anti-spam)
+    // Insert like/vote (unique constraint handles anti-spam)
     const { error: voteErr } = await supabase
-      .from('contest_votes')
+      .from('likes')
       .insert({
-        id:         randomUUID(),
-        contest_id: req.params.id,
-        entry_id:   req.params.entryId,
-        user_id:    user.id,
+        user_id:  user.id,
+        entry_id: req.params.entryId,
       });
 
     if (voteErr) {
-      if (voteErr.message?.includes('unique')) {
+      if (voteErr.message?.includes('unique') || voteErr.code === '23505') {
         return res.status(409).json({ error: 'You have already voted for this entry.' });
       }
       throw voteErr;
     }
-
-    // Increment vote_count on the entry
-    await supabase.rpc('increment_vote_count', { entry_id: req.params.entryId }).catch(() => {
-      // Fallback: manual update
-      return supabase
-        .from('contest_entries')
-        .select('vote_count')
-        .eq('id', req.params.entryId)
-        .single()
-        .then(({ data }) => {
-          if (data) {
-            return supabase
-              .from('contest_entries')
-              .update({ vote_count: (data.vote_count || 0) + 1 })
-              .eq('id', req.params.entryId);
-          }
-        });
-    });
 
     res.json({ success: true, message: 'Vote recorded.' });
   } catch (err) {
@@ -358,21 +338,40 @@ router.patch('/:id/entries/:entryId', async (req, res) => {
       return res.status(403).json({ error: 'Admin access required.' });
     }
 
-    const allowed = ['is_winner', 'winner_rank', 'featured'];
-    const updates = Object.fromEntries(
-      Object.entries(req.body).filter(([k]) => allowed.includes(k)),
-    );
+    const { is_winner, winner_rank, featured } = req.body;
 
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'No valid fields provided.' });
+    // Update featured flag on the submission
+    if (featured !== undefined) {
+      await supabase
+        .from('submissions')
+        .update({ featured: Boolean(featured) })
+        .eq('id', req.params.entryId)
+        .eq('contest_id', req.params.id);
+    }
+
+    // Track winners in the winners table
+    if (is_winner !== undefined) {
+      if (is_winner) {
+        await supabase
+          .from('winners')
+          .upsert({
+            contest_id:    req.params.id,
+            submission_id: req.params.entryId,
+            rank:          winner_rank || 1,
+          }, { onConflict: 'contest_id,submission_id' });
+      } else {
+        await supabase
+          .from('winners')
+          .delete()
+          .eq('contest_id', req.params.id)
+          .eq('submission_id', req.params.entryId);
+      }
     }
 
     const { data, error } = await supabase
-      .from('contest_entries')
-      .update(updates)
+      .from('submissions')
+      .select('*')
       .eq('id', req.params.entryId)
-      .eq('contest_id', req.params.id)
-      .select()
       .single();
 
     if (error) throw error;
@@ -407,11 +406,10 @@ router.post('/:id/payout', async (req, res) => {
     if (cErr || !contest) return res.status(404).json({ error: 'Contest not found.' });
 
     const { data: winners, error: wErr } = await supabase
-      .from('contest_entries')
-      .select('*')
+      .from('winners')
+      .select('*, submissions(user_id)')
       .eq('contest_id', req.params.id)
-      .eq('is_winner', true)
-      .order('winner_rank', { ascending: true });
+      .order('rank', { ascending: true });
 
     if (wErr) throw wErr;
     if (!winners || winners.length === 0) {
@@ -428,7 +426,7 @@ router.post('/:id/payout', async (req, res) => {
     const results = await Promise.allSettled(
       winners.map((w) =>
         supabase.from('earnings').insert({
-          creator_id: w.user_id,
+          creator_id: w.submissions?.user_id || w.user_id,
           contest_id: req.params.id,
           amount:     prizeShare,
           source:     'contest_prize',
@@ -454,10 +452,10 @@ router.post('/:id/payout', async (req, res) => {
 router.get('/:id/entries', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('contest_entries')
+      .from('submissions')
       .select('*')
       .eq('contest_id', req.params.id)
-      .order('vote_count', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
     res.json({ entries: data || [] });

@@ -47,15 +47,15 @@ export default function AdminTab() {
       setContests(contResult.data || []);
       setEvents(evResult.data || []);
       setSubmissions(subResult.data?.submissions || []);
-      setEntries(subResult.data?.contest_entries || []);
+      setEntries(subResult.data?.contest_entries || subResult.data?.submissions?.filter(s => s.contest_id) || []);
 
       // Announcements
       const annResult = await api('/api/announcements');
       setAnnouncements(annResult.data || []);
 
-      // Tickets (free_tickets table)
+      // Tickets (event_tickets — includes view_only/free tickets)
       const { data: tix } = await supabase
-        .from('free_tickets')
+        .from('event_tickets')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(200);

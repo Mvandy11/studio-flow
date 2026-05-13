@@ -40,7 +40,7 @@ router.get('/contests', async (req, res) => {
 
     const { data, error } = await supabase
       .from('contests')
-      .select('*, contest_entries(count)')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -93,15 +93,19 @@ router.get('/submissions', async (req, res) => {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const [{ data: subs }, { data: entries }] = await Promise.all([
-      supabase.from('submissions').select('*').order('created_at', { ascending: false }),
-      supabase.from('contest_entries').select('*, contests(title)').order('created_at', { ascending: false }).limit(200),
-    ]);
+    const { data: allSubs } = await supabase
+      .from('submissions')
+      .select('*, contests(title)')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    const subs    = (allSubs || []).filter((s) => !s.contest_id);
+    const entries = (allSubs || []).filter((s) => !!s.contest_id);
 
     res.json({
       data: {
-        submissions:     subs    || [],
-        contest_entries: entries || [],
+        submissions:     subs,
+        contest_entries: entries,
       },
     });
   } catch (err) {

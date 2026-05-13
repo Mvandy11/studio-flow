@@ -58,7 +58,7 @@ export default function AdminDashboard() {
     ] = await Promise.all([
       supabase.from('contests').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('events').select('*').order('created_at', { ascending: false }).limit(50),
-      supabase.from('contest_entries').select('*, contests(title)').order('created_at', { ascending: false }).limit(100),
+      supabase.from('submissions').select('*, contests(title)').not('contest_id', 'is', null).order('created_at', { ascending: false }).limit(100),
     ]);
 
     let anns = [];

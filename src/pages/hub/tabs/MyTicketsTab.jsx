@@ -13,35 +13,24 @@ export default function MyTicketsTab({ refreshKey }) {
     async function load() {
       setLoading(true);
       try {
-        const [{ data: paid }, { data: free }] = await Promise.all([
-          supabase
-            .from('event_tickets')
-            .select('id, event_id, ticket_type, amount, status, created_at')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('free_tickets')
-            .select('id, event_id, ticket_type, created_at')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false }),
-        ]);
+        const { data: allTickets } = await supabase
+          .from('event_tickets')
+          .select('id, event_id, ticket_type, amount, status, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
-        const paidRows = (paid || []).map((t) => ({
-          ...t,
-          ticket_type:  t.ticket_type || 'paid',
-          event_title:  t.event_id    || 'Event',
-          purchased_at: t.created_at,
-          status:       t.status      || 'upcoming',
-        }));
-        const freeRows = (free || []).map((t) => ({
-          ...t,
-          ticket_type:  'free',
-          event_title:  t.event_id || 'Event',
-          amount:       0,
-          purchased_at: t.created_at,
-          status:       'upcoming',
-        }));
-        setTickets([...paidRows, ...freeRows]);
+        const rows = (allTickets || []).map((t) => {
+          const isFree = t.ticket_type === 'view_only' || t.ticket_type === 'free';
+          return {
+            ...t,
+            ticket_type:  isFree ? 'free' : (t.ticket_type || 'paid'),
+            event_title:  t.event_id || 'Event',
+            purchased_at: t.created_at,
+            status:       t.status || 'upcoming',
+            amount:       isFree ? 0 : (t.amount || 0),
+          };
+        });
+        setTickets(rows);
       } catch (_) {
         setTickets([]);
       }
