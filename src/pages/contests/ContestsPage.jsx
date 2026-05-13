@@ -31,18 +31,14 @@ export default function ContestsPage() {
       setLoading(true);
       setError(null);
       try {
-        let query = supabase
+        const { data, error: qErr } = await supabase
           .from('contests')
           .select('*')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(100);
 
-        if (category) query = query.eq('category', category);
-
-        const { data, error: qErr } = await query;
         if (qErr) throw new Error(qErr.message);
-
         setContests(data || []);
       } catch (err) {
         setError(err.message);
@@ -51,7 +47,11 @@ export default function ContestsPage() {
       }
     }
     load();
-  }, [category]);
+  }, []);
+
+  const filteredContests = category
+    ? contests.filter((c) => c.category?.toLowerCase().includes(category.toLowerCase()))
+    : contests;
 
   return (
     <div className="page-container">
@@ -89,7 +89,7 @@ export default function ContestsPage() {
         </div>
       )}
 
-      {!loading && !error && contests.length === 0 && (
+      {!loading && !error && filteredContests.length === 0 && (
         <div className="ai-grid__empty">
           <p style={{ fontSize:'2.5rem' }}>🏆</p>
           <p>No contests yet.</p>
@@ -101,9 +101,9 @@ export default function ContestsPage() {
         </div>
       )}
 
-      {!loading && contests.length > 0 && (
+      {!loading && filteredContests.length > 0 && (
         <div className="contests-grid">
-          {contests.map((c) => <ContestCard key={c.id} contest={c} />)}
+          {filteredContests.map((c) => <ContestCard key={c.id} contest={c} />)}
         </div>
       )}
 
