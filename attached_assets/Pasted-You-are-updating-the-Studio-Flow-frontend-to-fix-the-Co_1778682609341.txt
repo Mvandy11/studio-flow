@@ -1,0 +1,98 @@
+You are updating the Studio Flow frontend to fix the Contest List View so that all contests appear correctly on the /contests page.
+
+GOAL:
+Ensure the Contests page loads and displays all contests using the correct Supabase view: admin_contest_dashboard.
+
+---------------------------------------
+STEP 1 — FIX DATA SOURCE FOR CONTEST LIST
+---------------------------------------
+
+Search the entire codebase for any place where the contest list is loaded using:
+
+- contest_leaderboard
+- contest_submission_feed
+- old contest tables (contest_entries, contest_votes, etc.)
+- any static or hardcoded contest arrays
+
+Replace ALL of these with:
+
+supabase.from('admin_contest_dashboard').select('*')
+
+This view contains:
+- contest_id
+- title
+- description
+- category
+- created_at
+- is_active
+- submission_count
+- total_like_count
+- winner preview fields
+
+These are the fields the Contest List UI expects.
+
+---------------------------------------
+STEP 2 — REMOVE INVALID FIELD REFERENCES
+---------------------------------------
+
+Search the Contest List component(s) for references to fields that DO NOT exist in contest_leaderboard, such as:
+
+- submission_count
+- total_like_count
+- entries
+- status
+- prize
+- voting
+- archived
+- completed
+
+Remove or replace these with the correct fields from admin_contest_dashboard.
+
+---------------------------------------
+STEP 3 — UPDATE UI MAPPING
+---------------------------------------
+
+Ensure the Contest List UI maps each contest to a card using:
+
+- title
+- category
+- submission_count
+- total_like_count
+- winner preview (if present)
+
+Remove any UI elements expecting old fields like:
+- voting state
+- archive state
+- entry counts from old tables
+
+---------------------------------------
+STEP 4 — VALIDATE ROUTING
+---------------------------------------
+
+Ensure each contest card links to:
+
+/contests/[contest_id]
+
+Remove any routing that points to:
+/subscription/*
+/subscription/contests/*
+or any legacy contest routes.
+
+---------------------------------------
+STEP 5 — CLEANUP & BUILD
+---------------------------------------
+
+- Remove unused imports
+- Remove unused types
+- Remove unused components tied to old contest logic
+- Ensure the app compiles with zero TypeScript errors
+
+---------------------------------------
+FINAL OUTPUT
+---------------------------------------
+
+After completing the work, print:
+- All modified files
+- All updated Supabase queries
+- All removed legacy field references
+- Any remaining issues requiring manual review

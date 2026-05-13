@@ -32,9 +32,9 @@ export default function ContestsPage() {
       setError(null);
       try {
         let query = supabase
-          .from('contest_leaderboard')
+          .from('admin_contest_dashboard')
           .select('*')
-          .order('submission_count', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(100);
 
         if (category) query = query.eq('category', category);
