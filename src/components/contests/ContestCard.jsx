@@ -15,9 +15,6 @@ export default function ContestCard({ contest }) {
     ? (CATEGORY_LABELS[contest.category] ?? contest.category)
     : null;
 
-  const submissionCount = contest.submission_count ?? null;
-  const totalLikes      = contest.total_like_count  ?? null;
-
   return (
     <Link to={`/contests/${contest.id}`} className="contest-card">
       {contest.thumbnail_url ? (
@@ -55,10 +52,7 @@ export default function ContestCard({ contest }) {
       </div>
 
       <div className="contest-card__footer">
-        <span style={{ display:'flex', gap:'0.75rem', color:'rgba(200,200,215,0.5)', fontSize:'0.78rem' }}>
-          {submissionCount !== null && <span>📥 {submissionCount}</span>}
-          {totalLikes      !== null && <span>❤️ {totalLikes}</span>}
-        </span>
+        <span />
         <span>View →</span>
       </div>
     </Link>

@@ -1,0 +1,104 @@
+You are updating the Studio Flow frontend to fix the PUBLIC contests page so that all contests load correctly for non-admin users.
+
+GOAL:
+Ensure the public-facing /contests page uses ONLY public-safe Supabase tables/views and NEVER calls admin-only views such as admin_contest_dashboard or functions like is_admin().
+
+---------------------------------------
+STEP 1 — FIND AND FIX THE PUBLIC CONTEST QUERY
+---------------------------------------
+
+Search the entire codebase for the public contests page component. It may be named:
+- ContestsPage.jsx / .tsx
+- PublicContests.jsx / .tsx
+- ContestIndex.jsx / .tsx
+- ContestsList.jsx / .tsx
+
+Inside that file, locate ANY of the following incorrect queries:
+
+- supabase.from('admin_contest_dashboard')
+- supabase.from('admin_contests')
+- supabase.from('contest_admin_view')
+- supabase.rpc('is_admin')
+- supabase.from('contest_leaderboard') with INNER JOINs
+- supabase.from('public_contests_view') that filters by is_public before the column existed
+
+REPLACE ALL OF THEM with the correct public-safe query:
+
+supabase
+  .from('contests')
+  .select('*')
+  .eq('is_public', true)
+  .eq('is_active', true)
+  .order('created_at', { ascending: false });
+
+This ensures:
+- no admin-only logic is used
+- no RLS blocks the query
+- all contests appear instantly
+
+---------------------------------------
+STEP 2 — REMOVE ANY ADMIN-ONLY FIELDS FROM PUBLIC UI
+---------------------------------------
+
+Search the public contests page for references to:
+- submission_count
+- total_like_count
+- winner preview
+- admin-only metadata
+- admin-only actions
+
+REMOVE these fields from the public UI.
+
+The public page should ONLY display:
+- title
+- category
+- description
+- created_at
+- is_active
+- is_public
+
+---------------------------------------
+STEP 3 — FIX LOADING STATE
+---------------------------------------
+
+Ensure the public contests page:
+- sets loading = false after the query resolves
+- handles empty results gracefully
+- does NOT wait for admin-only data
+
+Remove any logic that waits for:
+- admin_contest_dashboard
+- winners table
+- submissions table directly
+- is_admin() checks
+
+---------------------------------------
+STEP 4 — FIX ROUTING
+---------------------------------------
+
+Ensure each contest card links to:
+
+/contests/[id]
+
+Remove any legacy routes under:
+/subscription/*
+/admin/contests/*
+
+---------------------------------------
+STEP 5 — CLEANUP
+---------------------------------------
+
+- Remove unused imports
+- Remove unused admin-only components
+- Remove old contest logic
+- Ensure the page compiles with zero TypeScript errors
+
+---------------------------------------
+FINAL OUTPUT
+---------------------------------------
+
+After completing the work, print:
+- All modified files
+- All updated Supabase queries
+- All removed admin-only logic
+- Any remaining issues requiring manual review
