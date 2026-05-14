@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getSessionById } from '../lib/session';
 import { useRealtimeChat } from '../hooks/useRealtimeChat';
 import ChatBubble from '../components/ChatBubble';
+import LivePlayer from '../components/LivePlayer';
 
 export default function SessionPage() {
   const { id } = useParams();
@@ -36,12 +37,7 @@ export default function SessionPage() {
 
       <div style={{ padding: '2rem' }}>
         {session.livestream_url && (
-          <iframe
-            src={session.livestream_url}
-            width="100%"
-            height="400"
-            allow="autoplay; encrypted-media"
-          />
+          <LivePlayer url={session.livestream_url} label={session.title} />
         )}
 
         <h2>Live Chat</h2>

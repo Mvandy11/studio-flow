@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { checkEventAccess } from '../../lib/checkEventAccess';
 import { api } from '../../lib/api.js';
+import LivePlayer from '../../components/LivePlayer';
 
 /* ── helpers ─────────────────────────────────────────────────── */
 function formatDate(iso) {
@@ -166,6 +167,11 @@ export default function EventDetailsPage() {
         <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#111', marginBottom: '1.75rem' }}>
           <img src={thumbnail} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
+      )}
+
+      {/* Live stream player */}
+      {isLive && event.live_stream_url && eventStatus !== 'ended' && (
+        <LivePlayer url={event.live_stream_url} label={event.title} />
       )}
 
       {/* Video player (recorded events) */}

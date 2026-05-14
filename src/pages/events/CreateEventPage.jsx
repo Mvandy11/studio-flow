@@ -19,15 +19,16 @@ export default function CreateEventPage() {
   const { user, role } = useAuth();
 
   const [form, setForm] = useState({
-    title:         '',
-    description:   '',
-    thumbnail_url: '',
-    event_mode:    'live',
-    is_paid_event: false,
-    ticket_price:  '',
-    stage_room_id: '',
-    starts_at:     '',
-    video_url:     '',
+    title:          '',
+    description:    '',
+    thumbnail_url:  '',
+    event_mode:     'live',
+    is_paid_event:  false,
+    ticket_price:   '',
+    stage_room_id:  '',
+    starts_at:      '',
+    video_url:      '',
+    live_stream_url: '',
   });
   const [backstagePass, setBackstagePass] = useState(false);
   const [seatLimit,     setSeatLimit]     = useState(50);
@@ -79,8 +80,9 @@ export default function CreateEventPage() {
             live_room_id:  roomId,
             starts_at:     form.starts_at || null,
             start_time:    form.starts_at || null,
-            video_url:     isRecorded ? form.video_url.trim() || null : null,
-            status:        'upcoming',
+            video_url:      isRecorded ? form.video_url.trim() || null : null,
+            live_stream_url: isLive ? form.live_stream_url.trim() || null : null,
+            status:         'upcoming',
           }),
         });
 
@@ -93,15 +95,16 @@ export default function CreateEventPage() {
       const { data, error } = await supabase
         .from('events')
         .insert({
-          title:         form.title.trim(),
-          description:   form.description.trim() || null,
-          thumbnail_url: form.thumbnail_url.trim() || null,
-          event_mode:    form.event_mode,
-          is_paid_event: form.is_paid_event,
-          ticket_price:  form.is_paid_event ? Number(form.ticket_price) : null,
-          stage_room_id: roomId,
-          creator_id:    user.id,
-          starts_at:     form.starts_at || null,
+          title:           form.title.trim(),
+          description:     form.description.trim() || null,
+          thumbnail_url:   form.thumbnail_url.trim() || null,
+          event_mode:      form.event_mode,
+          is_paid_event:   form.is_paid_event,
+          ticket_price:    form.is_paid_event ? Number(form.ticket_price) : null,
+          stage_room_id:   roomId,
+          creator_id:      user.id,
+          starts_at:       form.starts_at || null,
+          live_stream_url: isLive ? form.live_stream_url.trim() || null : null,
           ...(backstagePass && bpEnabled
             ? { backstage_pass: true, seat_limit: seatLimit }
             : { backstage_pass: false, seat_limit: null }),
@@ -213,6 +216,24 @@ export default function CreateEventPage() {
               />
               <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.3rem' }}>
                 Used to route viewers to the correct live stage.
+              </p>
+            </div>
+          )}
+
+          {/* Live-only: External stream URL */}
+          {isLive && (
+            <div>
+              <label className="cinematic-label">
+                Livestream URL <span style={{ color: 'rgba(200,200,215,0.35)', fontWeight: 400 }}>(optional)</span>
+              </label>
+              <input
+                className="cinematic-input"
+                placeholder="YouTube Live, Twitch, Vimeo, or Cloudflare Stream URL"
+                value={form.live_stream_url}
+                onChange={(e) => set('live_stream_url', e.target.value)}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.3rem' }}>
+                Embeds a live player on the event page. Supports YouTube, Twitch, Vimeo, and Cloudflare Stream.
               </p>
             </div>
           )}

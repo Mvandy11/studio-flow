@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { isCreatorAdmin } from '../lib/roles';
+import LivePlayer from '../components/LivePlayer';
 import '../styles/portfolio.css';
 
 const SOCIAL_ICONS = {
@@ -165,6 +166,24 @@ export default function CreatorProfile() {
   const socialLinks = profile.social_links || {};
   const isOwn       = user?.id === profile.id;
 
+  /* ── Go Live state (own profile only) ───────────────────── */
+  const [goLiveUrl,    setGoLiveUrl]    = useState(profile.live_stream_url  || '');
+  const [goLiveType,   setGoLiveType]   = useState(profile.live_stream_type || 'youtube');
+  const [isLiveNow,    setIsLiveNow]    = useState(profile.is_live          || false);
+  const [goLiveSaving, setGoLiveSaving] = useState(false);
+  const [goLiveMsg,    setGoLiveMsg]    = useState('');
+
+  async function saveGoLive() {
+    setGoLiveSaving(true);
+    setGoLiveMsg('');
+    const { error } = await supabase
+      .from('profiles')
+      .update({ live_stream_url: goLiveUrl || null, live_stream_type: goLiveType, is_live: isLiveNow })
+      .eq('id', user.id);
+    setGoLiveSaving(false);
+    setGoLiveMsg(error ? error.message : isLiveNow ? '🔴 You are now live!' : '✅ Stream settings saved.');
+  }
+
   return (
     <div className="portfolio-page">
       {/* Cover */}
@@ -183,7 +202,21 @@ export default function CreatorProfile() {
         </div>
 
         <div className="portfolio-identity">
-          <h1 className="portfolio-name">{displayName}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+            <h1 className="portfolio-name" style={{ margin: 0 }}>{displayName}</h1>
+            {profile.is_live && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                padding: '0.2rem 0.6rem', borderRadius: '999px',
+                background: '#ef4444', color: '#fff',
+                fontSize: '0.62rem', fontWeight: 800,
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+                animation: 'live-pulse 2s ease-in-out infinite',
+              }}>
+                🔴 LIVE
+              </span>
+            )}
+          </div>
           {profile.bio && <p className="portfolio-bio">{profile.bio}</p>}
           {Object.entries(socialLinks).length > 0 && (
             <div className="portfolio-social">
@@ -218,6 +251,13 @@ export default function CreatorProfile() {
           )}
         </div>
       </div>
+
+      {/* Live player — visible to all when creator is live */}
+      {profile.is_live && profile.live_stream_url && (
+        <div style={{ padding: '0 1.5rem', marginTop: '0.5rem' }}>
+          <LivePlayer url={profile.live_stream_url} label={`${displayName} — Live`} />
+        </div>
+      )}
 
       {/* Stats */}
       <div className="portfolio-stats">
@@ -309,6 +349,115 @@ export default function CreatorProfile() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Go Live panel (own profile only) ────────────────────── */}
+      {isOwn && (
+        <div className="portfolio-section">
+          <h2 className="portfolio-section-title">📡 Go Live</h2>
+          <div style={{
+            background: 'rgba(248,113,113,0.05)',
+            border: '1px solid rgba(248,113,113,0.15)',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+          }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.4rem' }}>
+                Livestream URL
+              </label>
+              <input
+                className="cinematic-input"
+                placeholder="YouTube Live, Twitch, Vimeo, or Cloudflare Stream URL"
+                value={goLiveUrl}
+                onChange={(e) => setGoLiveUrl(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.4rem' }}>
+                Platform
+              </label>
+              <select
+                value={goLiveType}
+                onChange={(e) => setGoLiveType(e.target.value)}
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: 'rgba(220,220,235,0.85)',
+                  padding: '0.55rem 0.85rem',
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  width: '100%',
+                  maxWidth: '220px',
+                }}
+              >
+                <option value="youtube">YouTube Live</option>
+                <option value="twitch">Twitch</option>
+                <option value="vimeo">Vimeo Live</option>
+                <option value="cloudflare">Cloudflare Stream</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isLiveNow}
+                onClick={() => setIsLiveNow((v) => !v)}
+                style={{
+                  position: 'relative', width: '44px', height: '24px',
+                  borderRadius: '999px', border: 'none', cursor: 'pointer',
+                  background: isLiveNow ? '#ef4444' : 'rgba(255,255,255,0.12)',
+                  transition: 'background 0.2s',
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: '3px',
+                  left: isLiveNow ? '23px' : '3px',
+                  width: '18px', height: '18px', borderRadius: '50%',
+                  background: '#fff', transition: 'left 0.2s',
+                }} />
+              </button>
+              <span style={{ fontSize: '0.88rem', color: isLiveNow ? '#fca5a5' : 'rgba(200,200,215,0.55)', fontWeight: 600 }}>
+                {isLiveNow ? '🔴 You are live' : 'Go Live'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={saveGoLive}
+                disabled={goLiveSaving}
+                style={{
+                  padding: '0.55rem 1.25rem', borderRadius: '8px',
+                  background: isLiveNow ? '#ef4444' : 'rgba(255,255,255,0.07)',
+                  border: isLiveNow ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.12)',
+                  color: '#fff', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {goLiveSaving ? 'Saving…' : isLiveNow ? '📡 Save & Go Live' : 'Save Settings'}
+              </button>
+              {goLiveMsg && (
+                <span style={{ fontSize: '0.82rem', color: isLiveNow ? '#fca5a5' : '#86efac' }}>
+                  {goLiveMsg}
+                </span>
+              )}
+            </div>
+
+            {/* Preview */}
+            {goLiveUrl && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <p style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.35)', marginBottom: '0.5rem' }}>Preview</p>
+                <LivePlayer url={goLiveUrl} label="Preview" />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
