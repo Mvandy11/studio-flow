@@ -2,111 +2,123 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
+const METHOD_OPTIONS = [
+  {
+    value: 'paypal',
+    label: 'PayPal',
+    icon: '💙',
+    placeholder: 'your@email.com',
+    hint: 'Enter the email address linked to your PayPal account.',
+    validate: (v) => v.includes('@') || 'Enter a valid PayPal email.',
+  },
+  {
+    value: 'venmo',
+    label: 'Venmo',
+    icon: '💸',
+    placeholder: '@YourVenmoHandle or phone number',
+    hint: 'Enter your Venmo @handle or registered phone number.',
+    validate: (v) => (v.startsWith('@') || /^\+?\d{10,}$/.test(v)) || 'Enter a Venmo @handle or phone number.',
+  },
+  {
+    value: 'stripe',
+    label: 'Stripe Connect',
+    icon: '🔵',
+    placeholder: 'acct_XXXXXXXXXXXXXXXXXX',
+    hint: 'Enter your Stripe Connect account ID (starts with acct_).',
+    validate: (v) => v.startsWith('acct_') || 'Enter a valid Stripe Connect account ID (acct_…).',
+  },
+  {
+    value: 'cashapp',
+    label: 'CashApp',
+    icon: '💚',
+    placeholder: '$YourCashtag',
+    hint: 'Enter your CashApp $cashtag.',
+    validate: (v) => v.startsWith('$') || 'Enter a valid CashApp $cashtag.',
+  },
+];
+
 export default function PremierSettings() {
   const { user } = useAuth();
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);
+  const [valErr,   setValErr]   = useState('');
 
-  // Payout method options:
-  // "studioflow-kofi" | "my-kofi" | "custom"
-  const [payoutMethod, setPayoutMethod] = useState("studioflow-kofi");
+  const [method,  setMethod]  = useState('paypal');
+  const [account, setAccount] = useState('');
 
-  // Studio Flow Ko-fi Product
-  const [sfProductLink, setSfProductLink] = useState("");
-  const [sfEventTitle, setSfEventTitle] = useState("");
-  const [sfEventDate, setSfEventDate] = useState("");
-  const [sfEventTime, setSfEventTime] = useState("");
-  const [sfThumbnail, setSfThumbnail] = useState("");
+  // Also keep legacy creator_settings fields so existing EarningsDashboard still works
+  const [paypal,    setPaypal]    = useState('');
+  const [venmo,     setVenmo]     = useState('');
+  const [stripe,    setStripe]    = useState('');
+  const [cashapp,   setCashapp]   = useState('');
 
-  // Creator's own Ko-fi links
-  const [kofiPage, setKofiPage] = useState("");
-  const [kofiDonation, setKofiDonation] = useState("");
-  const [kofiMembership, setKofiMembership] = useState("");
-  const [kofiShop, setKofiShop] = useState("");
-
-  // Custom payout links
-  const [paypal, setPaypal] = useState("");
-  const [cashapp, setCashapp] = useState("");
-  const [stripe, setStripe] = useState("");
-  const [venmo, setVenmo] = useState("");
-  const [customUrl, setCustomUrl] = useState("");
-
-  // Load existing settings
   useEffect(() => {
-    async function loadSettings() {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
+    if (!user) { setLoading(false); return; }
+    async function load() {
+      const { data } = await supabase
         .from('creator_settings')
-        .select('*')
+        .select('payout_method, paypal, venmo, stripe, cashapp, custom_url')
         .eq('creator_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (data) {
-        setPayoutMethod(data.payout_method || "studioflow-kofi");
+        // Map old method values → new ones
+        const m = (['paypal','venmo','stripe','cashapp'].includes(data.payout_method))
+          ? data.payout_method
+          : 'paypal';
+        setMethod(m);
+        setPaypal(data.paypal   || '');
+        setVenmo(data.venmo     || '');
+        setStripe(data.stripe   || '');
+        setCashapp(data.cashapp || '');
 
-        setSfProductLink(data.sf_product_link || "");
-        setSfEventTitle(data.sf_event_title || "");
-        setSfEventDate(data.sf_event_date || "");
-        setSfEventTime(data.sf_event_time || "");
-        setSfThumbnail(data.sf_thumbnail || "");
-
-        setKofiPage(data.kofi_page || "");
-        setKofiDonation(data.kofi_donation || "");
-        setKofiMembership(data.kofi_membership || "");
-        setKofiShop(data.kofi_shop || "");
-
-        setPaypal(data.paypal || "");
-        setCashapp(data.cashapp || "");
-        setStripe(data.stripe || "");
-        setVenmo(data.venmo || "");
-        setCustomUrl(data.custom_url || "");
+        // Pre-fill account field based on selected method
+        const fieldMap = { paypal: data.paypal, venmo: data.venmo, stripe: data.stripe, cashapp: data.cashapp };
+        setAccount(fieldMap[m] || '');
       }
-
       setLoading(false);
     }
-
-    loadSettings();
+    load();
   }, [user]);
 
-  async function saveSettings() {
-    setSaving(true);
-
-    const payload = {
-      creator_id: user.id,
-      payout_method: payoutMethod,
-
-      sf_product_link: sfProductLink,
-      sf_event_title: sfEventTitle,
-      sf_event_date: sfEventDate,
-      sf_event_time: sfEventTime,
-      sf_thumbnail: sfThumbnail,
-
-      kofi_page: kofiPage,
-      kofi_donation: kofiDonation,
-      kofi_membership: kofiMembership,
-      kofi_shop: kofiShop,
-
-      paypal,
-      cashapp,
-      stripe,
-      venmo,
-      custom_url: customUrl,
-    };
-
-    const { error } = await supabase
-      .from('creator_settings')
-      .upsert(payload);
-
-    setSaving(false);
-    if (!error) alert("Payout settings saved.");
+  // When method changes, pre-fill account from the matching saved value
+  function handleMethodChange(m) {
+    setMethod(m);
+    setValErr('');
+    const saved = { paypal, venmo, stripe, cashapp };
+    setAccount(saved[m] || '');
   }
 
-  if (loading) return <div className="cinematic-title">Loading...</div>;
+  async function saveSettings() {
+    const opt = METHOD_OPTIONS.find((o) => o.value === method);
+    if (!account.trim()) { setValErr('Account info is required.'); return; }
+    const validationResult = opt?.validate(account.trim());
+    if (typeof validationResult === 'string') { setValErr(validationResult); return; }
+    setValErr('');
+    setSaving(true);
+    setSaved(false);
+
+    // Update in-memory copies
+    const fieldMap = { paypal: setPaypal, venmo: setVenmo, stripe: setStripe, cashapp: setCashapp };
+    fieldMap[method]?.(account.trim());
+
+    const payload = {
+      creator_id:    user.id,
+      payout_method: method,
+      paypal:   method === 'paypal'   ? account.trim() : paypal,
+      venmo:    method === 'venmo'    ? account.trim() : venmo,
+      stripe:   method === 'stripe'   ? account.trim() : stripe,
+      cashapp:  method === 'cashapp'  ? account.trim() : cashapp,
+    };
+
+    const { error } = await supabase.from('creator_settings').upsert(payload);
+    setSaving(false);
+    if (!error) setSaved(true);
+  }
+
+  if (loading) return <div className="cinematic-title">Loading…</div>;
 
   if (!user) return (
     <div className="cinematic-card-xl" style={{ padding: '2rem', textAlign: 'center' }}>
@@ -116,171 +128,79 @@ export default function PremierSettings() {
     </div>
   );
 
+  const selectedOpt = METHOD_OPTIONS.find((o) => o.value === method);
+
   return (
-    <div className="cinematic-card-xl" style={{ padding: "2rem" }}>
-      <h1 className="cinematic-title">Premier Payout Settings</h1>
+    <div className="cinematic-card-xl" style={{ padding: '2rem', maxWidth: '560px' }}>
+      <h1 className="cinematic-title">Payout Settings</h1>
+      <p style={{ color: 'rgba(200,200,215,0.45)', fontSize: '0.875rem', marginBottom: '2rem' }}>
+        Choose how you want to receive your earnings from Studio Flow.
+      </p>
 
-      {/* Payout Method Selection */}
-      <div className="cinematic-section">
-        <label className="cinematic-label">Payout Method</label>
-
-        <div className="cinematic-radio-group">
-          <label>
-            <input
-              type="radio"
-              checked={payoutMethod === "studioflow-kofi"}
-              onChange={() => setPayoutMethod("studioflow-kofi")}
-            />
-            Use Studio Flow Ko‑fi Premier Product (Recommended)
-          </label>
-
-          <label>
-            <input
-              type="radio"
-              checked={payoutMethod === "my-kofi"}
-              onChange={() => setPayoutMethod("my-kofi")}
-            />
-            Use My Own Ko‑fi Page
-          </label>
-
-          <label>
-            <input
-              type="radio"
-              checked={payoutMethod === "custom"}
-              onChange={() => setPayoutMethod("custom")}
-            />
-            Use Custom Payout Links
-          </label>
-        </div>
+      {/* Method selector */}
+      <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        {METHOD_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => handleMethodChange(opt.value)}
+            style={{
+              padding: '0.6rem 1.1rem',
+              borderRadius: '10px',
+              border: method === opt.value
+                ? '1px solid rgba(245,166,35,0.55)'
+                : '1px solid rgba(255,255,255,0.1)',
+              background: method === opt.value
+                ? 'rgba(245,166,35,0.09)'
+                : 'rgba(255,255,255,0.03)',
+              color: method === opt.value ? '#f5a623' : 'rgba(200,200,215,0.65)',
+              fontWeight: method === opt.value ? 700 : 500,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <span>{opt.icon}</span> {opt.label}
+          </button>
+        ))}
       </div>
 
-      {/* Studio Flow Ko-fi Product */}
-      {payoutMethod === "studioflow-kofi" && (
-        <div className="cinematic-section">
-          <h2 className="cinematic-subtitle">Studio Flow Ko‑fi Product</h2>
-
-          <input
-            className="cinematic-input"
-            placeholder="Ko‑fi Product Link"
-            value={sfProductLink}
-            onChange={(e) => setSfProductLink(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Event Title"
-            value={sfEventTitle}
-            onChange={(e) => setSfEventTitle(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            type="date"
-            value={sfEventDate}
-            onChange={(e) => setSfEventDate(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            type="time"
-            value={sfEventTime}
-            onChange={(e) => setSfEventTime(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Thumbnail URL"
-            value={sfThumbnail}
-            onChange={(e) => setSfThumbnail(e.target.value)}
-          />
-        </div>
-      )}
-
-      {/* My Own Ko-fi Page */}
-      {payoutMethod === "my-kofi" && (
-        <div className="cinematic-section">
-          <h2 className="cinematic-subtitle">My Ko‑fi Page</h2>
-
-          <input
-            className="cinematic-input"
-            placeholder="Ko‑fi Page URL"
-            value={kofiPage}
-            onChange={(e) => setKofiPage(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Donation Link"
-            value={kofiDonation}
-            onChange={(e) => setKofiDonation(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Membership Link"
-            value={kofiMembership}
-            onChange={(e) => setKofiMembership(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Shop Link"
-            value={kofiShop}
-            onChange={(e) => setKofiShop(e.target.value)}
-          />
-        </div>
-      )}
-
-      {/* Custom Payout Links */}
-      {payoutMethod === "custom" && (
-        <div className="cinematic-section">
-          <h2 className="cinematic-subtitle">Custom Payout Links</h2>
-
-          <input
-            className="cinematic-input"
-            placeholder="PayPal.me"
-            value={paypal}
-            onChange={(e) => setPaypal(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Cash App"
-            value={cashapp}
-            onChange={(e) => setCashapp(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Stripe Checkout Link"
-            value={stripe}
-            onChange={(e) => setStripe(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Venmo"
-            value={venmo}
-            onChange={(e) => setVenmo(e.target.value)}
-          />
-
-          <input
-            className="cinematic-input"
-            placeholder="Custom URL"
-            value={customUrl}
-            onChange={(e) => setCustomUrl(e.target.value)}
-          />
-        </div>
-      )}
+      {/* Account input */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <label className="cinematic-label">{selectedOpt?.label} Account</label>
+        <input
+          className="cinematic-input"
+          placeholder={selectedOpt?.placeholder}
+          value={account}
+          onChange={(e) => { setAccount(e.target.value); setValErr(''); setSaved(false); }}
+        />
+        {selectedOpt?.hint && (
+          <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.35rem' }}>
+            {selectedOpt.hint}
+          </p>
+        )}
+        {valErr && (
+          <p style={{ fontSize: '0.8rem', color: '#fca5a5', marginTop: '0.35rem' }}>{valErr}</p>
+        )}
+      </div>
 
       <button
         className="cinematic-button-accent"
         onClick={saveSettings}
         disabled={saving}
-        style={{ marginTop: "2rem" }}
+        style={{ marginTop: '0.5rem' }}
       >
-        {saving ? "Saving..." : "Save Payout Settings"}
+        {saving ? 'Saving…' : 'Save Payout Settings'}
       </button>
+
+      {saved && (
+        <p style={{ fontSize: '0.85rem', color: '#86efac', marginTop: '0.75rem' }}>
+          ✅ Payout settings saved.
+        </p>
+      )}
     </div>
   );
 }

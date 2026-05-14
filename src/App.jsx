@@ -9,6 +9,7 @@ import Studio from './pages/Studio';
 import StudioSessions from './pages/StudioSessions';
 import SessionEditor from './pages/SessionEditor';
 import PremierSettings from './pages/PremierSettings';
+import PayoutSettings from './pages/PayoutSettings';
 import EventsPage from './pages/events/EventsPage';
 import EventDetailsPage from './pages/events/EventDetailsPage';
 import PurchasePage from './pages/events/PurchasePage';
@@ -95,6 +96,7 @@ export default function App() {
 
           {/* ── Account ── */}
           <Route path="/earnings" element={<EarningsDashboard />} />
+          <Route path="/settings/payouts" element={<PayoutSettings />} />
           <Route path="/admin" element={<AdminDashboard />} />
 
           {/* ── Stripe callbacks ── */}

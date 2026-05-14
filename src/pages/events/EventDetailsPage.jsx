@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { isCreatorAdmin } from '../../lib/roles';
 import { checkEventAccess } from '../../lib/checkEventAccess';
 import { api } from '../../lib/api.js';
 import LivePlayer from '../../components/LivePlayer';
@@ -74,6 +75,118 @@ function VideoPlayer({ url }) {
   );
 }
 
+/* ── WinnerModal ─────────────────────────────────────────────── */
+function WinnerModal({ winner, drawing, onClose, onSendPayout }) {
+  const [sending, setSending] = useState(false);
+  const [sent,    setSent]    = useState(false);
+  const [sendErr, setSendErr] = useState('');
+
+  async function handleSend() {
+    setSending(true);
+    setSendErr('');
+    try {
+      await onSendPayout();
+      setSent(true);
+    } catch (err) {
+      setSendErr(err.message || 'Payout failed.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+    }}>
+      <div style={{
+        background: '#13131a', border: '1px solid rgba(245,166,35,0.3)',
+        borderRadius: '20px', padding: '2rem', maxWidth: '480px', width: '100%',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎰</div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#f5a623' }}>Drawing Winner!</h2>
+          <p style={{ color: 'rgba(200,200,215,0.45)', fontSize: '0.82rem', marginTop: '0.35rem' }}>
+            {drawing.eventTitle}
+          </p>
+        </div>
+
+        {/* Winner details */}
+        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(245,166,35,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>
+              {winner.avatarUrl
+                ? <img src={winner.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                : '🎟'
+              }
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1rem' }}>{winner.name}</div>
+              {winner.email && (
+                <div style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.5)' }}>{winner.email}</div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.83rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.6rem 0.85rem' }}>
+              <div style={{ color: 'rgba(200,200,215,0.4)', marginBottom: '0.2rem' }}>Total Pot</div>
+              <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#f5a623' }}>${drawing.totalPot.toFixed(2)}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.6rem 0.85rem' }}>
+              <div style={{ color: 'rgba(200,200,215,0.4)', marginBottom: '0.2rem' }}>Total Entries</div>
+              <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{drawing.totalEntries}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Payout method */}
+        <div style={{ marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+          {winner.hasPayoutMethod ? (
+            <p style={{ color: 'rgba(200,200,215,0.65)', margin: 0 }}>
+              Payout via: <strong style={{ color: '#fff' }}>{winner.payoutMethod?.toUpperCase()}</strong>
+              {winner.payoutAccount && <> — <code style={{ color: '#f5a623' }}>{winner.payoutAccount}</code></>}
+            </p>
+          ) : (
+            <p style={{ color: '#fca5a5', margin: 0 }}>
+              ⚠ Winner has not set up a payout method. They must add one in their account settings before you can send payment.
+            </p>
+          )}
+        </div>
+
+        {sendErr && (
+          <p style={{ color: '#fca5a5', fontSize: '0.83rem', marginBottom: '0.75rem' }}>{sendErr}</p>
+        )}
+        {sent && (
+          <p style={{ color: '#86efac', fontSize: '0.83rem', marginBottom: '0.75rem' }}>✅ Payout initiated successfully! Check Payout Logs for status.</p>
+        )}
+
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {!sent && winner.hasPayoutMethod && (
+            <button
+              className="cinematic-button-accent"
+              onClick={handleSend}
+              disabled={sending}
+              style={{ flex: 1, minWidth: '140px' }}
+            >
+              {sending ? 'Sending…' : `💸 Send Payout — $${drawing.totalPot.toFixed(2)}`}
+            </button>
+          )}
+          <button
+            className="cinematic-button"
+            onClick={onClose}
+            style={{ flex: 1, minWidth: '100px' }}
+          >
+            {sent ? 'Done' : 'Cancel'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── main component ─────────────────────────────────────────── */
 export default function EventDetailsPage() {
   const { id: eventId } = useParams();
@@ -85,7 +198,17 @@ export default function EventDetailsPage() {
   const [error,    setError]    = useState('');
   const [joining,  setJoining]  = useState(false);
 
+  // Drawing pot
+  const [entryCount,   setEntryCount]   = useState(0);
+  const [potLoading,   setPotLoading]   = useState(false);
+
+  // Admin winner picker
+  const [picking,      setPicking]      = useState(false);
+  const [pickErr,      setPickErr]      = useState('');
+  const [winnerResult, setWinnerResult] = useState(null);
+
   const countdown = useCountdown(event?.start_time || event?.starts_at);
+  const isAdmin = isCreatorAdmin(role);
 
   useEffect(() => {
     async function load() {
@@ -100,6 +223,21 @@ export default function EventDetailsPage() {
     }
     load();
   }, [eventId]);
+
+  // Fetch drawing entry count when event loads
+  useEffect(() => {
+    if (!event?.drawing_enabled) return;
+    setPotLoading(true);
+    supabase
+      .from('ticket_purchases')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('drawing_entry', true)
+      .then(({ count }) => {
+        setEntryCount(count || 0);
+        setPotLoading(false);
+      });
+  }, [event, eventId]);
 
   const handleJoinLive = useCallback(async () => {
     if (!user) { navigate(`/events/${eventId}/purchase`); return; }
@@ -119,6 +257,39 @@ export default function EventDetailsPage() {
       setJoining(false);
     }
   }, [user, role, eventId, navigate]);
+
+  async function handlePickWinner() {
+    setPicking(true);
+    setPickErr('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const result = await api(`/api/events/${eventId}/pick-winner`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      });
+      setWinnerResult(result);
+    } catch (err) {
+      setPickErr(err.message || 'Could not pick a winner.');
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  async function handleSendPayout() {
+    if (!winnerResult) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    await api('/api/payouts/initiate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({
+        userId:  winnerResult.winner.userId,
+        eventId,
+        amount:  winnerResult.drawing.totalPot,
+        method:  winnerResult.winner.payoutMethod,
+        note:    `Drawing winner — ${winnerResult.drawing.eventTitle}`,
+      }),
+    });
+  }
 
   if (loading) return (
     <div className="page-container" style={{ textAlign: 'center', paddingTop: '4rem' }}>
@@ -145,6 +316,9 @@ export default function EventDetailsPage() {
   const dateStr      = formatDate(event.start_time || event.starts_at);
   const videoUrl     = event.video_url;
   const thumbnail    = event.thumbnail_url || event.image_url;
+  const drawingEnabled = !!event.drawing_enabled;
+  const drawingAmount  = Number(event.drawing_amount || 0);
+  const totalPot       = drawingAmount * entryCount;
 
   /* live status badge colour */
   const statusMeta = {
@@ -157,6 +331,16 @@ export default function EventDetailsPage() {
 
   return (
     <div className="page-container" style={{ maxWidth: '760px', margin: '0 auto' }}>
+      {/* Winner Modal */}
+      {winnerResult && (
+        <WinnerModal
+          winner={winnerResult.winner}
+          drawing={winnerResult.drawing}
+          onClose={() => setWinnerResult(null)}
+          onSendPayout={handleSendPayout}
+        />
+      )}
+
       {/* Back */}
       <Link to="/events" style={{ fontSize: '0.82rem', color: 'rgba(200,200,215,0.45)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '1.5rem' }}>
         ← Events
@@ -196,6 +380,11 @@ export default function EventDetailsPage() {
         <span style={{ padding: '0.25rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: price === 0 ? 'rgba(34,197,94,0.12)' : 'rgba(245,166,35,0.12)', color: price === 0 ? '#22c55e' : '#f5a623', border: `1px solid ${price === 0 ? '#22c55e44' : '#f5a62344'}` }}>
           {price === 0 ? 'Free' : `$${price.toFixed(2)}`}
         </span>
+        {drawingEnabled && (
+          <span style={{ padding: '0.25rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(245,166,35,0.15)', color: '#f5a623', border: '1px solid rgba(245,166,35,0.35)' }}>
+            🎰 Drawing Pot
+          </span>
+        )}
       </div>
 
       {/* Title */}
@@ -213,6 +402,58 @@ export default function EventDetailsPage() {
         <p style={{ color: 'rgba(200,200,215,0.65)', lineHeight: 1.65, marginBottom: '2rem', fontSize: '0.92rem' }}>
           {event.description}
         </p>
+      )}
+
+      {/* ── Drawing Pot Panel ──────────────────────────────────── */}
+      {drawingEnabled && (
+        <div style={{ background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '16px', padding: '1.25rem 1.5rem', marginBottom: '2rem' }}>
+          <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700, color: '#f5a623', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            🎰 Drawing Pot
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: isAdmin ? '1.25rem' : 0 }}>
+            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.4)', marginBottom: '0.3rem' }}>
+                Total Pot
+              </div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f5a623' }}>
+                {potLoading ? '…' : `$${totalPot.toFixed(2)}`}
+              </div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.4)', marginBottom: '0.3rem' }}>
+                Entries
+              </div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>
+                {potLoading ? '…' : entryCount}
+              </div>
+            </div>
+          </div>
+          <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', margin: 0 }}>
+            ${drawingAmount.toFixed(2)} from each ticket goes into the pot. Every ticket purchase = 1 entry.
+          </p>
+
+          {/* Admin: Pick Winner */}
+          {isAdmin && (
+            <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button
+                className="cinematic-button-accent"
+                onClick={handlePickWinner}
+                disabled={picking || entryCount === 0}
+                style={{ fontSize: '0.9rem' }}
+              >
+                {picking ? 'Picking…' : '🎲 Pick Random Winner'}
+              </button>
+              {entryCount === 0 && !potLoading && (
+                <p style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.5rem' }}>
+                  No entries yet.
+                </p>
+              )}
+              {pickErr && (
+                <p style={{ fontSize: '0.82rem', color: '#fca5a5', marginTop: '0.5rem' }}>{pickErr}</p>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Countdown (upcoming live events) */}

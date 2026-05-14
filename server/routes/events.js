@@ -206,6 +206,95 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
+/* ── POST /api/events/:id/pick-winner (creator_admin only) ───── */
+router.post('/:id/pick-winner', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const eventId = req.params.id;
+
+    // Verify event exists and drawing is enabled
+    const { data: event } = await supabase
+      .from('events')
+      .select('id, title, drawing_enabled, drawing_amount')
+      .eq('id', eventId)
+      .maybeSingle();
+
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+    if (!event.drawing_enabled) return res.status(422).json({ error: 'Drawing is not enabled for this event.' });
+
+    // Count entries
+    const { count: entryCount } = await supabase
+      .from('ticket_purchases')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('drawing_entry', true);
+
+    if (!entryCount || entryCount === 0) {
+      return res.status(422).json({ error: 'No drawing entries for this event.' });
+    }
+
+    // Pick random winner
+    const { data: entries } = await supabase
+      .from('ticket_purchases')
+      .select('user_id')
+      .eq('event_id', eventId)
+      .eq('drawing_entry', true);
+
+    if (!entries || entries.length === 0) {
+      return res.status(422).json({ error: 'No drawing entries found.' });
+    }
+
+    const winner = entries[Math.floor(Math.random() * entries.length)];
+    const winnerId = winner.user_id;
+
+    // Fetch winner profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, full_name, username, avatar_url')
+      .eq('id', winnerId)
+      .maybeSingle();
+
+    // Fetch winner email from auth.users (service role)
+    const { data: authData } = await supabase.auth.admin.getUserById(winnerId);
+    const winnerEmail = authData?.user?.email || null;
+
+    // Fetch winner payout method
+    const { data: settings } = await supabase
+      .from('creator_settings')
+      .select('payout_method, paypal, venmo, stripe, cashapp')
+      .eq('creator_id', winnerId)
+      .maybeSingle();
+
+    const payoutMethod  = settings?.payout_method || null;
+    const payoutAccount = payoutMethod ? (settings?.[payoutMethod] || null) : null;
+
+    const totalPot = Number(event.drawing_amount || 0) * entryCount;
+
+    return res.json({
+      winner: {
+        userId:        winnerId,
+        name:          profile?.full_name || profile?.username || 'Unknown',
+        email:         winnerEmail,
+        avatarUrl:     profile?.avatar_url || null,
+        payoutMethod,
+        payoutAccount,
+        hasPayoutMethod: !!payoutMethod,
+      },
+      drawing: {
+        eventId,
+        eventTitle:    event.title,
+        totalEntries:  entryCount,
+        drawingAmount: Number(event.drawing_amount || 0),
+        totalPot,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ── DELETE /api/events/:id (creator_admin only) ─────────────── */
 router.delete('/:id', async (req, res) => {
   try {

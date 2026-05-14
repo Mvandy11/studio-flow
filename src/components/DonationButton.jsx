@@ -1,4 +1,4 @@
-const REWARD_POOL_STRIPE_LINK = 'https://buy.stripe.com/aFa28tddbcgofnmcl7b7y08';
+const REWARD_POOL_STRIPE_LINK = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
 
 export default function DonationButton({ compact = false }) {
   return (

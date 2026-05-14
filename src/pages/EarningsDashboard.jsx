@@ -39,7 +39,7 @@ export default function EarningsDashboard() {
         .limit(100),
       supabase
         .from('creator_settings')
-        .select('payout_method, paypal, cashapp, venmo, stripe, kofi_page, custom_url')
+        .select('payout_method, paypal, cashapp, venmo, stripe, custom_url')
         .eq('creator_id', user.id)
         .maybeSingle(),
     ]).then(([earningsRes, settingsRes]) => {
@@ -78,10 +78,9 @@ export default function EarningsDashboard() {
                            .reduce((s, e) => s + Number(e.amount), 0);
   const hasPending = earnings.some((e) => e.status === 'pending');
 
+  const METHOD_LABELS = { paypal: 'PayPal', venmo: 'Venmo', stripe: 'Stripe Connect', cashapp: 'CashApp', bank: 'Bank Transfer' };
   const payoutMethodLabel = settings?.payout_method
-    ? settings.payout_method.replace('studioflow-kofi', 'Studio Flow Ko-fi')
-                             .replace('my-kofi', 'My Ko-fi Page')
-                             .replace('custom', 'Custom Link')
+    ? METHOD_LABELS[settings.payout_method] ?? settings.payout_method
     : null;
 
   if (authLoading || loading) return (

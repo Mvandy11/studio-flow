@@ -19,16 +19,18 @@ export default function CreateEventPage() {
   const { user, role } = useAuth();
 
   const [form, setForm] = useState({
-    title:          '',
-    description:    '',
-    thumbnail_url:  '',
-    event_mode:     'live',
-    is_paid_event:  false,
-    ticket_price:   '',
-    stage_room_id:  '',
-    starts_at:      '',
-    video_url:      '',
+    title:           '',
+    description:     '',
+    thumbnail_url:   '',
+    event_mode:      'live',
+    is_paid_event:   false,
+    ticket_price:    '',
+    stage_room_id:   '',
+    starts_at:       '',
+    video_url:       '',
     live_stream_url: '',
+    drawing_enabled: false,
+    drawing_amount:  '',
   });
   const [backstagePass, setBackstagePass] = useState(false);
   const [seatLimit,     setSeatLimit]     = useState(50);
@@ -70,19 +72,23 @@ export default function CreateEventPage() {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            title:         form.title.trim(),
-            description:   form.description.trim() || null,
-            thumbnail_url: form.thumbnail_url.trim() || null,
-            event_mode:    form.event_mode,
-            is_paid:       form.is_paid_event,
-            price:         form.is_paid_event ? Number(form.ticket_price) : 0,
-            stage_room_id: roomId,
-            live_room_id:  roomId,
-            starts_at:     form.starts_at || null,
-            start_time:    form.starts_at || null,
-            video_url:      isRecorded ? form.video_url.trim() || null : null,
+            title:           form.title.trim(),
+            description:     form.description.trim() || null,
+            thumbnail_url:   form.thumbnail_url.trim() || null,
+            event_mode:      form.event_mode,
+            is_paid:         form.is_paid_event,
+            price:           form.is_paid_event ? Number(form.ticket_price) : 0,
+            stage_room_id:   roomId,
+            live_room_id:    roomId,
+            starts_at:       form.starts_at || null,
+            start_time:      form.starts_at || null,
+            video_url:       isRecorded ? form.video_url.trim() || null : null,
             live_stream_url: isLive ? form.live_stream_url.trim() || null : null,
-            status:         'upcoming',
+            status:          'upcoming',
+            drawing_enabled: form.is_paid_event && form.drawing_enabled,
+            drawing_amount:  form.is_paid_event && form.drawing_enabled && form.drawing_amount
+              ? Number(form.drawing_amount)
+              : null,
           }),
         });
 
@@ -105,6 +111,10 @@ export default function CreateEventPage() {
           creator_id:      user.id,
           starts_at:       form.starts_at || null,
           live_stream_url: isLive ? form.live_stream_url.trim() || null : null,
+          drawing_enabled: form.is_paid_event && form.drawing_enabled,
+          drawing_amount:  form.is_paid_event && form.drawing_enabled && form.drawing_amount
+            ? Number(form.drawing_amount)
+            : null,
           ...(backstagePass && bpEnabled
             ? { backstage_pass: true, seat_limit: seatLimit }
             : { backstage_pass: false, seat_limit: null }),
@@ -280,6 +290,45 @@ export default function CreateEventPage() {
                 onChange={(e) => set('ticket_price', e.target.value)}
                 style={{ maxWidth: '160px' }}
               />
+            </div>
+          )}
+
+          {/* Drawing Pot — only when paid event */}
+          {form.is_paid_event && (
+            <div style={{ padding: '1rem 1.25rem', borderRadius: '12px', background: 'rgba(245,166,35,0.05)', border: '1px solid rgba(245,166,35,0.15)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: form.drawing_enabled ? '1rem' : 0 }}>
+                <input
+                  type="checkbox"
+                  id="drawing_enabled"
+                  checked={form.drawing_enabled}
+                  onChange={(e) => set('drawing_enabled', e.target.checked)}
+                  style={{ accentColor: '#f5a623', width: '1rem', height: '1rem', cursor: 'pointer' }}
+                />
+                <label htmlFor="drawing_enabled" className="cinematic-label" style={{ margin: 0, cursor: 'pointer', color: '#f5a623' }}>
+                  🎰 Enable Drawing Pot
+                </label>
+              </div>
+              {form.drawing_enabled && (
+                <div>
+                  <label className="cinematic-label">Drawing Pot Amount per Ticket (USD)</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    className="cinematic-input"
+                    placeholder="e.g. 5.00"
+                    value={form.drawing_amount}
+                    onChange={(e) => set('drawing_amount', e.target.value)}
+                    style={{ maxWidth: '160px' }}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.3rem' }}>
+                    This amount from each ticket goes into the prize pot. Every ticket = 1 entry.
+                    {form.drawing_amount && form.ticket_price && Number(form.drawing_amount) > 0 && (
+                      <> Total pot grows by <strong style={{ color: '#f5a623' }}>${Number(form.drawing_amount).toFixed(2)}</strong> per ticket sold.</>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
