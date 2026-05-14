@@ -1,0 +1,108 @@
+You are fixing the Studio Flow PUBLIC contests page. 
+RLS is now correct, but the frontend is still not showing contests. 
+This means the frontend is querying the wrong table or using a stale view.
+
+GOAL:
+Find EVERY place in the Studio Flow codebase where contests are queried, 
+identify the one used by the PUBLIC page, and replace it with the correct query.
+
+------------------------------------------------
+STEP 1 — SEARCH ENTIRE REPO FOR ALL CONTEST QUERIES
+------------------------------------------------
+
+Search for these strings:
+
+- from('contests')
+- from("contests")
+- admin_contest_dashboard
+- contest_leaderboard
+- contest_submission_feed
+- public_contests_view
+- getContests
+- useContests
+- fetchContests
+- /api/contests
+- supabase.from
+- supabaseClient.from
+
+Print all file paths where these appear.
+
+------------------------------------------------
+STEP 2 — IDENTIFY THE PUBLIC CONTESTS PAGE
+------------------------------------------------
+
+Find the component that renders the PUBLIC contests list. 
+It may be named:
+
+- ContestsPage
+- PublicContests
+- ContestsList
+- ContestIndex
+- pages/contests/index
+- src/pages/contests/index
+- app/contests/page.tsx
+
+Print the file path.
+
+------------------------------------------------
+STEP 3 — FIX THE QUERY
+------------------------------------------------
+
+Replace ANY query found in that file with:
+
+```ts
+const { data: contests, error } = await supabase
+  .from('contests')
+  .select('*')
+  .eq('is_public', true)
+  .eq('is_active', true)
+  .order('created_at', { ascending: false });
+REMOVE any usage of:
+
+admin_contest_dashboard
+
+contest_leaderboard
+
+public_contests_view
+
+contest_submission_feed
+
+is_admin()
+
+joins
+
+serverless API wrappers
+
+STEP 4 — FIX CATEGORY FILTER
+
+After data loads, apply:
+
+ts
+let filtered = contests;
+
+if (selectedCategory !== "All Categories") {
+  filtered = contests.filter(c =>
+    c.category?.toLowerCase().includes(selectedCategory.toLowerCase())
+  );
+}
+
+setFilteredContests(filtered);
+STEP 5 — CLEANUP
+
+Remove unused imports
+
+Remove old admin-only logic
+
+Ensure no TypeScript errors
+
+FINAL OUTPUT
+
+Print:
+
+All files modified
+
+The final public query
+
+The final category filter
+
+Any remaining issues requiring manual review

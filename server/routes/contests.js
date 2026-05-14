@@ -78,7 +78,14 @@ router.get('/', async (req, res) => {
       .order('created_at', { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
-    if (status)   query = query.eq('status', status);
+    if (status) {
+      // Explicit status filter (e.g. admin dashboard requesting 'draft')
+      query = query.eq('status', status);
+    } else {
+      // Default: show all publicly visible contests — exclude drafts and archived
+      query = query.in('status', ['active', 'voting', 'completed']);
+    }
+
     if (category) query = query.eq('category', category);
 
     const { data, count, error } = await query;
