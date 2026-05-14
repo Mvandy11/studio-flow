@@ -1,0 +1,120 @@
+You are fixing the Studio Flow Feed, which currently stays stuck on “Loading…” for all non-admin accounts. The feed must load correctly for Free, Paid, and Admin users. You must also ensure compatibility with the Replit Feed if any legacy code references it.
+
+GOAL:
+Fix the infinite loading bug, remove template leftovers, add fallback UI, and ensure the feed loads public content even for Free users.
+
+────────────────────────────────────────
+1. FIX THE FEED QUERY (MAIN ISSUE)
+────────────────────────────────────────
+
+The current feed query returns NULL for new users or users with no posts. This causes the Suspense boundary to never resolve.
+
+Fix:
+- Ensure the feed query ALWAYS returns an array, even if empty.
+- If no posts exist, return [] instead of null.
+
+Example:
+If Supabase returns null → convert to [].
+
+────────────────────────────────────────
+2. REMOVE OLD TEMPLATE FEED LOGIC
+────────────────────────────────────────
+
+Search for and remove any references to:
+- user.feedPreferences
+- user.following
+- user.subscriptions
+- template “social feed” logic
+- template “activity feed” logic
+- template “recommended creators” logic
+
+These break the feed for new accounts.
+
+────────────────────────────────────────
+3. ADD FALLBACK UI (NO MORE INFINITE LOADING)
+────────────────────────────────────────
+
+If feed array is empty:
+Show:
+“No posts yet — creators will appear here soon.”
+
+If feed fails to load:
+Show:
+“Unable to load feed. Please refresh.”
+
+Never show “Loading…” forever.
+
+────────────────────────────────────────
+4. ENSURE FEED LOADS FOR FREE USERS
+────────────────────────────────────────
+
+Free users must be able to SEE the feed.
+
+Membership should only restrict:
+- Posting
+- Uploading
+- Submitting
+- Creator tools
+
+Do NOT block feed visibility based on membership.
+
+────────────────────────────────────────
+5. ADD PUBLIC CONTENT SOURCES TO FEED
+────────────────────────────────────────
+
+The feed should include:
+- Public posts
+- Public contests
+- Public events
+- Announcements
+- Creator highlights
+- AI Tools updates (optional)
+
+Ensure queries include:
+WHERE visibility = 'public'
+
+────────────────────────────────────────
+6. REPLIT FEED COMPATIBILITY (IF PRESENT)
+────────────────────────────────────────
+
+If any part of the code references a “Replit Feed” or “Replit Activity”:
+
+Fix:
+- Remove or replace with Studio Flow feed logic
+- Ensure no Replit-specific API calls remain
+- Ensure no template Replit components remain
+
+────────────────────────────────────────
+7. FIX SUSPENSE / LOADING STATE
+────────────────────────────────────────
+
+Replace any Suspense wrappers with:
+
+- A real loading skeleton
+- A real error fallback
+- A real empty state
+
+Do NOT leave Suspense with no fallback.
+
+────────────────────────────────────────
+8. CLEAN UP OLD CODE
+────────────────────────────────────────
+
+Search for and remove:
+- Old feed components
+- Old template feed logic
+- Unused imports
+- Dead code from DreamPort or template
+
+────────────────────────────────────────
+9. OUTPUT REQUIREMENTS
+────────────────────────────────────────
+
+At the end, print:
+
+- All modified files
+- All new files created
+- All removed files
+- All updated components
+- Any new hooks created (e.g., useFeed)
+- Any TODOs requiring manual Supabase updates
