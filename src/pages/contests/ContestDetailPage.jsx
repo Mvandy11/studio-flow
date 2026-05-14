@@ -46,59 +46,23 @@ export default function ContestDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      // Load contest metadata, submissions, and winners in parallel
-      const [
-        { data: contestRow, error: contestErr },
-        { data: feed, error: feedErr },
-        { data: w },
-      ] = await Promise.all([
-        supabase.from('contests').select('*').eq('id', id).single(),
-        supabase.from('contest_submission_feed').select('*').eq('contest_id', id).order('like_count', { ascending: false }),
-        supabase.from('winners').select('submission_id, rank').eq('contest_id', id),
-      ]);
+      // All public reads go through the API server (service role key — bypasses RLS)
+      const json = await api(`/api/contests/${id}`);
 
-      if (contestErr || !contestRow) throw new Error(contestErr?.message || 'Contest not found.');
+      setContest(json.contest);
+      setEntries(json.entries || []);
+      setWinners(json.winners || []);
 
-      setContest(contestRow);
-
-      // Entries: use feed if available, otherwise fall back to submissions table
-      let loadedEntries = [];
-      if (!feedErr && feed && feed.length > 0) {
-        loadedEntries = feed;
-      } else {
-        const { data: subs } = await supabase
-          .from('submissions')
-          .select('*')
-          .eq('contest_id', id)
-          .order('created_at', { ascending: false });
-
-        if (subs && subs.length > 0) {
-          const subIds = subs.map(s => s.id);
-          const { data: likeCounts } = await supabase
-            .from('likes')
-            .select('entry_id')
-            .in('entry_id', subIds);
-          const countMap = {};
-          for (const row of (likeCounts || [])) {
-            countMap[row.entry_id] = (countMap[row.entry_id] || 0) + 1;
-          }
-          loadedEntries = subs
-            .map(s => ({ ...s, like_count: countMap[s.id] || 0 }))
-            .sort((a, b) => b.like_count - a.like_count);
-        }
-      }
-      setEntries(loadedEntries);
-      setWinners(w || []);
-
-      // Load user's existing likes
-      if (user && loadedEntries.length > 0) {
-        const entryIds = loadedEntries.map(e => e.id);
+      // User-specific: which entries has this user already liked?
+      // This uses the Supabase client with the user's JWT session.
+      if (user && json.entries?.length > 0) {
+        const entryIds = json.entries.map((e) => e.id);
         const { data: myLikes } = await supabase
           .from('likes')
           .select('entry_id')
           .eq('user_id', user.id)
           .in('entry_id', entryIds);
-        if (myLikes) setLikedEntries(new Set(myLikes.map(r => r.entry_id)));
+        if (myLikes) setLikedEntries(new Set(myLikes.map((r) => r.entry_id)));
       }
     } catch (err) {
       setError(err.message);

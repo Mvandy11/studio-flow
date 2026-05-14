@@ -1,0 +1,171 @@
+You are fixing all Row Level Security (RLS) policies for the Studio Flow platform. 
+The issue: contests appear in the admin dashboard but NOT in the public view. 
+This means the `anon` role has no SELECT access on key tables.
+
+GOAL:
+Create correct, safe RLS policies for:
+- contests
+- submissions
+- likes
+- comments
+- winners (optional)
+- profiles (read-only public)
+- any views that depend on these tables
+
+Ensure:
+- Public users (anon) can READ contests and submissions.
+- Authenticated users can CREATE submissions, likes, comments.
+- Admins (service role) retain full access.
+- No table returns empty arrays due to missing policies.
+
+------------------------------------------------
+STEP 1 — ENABLE RLS ON ALL TABLES (IF NOT ALREADY)
+------------------------------------------------
+
+For each table:
+- contests
+- submissions
+- likes
+- comments
+- winners
+- profiles
+
+Ensure RLS is ON.
+
+------------------------------------------------
+STEP 2 — CREATE PUBLIC READ POLICY FOR CONTESTS
+------------------------------------------------
+
+Table: contests  
+Action: SELECT  
+Roles: anon, authenticated  
+Policy:
+
+true;
+
+This allows public users to see contests.
+
+------------------------------------------------
+STEP 3 — CREATE PUBLIC READ POLICY FOR SUBMISSIONS
+------------------------------------------------
+
+Table: submissions  
+Action: SELECT  
+Roles: anon, authenticated  
+Policy:
+
+true;
+
+This allows public users to see submissions on contest detail pages.
+
+------------------------------------------------
+STEP 4 — CREATE AUTHENTICATED INSERT POLICY FOR SUBMISSIONS
+------------------------------------------------
+
+Table: submissions  
+Action: INSERT  
+Roles: authenticated  
+Policy:
+
+auth.uid() = user_id;
+
+This ensures users can only submit as themselves.
+
+------------------------------------------------
+STEP 5 — CREATE PUBLIC READ POLICY FOR LIKES
+------------------------------------------------
+
+Table: likes  
+Action: SELECT  
+Roles: anon, authenticated  
+Policy:
+
+true;
+
+------------------------------------------------
+STEP 6 — CREATE AUTHENTICATED INSERT/DELETE POLICY FOR LIKES
+------------------------------------------------
+
+INSERT policy:
+
+auth.uid() = user_id;
+
+DELETE policy:
+
+auth.uid() = user_id;
+
+------------------------------------------------
+STEP 7 — CREATE PUBLIC READ POLICY FOR COMMENTS
+------------------------------------------------
+
+Table: comments  
+Action: SELECT  
+Roles: anon, authenticated  
+Policy:
+
+true;
+
+------------------------------------------------
+STEP 8 — CREATE AUTHENTICATED INSERT/DELETE POLICY FOR COMMENTS
+------------------------------------------------
+
+INSERT:
+
+auth.uid() = user_id;
+
+DELETE:
+
+auth.uid() = user_id;
+
+------------------------------------------------
+STEP 9 — CREATE PUBLIC READ POLICY FOR PROFILES
+------------------------------------------------
+
+Table: profiles  
+Action: SELECT  
+Roles: anon, authenticated  
+Policy:
+
+true;
+
+This allows public profile display.
+
+------------------------------------------------
+STEP 10 — FIX ANY VIEWS THAT DEPEND ON THESE TABLES
+------------------------------------------------
+
+For each view:
+- contest_leaderboard
+- contest_submission_feed
+- any public_* views
+
+Ensure the underlying tables now have correct SELECT policies.
+
+If any view has a broken reference (e.g., missing columns), refresh the view definition.
+
+------------------------------------------------
+STEP 11 — VALIDATION
+------------------------------------------------
+
+After applying all policies:
+
+1. Run a SELECT query as anon:
+   select * from contests;
+   → Should return all contests.
+
+2. Run:
+   select * from submissions;
+   → Should return all submissions.
+
+3. Load the public /contests page.
+   → Contests should appear immediately.
+
+------------------------------------------------
+FINAL OUTPUT
+------------------------------------------------
+
+Print:
+- All tables updated
+- All policies created
+- Any views that required updates
+- Any remaining issues requiring manual review

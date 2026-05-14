@@ -90,25 +90,46 @@ router.get('/', async (req, res) => {
 });
 
 // ── GET /api/contests/:id ─────────────────────────────────────
+// Returns: contest, entries (with like_count), winners
 router.get('/:id', async (req, res) => {
   try {
-    const { data: contest, error: cErr } = await supabase
-      .from('contests')
-      .select('*')
-      .eq('id', req.params.id)
-      .single();
+    const cid = req.params.id;
+
+    // Fetch contest + active submissions + winners in parallel
+    const [
+      { data: contest, error: cErr },
+      { data: submissions, error: sErr },
+      { data: winners },
+    ] = await Promise.all([
+      supabase.from('contests').select('*').eq('id', cid).single(),
+      supabase.from('submissions').select('*').eq('contest_id', cid).eq('status', 'active').order('created_at', { ascending: false }),
+      supabase.from('winners').select('submission_id, rank').eq('contest_id', cid),
+    ]);
 
     if (cErr || !contest) return res.status(404).json({ error: 'Contest not found.' });
+    if (sErr) throw sErr;
 
-    const { data: entries, error: eErr } = await supabase
-      .from('submissions')
-      .select('*')
-      .eq('contest_id', req.params.id)
-      .order('created_at', { ascending: false });
+    const subs = submissions || [];
 
-    if (eErr) throw eErr;
+    // Aggregate like counts per submission
+    let entries = subs;
+    if (subs.length > 0) {
+      const ids = subs.map((s) => s.id);
+      const { data: likes } = await supabase
+        .from('likes')
+        .select('entry_id')
+        .in('entry_id', ids);
 
-    res.json({ contest, entries: entries || [] });
+      const countMap = {};
+      for (const row of (likes || [])) {
+        countMap[row.entry_id] = (countMap[row.entry_id] || 0) + 1;
+      }
+      entries = subs
+        .map((s) => ({ ...s, like_count: countMap[s.id] || 0 }))
+        .sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+    }
+
+    res.json({ contest, entries, winners: winners || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
