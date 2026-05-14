@@ -1,0 +1,161 @@
+You are updating the UI for BOTH Studio Flow and DreamPort to unify the login + membership experience and remove duplicate/confusing subscription entry points.
+
+GOAL:
+- Login/Profile stays in the top-right corner.
+- Membership/Subcription moves INSIDE the profile dropdown.
+- Sidebar subscription link is removed.
+- Sidebar gets a “Support / Donate” link instead.
+- Profile dropdown shows membership status + upgrade options.
+- Layout spacing, margins, and alignment are corrected.
+- Studio Flow and DreamPort use the same unified pattern.
+
+────────────────────────────────────────
+1. REMOVE SUBSCRIPTION FROM SIDEBAR
+────────────────────────────────────────
+
+In BOTH Studio Flow and DreamPort:
+
+- Remove any sidebar item labeled:
+  - “Subscription”
+  - “Membership”
+  - “Upgrade”
+  - “Join Now”
+  - “Become a Member”
+
+The sidebar should ONLY contain platform features, not account actions.
+
+────────────────────────────────────────
+2. ADD MEMBERSHIP TO PROFILE DROPDOWN
+────────────────────────────────────────
+
+In the top-right profile menu, add:
+
+- My Profile
+- My Membership (NEW)
+- Manage Subscription (NEW)
+- Billing (NEW)
+- Settings
+- Logout
+
+“My Membership” should show:
+- Current tier (Free, Monthly, Enterprise)
+- Status (Active / Inactive)
+- Renewal date (if available)
+- Button: “Upgrade Membership”
+
+“Manage Subscription” should open the Stripe customer portal.
+
+────────────────────────────────────────
+3. ADD DONATION LINK TO SIDEBAR
+────────────────────────────────────────
+
+Studio Flow:
+Use the NEW donation link:
+https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t
+
+DreamPort:
+Use the DreamPort donation link:
+https://buy.stripe.com/7sY5kF1ut6W4b761Gtb7y0s
+
+Add a sidebar item:
+- “Support Studio Flow”
+- “Support DreamPort”
+
+This replaces the old subscription link.
+
+────────────────────────────────────────
+4. FIX HEADER + LAYOUT SPACING
+────────────────────────────────────────
+
+Apply the following layout rules to BOTH apps:
+
+- Page max-width: 1440px
+- Outer padding: 24px
+- Section spacing: 32px
+- Card spacing: 16px
+- Card padding: 20px
+- Sidebar width: 260px
+- Header height: 64px
+- Profile menu alignment: right-aligned with 16px margin
+
+Fix any misaligned elements in:
+- Header
+- Sidebar
+- Dashboard
+- Profile menu
+- Membership pages
+
+────────────────────────────────────────
+5. UPDATE PROFILE MENU COMPONENT
+────────────────────────────────────────
+
+Add a new component or update existing:
+
+<ProfileMenu />
+
+It must include:
+- Avatar
+- Name
+- Email
+- Membership badge (NEW)
+- Membership tier
+- Manage Subscription link
+- Billing link
+- Settings
+- Logout
+
+Membership badge:
+- Free → gray
+- Monthly → blue
+- Enterprise → gold
+
+────────────────────────────────────────
+6. UPDATE MEMBERSHIP LOGIC
+────────────────────────────────────────
+
+Both Studio Flow and DreamPort must read membership from the SHARED membership table:
+
+memberships:
+  user_id
+  tier
+  is_active
+  started_at
+  expires_at
+  stripe_customer_id
+  stripe_subscription_id
+
+Remove any old DreamPort-specific membership logic.
+
+────────────────────────────────────────
+7. CLEAN UP OLD CODE
+────────────────────────────────────────
+
+Search for and remove:
+- “subscription” in sidebar components
+- “membership” in sidebar components
+- Old DreamPort membership UI
+- Old Studio Flow membership UI
+- Any unused imports or dead code
+
+────────────────────────────────────────
+8. MOBILE + TABLET FIXES
+────────────────────────────────────────
+
+Ensure:
+- Sidebar collapses into a hamburger menu
+- Profile menu stays top-right
+- Membership options remain inside profile menu
+- Donation link appears in mobile sidebar
+
+────────────────────────────────────────
+9. OUTPUT REQUIREMENTS
+────────────────────────────────────────
+
+At the end, print:
+
+- All modified files
+- All new files created
+- All removed files
+- All updated components
+- Any new hooks created (e.g., useMembership)
+- Any TODOs requiring manual Supabase or Stripe updates

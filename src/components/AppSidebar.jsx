@@ -2,6 +2,8 @@ import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 
+const DONATION_URL = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
+
 const NAV_SECTIONS = [
   {
     items: [
@@ -26,7 +28,6 @@ const NAV_SECTIONS = [
       { to: '/submissions',          icon: '📬', label: 'Submissions' },
       { to: '/announcements',        icon: '📢', label: 'Announcements' },
       { to: '/creator-academy',      icon: '🎓', label: 'Academy' },
-      { to: '/subscription',         icon: '🌟', label: 'Subscription' },
     ],
   },
   {
@@ -87,7 +88,7 @@ export default function AppSidebar({ open, onClose }) {
           </div>
         ))}
 
-        {/* Admin link (creator_admin only) */}
+        {/* Admin links */}
         {isCreatorAdmin(role) && (
           <>
             <nav className="app-sidebar__nav">
@@ -118,6 +119,19 @@ export default function AppSidebar({ open, onClose }) {
         )}
 
         <div className="app-sidebar__spacer" />
+
+        {/* Donate link */}
+        <div style={{ padding: '0 0.625rem', marginBottom: '0.5rem' }}>
+          <a
+            href={DONATION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="app-sidebar__donate-link"
+          >
+            <span className="app-sidebar__link-icon">💝</span>
+            Support Studio Flow
+          </a>
+        </div>
 
         {/* User info */}
         {user && (

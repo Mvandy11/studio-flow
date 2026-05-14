@@ -3,21 +3,24 @@ import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 
+const DONATION_URL = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
+
 const NAV_LINKS = [
-  { to: '/',                label: 'Home',            icon: '⌂', end: true },
-  { to: '/feed',            label: 'Feed',            icon: '◈' },
-  { to: '/studio',          label: 'Studio',          icon: '⬡' },
-  { to: '/tools/denoise',   label: 'AI Denoise',      icon: '♫' },
-  { to: '/tools/upscale',   label: 'AI Upscale',      icon: '⤢' },
-  { to: '/tools/enhance',   label: 'AI Enhance',      icon: '✦' },
+  { to: '/',                     label: 'Home',          icon: '⌂', end: true },
+  { to: '/feed',                 label: 'Feed',          icon: '◈' },
+  { to: '/studio',               label: 'Studio',        icon: '⬡' },
+  { to: '/tools/denoise',        label: 'AI Denoise',    icon: '♫' },
+  { to: '/tools/upscale',        label: 'AI Upscale',    icon: '⤢' },
+  { to: '/tools/enhance',        label: 'AI Enhance',    icon: '✦' },
   { to: '/custom-event-request', label: 'Custom Events', icon: '🎬' },
   { to: '/contests',             label: 'Contests',      icon: '🏆' },
   { to: '/submissions',          label: 'Submissions',   icon: '📬' },
   { to: '/announcements',        label: 'Announcements', icon: '📢' },
-  { to: '/creator-academy', label: 'Academy',         icon: '🎓' },
-  { to: '/subscription',    label: 'Subscription',    icon: '🌟' },
-  { to: '/earnings',        label: 'Earnings',        icon: '◎' },
-  { to: '/profile',         label: 'Profile',         icon: '◉' },
+  { to: '/creator-academy',      label: 'Academy',       icon: '🎓' },
+  { to: '/earnings',             label: 'Earnings',      icon: '◎' },
+  { to: '/settings/payouts',     label: 'Payout Settings', icon: '💳' },
+  { to: '/subscription',         label: 'My Membership', icon: '🌟' },
+  { to: '/profile',              label: 'Profile',       icon: '◉' },
 ];
 
 export default function MobileDrawer({ open, onClose }) {
@@ -101,6 +104,21 @@ export default function MobileDrawer({ open, onClose }) {
 
         <div className="mob-drawer__divider" />
 
+        {/* Donate */}
+        <a
+          href={DONATION_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mob-drawer__link"
+          style={{ color: 'var(--accent-gold)', padding: '0.65rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}
+          onClick={onClose}
+        >
+          <span className="mob-drawer__link-icon">💝</span>
+          Support Studio Flow
+        </a>
+
+        <div className="mob-drawer__divider" />
+
         <div className="mob-drawer__auth">
           {user ? (
             <button
@@ -110,7 +128,7 @@ export default function MobileDrawer({ open, onClose }) {
               Log Out
             </button>
           ) : (
-            <Link to="/" className="mob-drawer__login" onClick={onClose}>Log In</Link>
+            <Link to="/login" className="mob-drawer__login" onClick={onClose}>Log In</Link>
           )}
         </div>
       </aside>
