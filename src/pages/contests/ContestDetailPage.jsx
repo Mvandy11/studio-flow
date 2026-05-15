@@ -34,6 +34,14 @@ export default function ContestDetailPage() {
   const [payingOut,      setPayingOut]      = useState(false);
   const [payoutMsg,      setPayoutMsg]      = useState(null);
 
+  // ── Pull Winners ──
+  const [pullEventId,      setPullEventId]      = useState('');
+  const [pullCount,        setPullCount]        = useState(1);
+  const [pullPayouts,      setPullPayouts]      = useState([{ placeNumber: 1, payoutAmount: '' }]);
+  const [pulling,          setPulling]          = useState(false);
+  const [pullResult,       setPullResult]       = useState(null);
+  const [pullError,        setPullError]        = useState(null);
+
   // ── Comments ──
   const [entryComments,    setEntryComments]    = useState({});   // { [entryId]: Comment[] }
   const [openComments,     setOpenComments]     = useState(new Set()); // which panels are open
@@ -292,6 +300,49 @@ export default function ContestDetailPage() {
     }
   }
 
+  // ── Pull Winners handler ──────────────────────────────────────
+  async function handlePullWinners(e) {
+    e.preventDefault();
+    if (!pullEventId.trim()) { setPullError('Event ID is required.'); return; }
+
+    setPulling(true);
+    setPullError(null);
+    setPullResult(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const result = await api(`/api/contests/${id}/pull-winners`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId:        pullEventId.trim(),
+          numberOfWinners: Number(pullCount),
+          payouts:         pullPayouts.map((p) => ({
+            placeNumber:  Number(p.placeNumber),
+            payoutAmount: Number(p.payoutAmount) || 0,
+          })),
+        }),
+      });
+      setPullResult(result);
+    } catch (err) {
+      setPullError(err.message);
+    } finally {
+      setPulling(false);
+    }
+  }
+
+  // Keep payouts array in sync with winner count
+  function updatePullCount(n) {
+    const num = Math.max(1, Math.min(Number(n) || 1, 20));
+    setPullCount(num);
+    setPullPayouts((prev) => {
+      const next = [...prev];
+      while (next.length < num) next.push({ placeNumber: next.length + 1, payoutAmount: '' });
+      return next.slice(0, num);
+    });
+  }
+
   async function handlePayout() {
     if (!confirm('Trigger payout for all marked winners in this contest?')) return;
     setPayingOut(true);
@@ -364,6 +415,152 @@ export default function ContestDetailPage() {
             <span style={{ fontSize: '0.78rem', color: payoutMsg.startsWith('✓') ? '#86efac' : '#fca5a5' }}>
               {payoutMsg}
             </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Pull Winners Panel (admin only) ──────────────────── */}
+      {isAdmin && (
+        <div style={{
+          marginBottom: '1.5rem',
+          padding: '1.25rem 1.5rem',
+          borderRadius: '14px',
+          background: 'rgba(139,92,246,0.04)',
+          border: '1px solid rgba(139,92,246,0.18)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c4b5fd', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '4px', padding: '0.2rem 0.55rem' }}>
+              🎲 Pull Winners
+            </span>
+            <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.45)' }}>
+              Randomly draw winners from ticket purchasers — repeat winners are automatically excluded.
+            </span>
+          </div>
+
+          <form onSubmit={handlePullWinners} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+            {/* Event ID input */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.35rem' }}>
+                Event ID *
+              </label>
+              <input
+                className="cinematic-input"
+                style={{ maxWidth: '420px' }}
+                placeholder="Paste the event UUID here"
+                value={pullEventId}
+                onChange={(e) => setPullEventId(e.target.value)}
+                disabled={pulling}
+              />
+              <p style={{ margin: '0.3rem 0 0', fontSize: '0.72rem', color: 'rgba(200,200,215,0.3)' }}>
+                The event whose ticket purchases make up the draw pool.
+              </p>
+            </div>
+
+            {/* Number of winners */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.35rem' }}>
+                Number of Winners
+              </label>
+              <input
+                type="number"
+                className="cinematic-input"
+                style={{ maxWidth: '120px' }}
+                min="1" max="20"
+                value={pullCount}
+                onChange={(e) => updatePullCount(e.target.value)}
+                disabled={pulling}
+              />
+            </div>
+
+            {/* Per-place payout amounts */}
+            {pullPayouts.length > 0 && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.5rem' }}>
+                  Payout per Place (optional)
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+                  {pullPayouts.map((p, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.5)', minWidth: '28px' }}>
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.3)' }}>$</span>
+                      <input
+                        type="number"
+                        className="cinematic-input"
+                        style={{ width: '90px', padding: '0.35rem 0.65rem' }}
+                        placeholder="0"
+                        min="0"
+                        step="0.01"
+                        value={p.payoutAmount}
+                        onChange={(e) => {
+                          const next = [...pullPayouts];
+                          next[i] = { ...next[i], payoutAmount: e.target.value };
+                          setPullPayouts(next);
+                        }}
+                        disabled={pulling}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {pullError && (
+              <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5' }}>✗ {pullError}</p>
+            )}
+
+            {/* Submit */}
+            <div>
+              <button
+                type="submit"
+                disabled={pulling || !pullEventId.trim()}
+                style={{
+                  padding: '0.55rem 1.35rem',
+                  borderRadius: '9px',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  cursor: (pulling || !pullEventId.trim()) ? 'not-allowed' : 'pointer',
+                  opacity: (pulling || !pullEventId.trim()) ? 0.5 : 1,
+                  background: 'rgba(139,92,246,0.18)',
+                  border: '1px solid rgba(139,92,246,0.4)',
+                  color: '#c4b5fd',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {pulling ? '🎲 Drawing…' : `🎲 Draw ${pullCount} Winner${pullCount > 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </form>
+
+          {/* Results */}
+          {pullResult && (
+            <div style={{ marginTop: '1.25rem', padding: '1rem 1.25rem', borderRadius: '10px', background: 'rgba(134,239,172,0.07)', border: '1px solid rgba(134,239,172,0.2)' }}>
+              <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', fontWeight: 700, color: '#86efac' }}>
+                ✓ {pullResult.winners?.length ?? 0} winner{pullResult.winners?.length !== 1 ? 's' : ''} drawn from pool of {pullResult.poolSize} eligible participants
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {(pullResult.winners || []).map((w) => (
+                  <div key={w.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'rgba(220,220,235,0.85)' }}>
+                    <span>{w.placeNumber === 1 ? '🥇' : w.placeNumber === 2 ? '🥈' : w.placeNumber === 3 ? '🥉' : `#${w.placeNumber}`}</span>
+                    <span style={{ fontWeight: 600 }}>{w.username || w.email || w.userId}</span>
+                    {w.payoutAmount > 0 && (
+                      <span style={{ color: '#86efac', fontSize: '0.8rem' }}>${w.payoutAmount}</span>
+                    )}
+                    {w.email && w.username && (
+                      <span style={{ color: 'rgba(200,200,215,0.4)', fontSize: '0.75rem' }}>{w.email}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setPullResult(null)}
+                style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                Dismiss
+              </button>
+            </div>
           )}
         </div>
       )}
