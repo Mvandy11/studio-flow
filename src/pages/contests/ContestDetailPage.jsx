@@ -37,10 +37,14 @@ export default function ContestDetailPage() {
   // ── Pull Winners ──
   const [pullEventId,      setPullEventId]      = useState('');
   const [pullCount,        setPullCount]        = useState(1);
-  const [pullPayouts,      setPullPayouts]      = useState([{ placeNumber: 1, payoutAmount: '' }]);
+  const [pullPayouts,      setPullPayouts]      = useState([{ placeNumber: 1, payoutAmount: 100 }]);
   const [pulling,          setPulling]          = useState(false);
   const [pullResult,       setPullResult]       = useState(null);
   const [pullError,        setPullError]        = useState(null);
+
+  // ── Winner History ──
+  const [winnerHistory,       setWinnerHistory]       = useState([]);
+  const [winnerHistoryLoading, setWinnerHistoryLoading] = useState(false);
 
   // ── Comments ──
   const [entryComments,    setEntryComments]    = useState({});   // { [entryId]: Comment[] }
@@ -80,6 +84,29 @@ export default function ContestDetailPage() {
   }
 
   useEffect(() => { load(); }, [id, user?.id]);
+
+  // ── Load winner history (admin only) ──────────────────────────
+  async function loadWinnerHistory() {
+    if (!id) return;
+    setWinnerHistoryLoading(true);
+    try {
+      const { data, error: hErr } = await supabase
+        .from('winner_history')
+        .select('id, place_number, payout_amount, created_at, user_id, profiles(username, display_name)')
+        .eq('contest_id', id)
+        .order('place_number', { ascending: true });
+
+      if (!hErr && data) {
+        setWinnerHistory(data);
+      }
+    } catch (_) {
+      // table may not exist yet — stay silent
+    } finally {
+      setWinnerHistoryLoading(false);
+    }
+  }
+
+  useEffect(() => { if (isAdmin) loadWinnerHistory(); }, [id, isAdmin]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -316,7 +343,7 @@ export default function ContestDetailPage() {
         method:  'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventId:        pullEventId.trim(),
+          eventId:         pullEventId.trim(),
           numberOfWinners: Number(pullCount),
           payouts:         pullPayouts.map((p) => ({
             placeNumber:  Number(p.placeNumber),
@@ -324,22 +351,38 @@ export default function ContestDetailPage() {
           })),
         }),
       });
-      setPullResult(result);
+      setPullResult({ ...result, requested: Number(pullCount) });
+      // Refresh history panel after a successful draw
+      loadWinnerHistory();
     } catch (err) {
-      setPullError(err.message);
+      const msg = err.message || '';
+      if (msg.includes('Admin access required') || msg.includes('403')) {
+        setPullError('You must be an admin to pull winners.');
+      } else if (msg.includes('No eligible')) {
+        setPullError('No eligible users remaining. All possible winners have already won before.');
+      } else {
+        setPullError(msg);
+      }
     } finally {
       setPulling(false);
     }
   }
 
-  // Keep payouts array in sync with winner count
+  // Smart defaults: 1st→$100, 2nd→$50, 3rd→$25, rest→$0
+  const DEFAULT_PAYOUTS = [100, 50, 25];
+  function defaultAmount(i) { return DEFAULT_PAYOUTS[i] ?? 0; }
+
+  // Keep payouts array in sync with winner count, applying smart defaults for new rows
   function updatePullCount(n) {
     const num = Math.max(1, Math.min(Number(n) || 1, 20));
     setPullCount(num);
     setPullPayouts((prev) => {
-      const next = [...prev];
-      while (next.length < num) next.push({ placeNumber: next.length + 1, payoutAmount: '' });
-      return next.slice(0, num);
+      const next = prev.slice(0, num);
+      while (next.length < num) {
+        const i = next.length;
+        next.push({ placeNumber: i + 1, payoutAmount: defaultAmount(i) });
+      }
+      return next;
     });
   }
 
@@ -419,76 +462,77 @@ export default function ContestDetailPage() {
         </div>
       )}
 
-      {/* ── Pull Winners Panel (admin only) ──────────────────── */}
+      {/* ── Winner Control Panel (admin only) ──────────────────── */}
       {isAdmin && (
-        <div style={{
-          marginBottom: '1.5rem',
-          padding: '1.25rem 1.5rem',
-          borderRadius: '14px',
-          background: 'rgba(139,92,246,0.04)',
-          border: '1px solid rgba(139,92,246,0.18)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c4b5fd', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '4px', padding: '0.2rem 0.55rem' }}>
-              🎲 Pull Winners
+        <div style={{ marginBottom: '1.5rem', borderRadius: '14px', border: '1px solid rgba(139,92,246,0.2)', overflow: 'hidden' }}>
+
+          {/* ── Section header ── */}
+          <div style={{ padding: '0.75rem 1.25rem', background: 'rgba(139,92,246,0.1)', borderBottom: '1px solid rgba(139,92,246,0.15)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c4b5fd', background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.35)', borderRadius: '4px', padding: '0.2rem 0.55rem' }}>
+              🎲 Winner Control
             </span>
-            <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.45)' }}>
-              Randomly draw winners from ticket purchasers — repeat winners are automatically excluded.
+            <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.4)' }}>
+              Admin only — draws are random, repeat winners automatically excluded
             </span>
           </div>
 
-          <form onSubmit={handlePullWinners} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-            {/* Event ID input */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.35rem' }}>
-                Event ID *
-              </label>
-              <input
-                className="cinematic-input"
-                style={{ maxWidth: '420px' }}
-                placeholder="Paste the event UUID here"
-                value={pullEventId}
-                onChange={(e) => setPullEventId(e.target.value)}
-                disabled={pulling}
-              />
-              <p style={{ margin: '0.3rem 0 0', fontSize: '0.72rem', color: 'rgba(200,200,215,0.3)' }}>
-                The event whose ticket purchases make up the draw pool.
-              </p>
-            </div>
+          {/* ── Winner Settings form ── */}
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139,92,246,0.1)' }}>
+            <p style={{ margin: '0 0 1rem', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.35)' }}>
+              Winner Settings
+            </p>
 
-            {/* Number of winners */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.35rem' }}>
-                Number of Winners
-              </label>
-              <input
-                type="number"
-                className="cinematic-input"
-                style={{ maxWidth: '120px' }}
-                min="1" max="20"
-                value={pullCount}
-                onChange={(e) => updatePullCount(e.target.value)}
-                disabled={pulling}
-              />
-            </div>
-
-            {/* Per-place payout amounts */}
-            {pullPayouts.length > 0 && (
+            <form onSubmit={handlePullWinners} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Event ID */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.5rem' }}>
-                  Payout per Place (optional)
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.35rem' }}>
+                  Event ID *
                 </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+                <input
+                  className="cinematic-input"
+                  style={{ maxWidth: '440px', width: '100%' }}
+                  placeholder="Paste the event UUID here"
+                  value={pullEventId}
+                  onChange={(e) => setPullEventId(e.target.value)}
+                  disabled={pulling}
+                />
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.72rem', color: 'rgba(200,200,215,0.28)' }}>
+                  The event whose ticket purchases form the draw pool.
+                </p>
+              </div>
+
+              {/* Number of winners */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.35rem' }}>
+                  Number of Winners
+                </label>
+                <input
+                  type="number"
+                  className="cinematic-input"
+                  style={{ maxWidth: '110px' }}
+                  min="1" max="20"
+                  value={pullCount}
+                  onChange={(e) => updatePullCount(e.target.value)}
+                  disabled={pulling}
+                />
+              </div>
+
+              {/* Per-place payout grid */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.6rem' }}>
+                  Payout per Place
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(145px, 1fr))', gap: '0.6rem' }}>
                   {pullPayouts.map((p, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.5)', minWidth: '28px' }}>
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.45rem 0.7rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize: '1rem', minWidth: '22px', textAlign: 'center' }}>
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : <span style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)' }}>#{i+1}</span>}
                       </span>
-                      <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.3)' }}>$</span>
+                      <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.3)', flexShrink: 0 }}>$</span>
                       <input
                         type="number"
                         className="cinematic-input"
-                        style={{ width: '90px', padding: '0.35rem 0.65rem' }}
+                        style={{ flex: 1, minWidth: 0, padding: '0.3rem 0.5rem', fontSize: '0.875rem' }}
                         placeholder="0"
                         min="0"
                         step="0.01"
@@ -503,65 +547,161 @@ export default function ContestDetailPage() {
                     </div>
                   ))}
                 </div>
+                <p style={{ margin: '0.4rem 0 0', fontSize: '0.72rem', color: 'rgba(200,200,215,0.25)' }}>
+                  Defaults: 1st $100 · 2nd $50 · 3rd $25. Edit any amount before drawing.
+                </p>
               </div>
-            )}
 
-            {/* Error */}
-            {pullError && (
-              <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5' }}>✗ {pullError}</p>
-            )}
+              {/* Error banner */}
+              {pullError && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.65rem 0.9rem', borderRadius: '8px', background: 'rgba(252,165,165,0.08)', border: '1px solid rgba(252,165,165,0.2)' }}>
+                  <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>⚠️</span>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.45 }}>{pullError}</p>
+                </div>
+              )}
 
-            {/* Submit */}
-            <div>
-              <button
-                type="submit"
-                disabled={pulling || !pullEventId.trim()}
-                style={{
-                  padding: '0.55rem 1.35rem',
-                  borderRadius: '9px',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  cursor: (pulling || !pullEventId.trim()) ? 'not-allowed' : 'pointer',
-                  opacity: (pulling || !pullEventId.trim()) ? 0.5 : 1,
-                  background: 'rgba(139,92,246,0.18)',
-                  border: '1px solid rgba(139,92,246,0.4)',
-                  color: '#c4b5fd',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {pulling ? '🎲 Drawing…' : `🎲 Draw ${pullCount} Winner${pullCount > 1 ? 's' : ''}`}
-              </button>
-            </div>
-          </form>
+              {/* Submit row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <button
+                  type="submit"
+                  disabled={pulling || !pullEventId.trim()}
+                  style={{
+                    padding: '0.6rem 1.4rem',
+                    borderRadius: '9px',
+                    fontWeight: 700,
+                    fontSize: '0.875rem',
+                    cursor: (pulling || !pullEventId.trim()) ? 'not-allowed' : 'pointer',
+                    opacity: (pulling || !pullEventId.trim()) ? 0.5 : 1,
+                    background: 'rgba(139,92,246,0.2)',
+                    border: '1px solid rgba(139,92,246,0.45)',
+                    color: '#c4b5fd',
+                    transition: 'all 0.15s',
+                    flexShrink: 0,
+                  }}
+                >
+                  {pulling ? '🎲 Drawing…' : `🎲 Generate ${pullCount} Winner${pullCount > 1 ? 's' : ''}`}
+                </button>
+                {pulling && (
+                  <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.35)' }}>
+                    Selecting from eligible pool…
+                  </span>
+                )}
+              </div>
+            </form>
 
-          {/* Results */}
-          {pullResult && (
-            <div style={{ marginTop: '1.25rem', padding: '1rem 1.25rem', borderRadius: '10px', background: 'rgba(134,239,172,0.07)', border: '1px solid rgba(134,239,172,0.2)' }}>
-              <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', fontWeight: 700, color: '#86efac' }}>
-                ✓ {pullResult.winners?.length ?? 0} winner{pullResult.winners?.length !== 1 ? 's' : ''} drawn from pool of {pullResult.poolSize} eligible participants
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {(pullResult.winners || []).map((w) => (
-                  <div key={w.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'rgba(220,220,235,0.85)' }}>
-                    <span>{w.placeNumber === 1 ? '🥇' : w.placeNumber === 2 ? '🥈' : w.placeNumber === 3 ? '🥉' : `#${w.placeNumber}`}</span>
-                    <span style={{ fontWeight: 600 }}>{w.username || w.email || w.userId}</span>
-                    {w.payoutAmount > 0 && (
-                      <span style={{ color: '#86efac', fontSize: '0.8rem' }}>${w.payoutAmount}</span>
-                    )}
-                    {w.email && w.username && (
-                      <span style={{ color: 'rgba(200,200,215,0.4)', fontSize: '0.75rem' }}>{w.email}</span>
-                    )}
+            {/* Draw results */}
+            {pullResult && (
+              <div style={{ marginTop: '1.25rem', padding: '1rem 1.25rem', borderRadius: '10px', background: 'rgba(134,239,172,0.06)', border: '1px solid rgba(134,239,172,0.18)' }}>
+                {/* Partial draw warning */}
+                {pullResult.requested > (pullResult.winners?.length ?? 0) && (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', padding: '0.55rem 0.8rem', borderRadius: '7px', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                    <span style={{ flexShrink: 0 }}>⚠️</span>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#fcd34d', lineHeight: 1.45 }}>
+                      Partial draw — requested {pullResult.requested} but only {pullResult.winners?.length ?? 0} eligible participant{pullResult.winners?.length !== 1 ? 's' : ''} remained.
+                      {pullResult.winners?.length === 0 && ' All ticket holders have already won before.'}
+                    </p>
                   </div>
-                ))}
+                )}
+
+                <p style={{ margin: '0 0 0.8rem', fontSize: '0.82rem', fontWeight: 700, color: '#86efac' }}>
+                  ✓ {pullResult.winners?.length ?? 0} winner{pullResult.winners?.length !== 1 ? 's' : ''} drawn
+                  {pullResult.poolSize != null ? ` from pool of ${pullResult.poolSize} eligible participants` : ''}
+                </p>
+
+                {/* Winners table */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {(pullResult.winners || []).map((w) => (
+                    <div key={w.userId} style={{ display: 'grid', gridTemplateColumns: '28px 1fr auto', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', fontSize: '0.85rem' }}>
+                      <span style={{ textAlign: 'center' }}>
+                        {w.placeNumber === 1 ? '🥇' : w.placeNumber === 2 ? '🥈' : w.placeNumber === 3 ? '🥉' : <span style={{ color: 'rgba(200,200,215,0.4)', fontSize: '0.75rem' }}>#{w.placeNumber}</span>}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ margin: 0, fontWeight: 600, color: 'rgba(220,220,235,0.9)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {w.username || w.email || w.userId}
+                        </p>
+                        {w.email && w.username && (
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(200,200,215,0.35)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.email}</p>
+                        )}
+                      </div>
+                      {w.payoutAmount > 0 && (
+                        <span style={{ fontWeight: 700, color: '#86efac', fontSize: '0.875rem', flexShrink: 0 }}>${Number(w.payoutAmount).toLocaleString()}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setPullResult(null)}
+                  style={{ marginTop: '0.8rem', fontSize: '0.72rem', color: 'rgba(200,200,215,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  Dismiss
+                </button>
               </div>
+            )}
+          </div>
+
+          {/* ── Winner History ── */}
+          <div style={{ padding: '1.1rem 1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.35)' }}>
+                Winner History
+              </p>
               <button
-                onClick={() => setPullResult(null)}
-                style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                onClick={loadWinnerHistory}
+                disabled={winnerHistoryLoading}
+                style={{ fontSize: '0.72rem', color: 'rgba(200,200,215,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: winnerHistoryLoading ? 0.5 : 1 }}
               >
-                Dismiss
+                {winnerHistoryLoading ? 'Loading…' : '↻ Refresh'}
               </button>
             </div>
-          )}
+
+            {winnerHistoryLoading && (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div className="cinematic-spinner" style={{ width: '22px', height: '22px', margin: '0 auto' }} />
+              </div>
+            )}
+
+            {!winnerHistoryLoading && winnerHistory.length === 0 && (
+              <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(200,200,215,0.25)', fontStyle: 'italic' }}>
+                No winners drawn yet for this contest.
+              </p>
+            )}
+
+            {!winnerHistoryLoading && winnerHistory.length > 0 && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                      {['Place', 'Winner', 'Payout', 'Drawn At'].map((h) => (
+                        <th key={h} style={{ textAlign: 'left', padding: '0.35rem 0.6rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.3)' }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {winnerHistory.map((row) => {
+                      const profile = row.profiles;
+                      const displayName = profile?.display_name || profile?.username || row.user_id;
+                      const medal = row.place_number === 1 ? '🥇' : row.place_number === 2 ? '🥈' : row.place_number === 3 ? '🥉' : `#${row.place_number}`;
+                      const drawnAt = row.created_at ? new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+                      return (
+                        <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td style={{ padding: '0.5rem 0.6rem', color: 'rgba(220,220,235,0.7)' }}>{medal}</td>
+                          <td style={{ padding: '0.5rem 0.6rem', color: 'rgba(220,220,235,0.85)', fontWeight: 500, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</td>
+                          <td style={{ padding: '0.5rem 0.6rem', color: row.payout_amount > 0 ? '#86efac' : 'rgba(200,200,215,0.35)', fontWeight: row.payout_amount > 0 ? 600 : 400 }}>
+                            {row.payout_amount > 0 ? `$${Number(row.payout_amount).toLocaleString()}` : '—'}
+                          </td>
+                          <td style={{ padding: '0.5rem 0.6rem', color: 'rgba(200,200,215,0.35)', whiteSpace: 'nowrap' }}>{drawnAt}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 
