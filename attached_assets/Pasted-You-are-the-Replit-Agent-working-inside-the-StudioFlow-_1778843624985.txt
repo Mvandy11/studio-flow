@@ -1,0 +1,134 @@
+You are the Replit Agent working inside the StudioFlow codebase. Supabase contest views have been corrected from SECURITY DEFINER to SECURITY INVOKER. Your task is to update all StudioFlow frontend and API code so it matches the corrected view behavior and no longer relies on elevated privileges.
+
+The corrected views are:
+- public.admin_contest_dashboard
+- public.contest_leaderboard
+- public.contest_submission_feed
+
+────────────────────────────────────────
+0. GLOBAL OBJECTIVE
+────────────────────────────────────────
+Update StudioFlow so that:
+- All contest-related Supabase queries work with SECURITY INVOKER
+- All queries include proper filters (event_id, creator_id, user_id)
+- Admin-only views are gated by profiles.role = 'admin'
+- Customer contest pages load without hanging
+- No query assumes elevated permissions
+- No query bypasses RLS
+
+────────────────────────────────────────
+1. SEARCH FOR ALL CONTEST VIEW USAGE
+────────────────────────────────────────
+Search the entire codebase for:
+- admin_contest_dashboard
+- contest_leaderboard
+- contest_submission_feed
+- from("admin_contest_dashboard")
+- from("contest_leaderboard")
+- from("contest_submission_feed")
+
+Identify all files that query these views.
+
+────────────────────────────────────────
+2. UPDATE ALL SUPABASE QUERIES
+────────────────────────────────────────
+For each query:
+
+A) Ensure the query includes explicit filters:
+- event_id (required)
+- creator_id (if applicable)
+- user_id (if applicable)
+
+Example fix:
+Before:
+supabase.from("contest_leaderboard").select("*")
+
+After:
+supabase
+  .from("contest_leaderboard")
+  .select("*")
+  .eq("event_id", eventId)
+
+B) Ensure no query expects elevated privileges.
+Remove any code that assumes:
+- unrestricted SELECT
+- unrestricted JOIN
+- unrestricted ORDER BY
+
+C) Ensure all queries handle RLS errors gracefully:
+- If 401/403, show “Not authorized”
+- Do NOT hang in loading state
+
+────────────────────────────────────────
+3. FIX ADMIN GATING
+────────────────────────────────────────
+Locate all admin contest pages:
+- /admin/contests
+- /admin/contests/[id]
+- /admin/contests/dashboard
+
+Ensure:
+- Admin pages check profiles.role === 'admin'
+- Non-admin users are redirected to "/"
+- No admin page queries admin_contest_dashboard without verifying admin role
+
+────────────────────────────────────────
+4. FIX CUSTOMER CONTEST PAGES
+────────────────────────────────────────
+Locate:
+- /contests
+- /contests/[id]
+- /contests/[id]/submit
+- /contests/[id]/leaderboard
+
+Ensure:
+- contest_leaderboard queries include event_id
+- contest_submission_feed queries include event_id
+- No page assumes SECURITY DEFINER behavior
+- Loading states resolve even if RLS blocks access
+
+────────────────────────────────────────
+5. UPDATE API ROUTES (IF ANY)
+────────────────────────────────────────
+Search for:
+- /api/contests
+- /api/contest-leaderboard
+- /api/contest-submissions
+
+Ensure:
+- They query the corrected views
+- They pass event_id explicitly
+- They do not assume elevated privileges
+
+────────────────────────────────────────
+6. ADD LOGGING AROUND CONTEST QUERIES
+────────────────────────────────────────
+For each contest query, add:
+
+console.log("[Contest Query]", {
+  view: VIEW_NAME,
+  eventId,
+  userId: session?.user?.id,
+});
+
+This helps diagnose RLS issues.
+
+────────────────────────────────────────
+7. CLEAN UP DEAD CODE
+────────────────────────────────────────
+Remove:
+- Any fallback queries referencing old tables
+- Any commented-out SECURITY DEFINER logic
+- Any unused imports related to contest views
+
+────────────────────────────────────────
+8. OUTPUT SUMMARY
+────────────────────────────────────────
+At the end, output:
+
+- All files modified
+- All contest queries updated
+- All admin gating fixes applied
+- All customer contest pages updated
+- Any API routes updated
+- Any TODOs remaining

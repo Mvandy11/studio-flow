@@ -61,7 +61,19 @@ export default function AdminDashboard() {
       supabase.from('contests').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('events').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('submissions').select('*, contests(title)').not('contest_id', 'is', null).order('created_at', { ascending: false }).limit(100),
-      supabase.from('admin_contest_dashboard').select('*').limit(100).then(r => r).catch(() => ({ data: [] })),
+      supabase.from('admin_contest_dashboard').select('*').limit(100)
+        .then(({ data, error }) => {
+          if (error) {
+            console.warn('[AdminDashboard] admin_contest_dashboard query failed (RLS or view missing):', error.message);
+            return { data: [] };
+          }
+          console.log('[AdminDashboard] admin_contest_dashboard loaded', { rows: data?.length ?? 0 });
+          return { data: data ?? [] };
+        })
+        .catch((err) => {
+          console.warn('[AdminDashboard] admin_contest_dashboard unexpected error:', err?.message);
+          return { data: [] };
+        }),
     ]);
 
     let anns = [];
