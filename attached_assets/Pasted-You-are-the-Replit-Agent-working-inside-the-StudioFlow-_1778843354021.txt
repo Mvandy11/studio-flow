@@ -1,0 +1,139 @@
+You are the Replit Agent working inside the StudioFlow codebase. Your task is to add structured logging to ALL Netlify serverless functions so that debugging, auth tracing, and API flow analysis become easy and consistent.
+
+StudioFlow functions live in:
+- netlify/functions/*.js
+- netlify/functions/**/*.js
+
+────────────────────────────────────────
+0. GLOBAL OBJECTIVE
+────────────────────────────────────────
+Add a consistent logging wrapper to every serverless function that logs:
+
+- Function name
+- Timestamp
+- Incoming request method + path
+- Query params
+- Body (if JSON)
+- Environment mode (dev/prod)
+- Execution time
+- Outgoing status code
+- Error stack traces
+
+Logging must:
+- Never break execution
+- Never throw
+- Never leak secrets
+- Work in both local dev and Netlify production
+
+────────────────────────────────────────
+1. CREATE A LOGGING UTILITY
+────────────────────────────────────────
+Create a new file:
+
+netlify/functions/_utils/logger.js
+
+Implement a logger with:
+
+- logInfo(message, meta)
+- logError(message, meta)
+- logStart(functionName, request)
+- logEnd(functionName, statusCode, durationMs)
+
+Use console.log internally with JSON.stringify so logs are structured.
+
+Example shape:
+
+{
+  level: "info",
+  fn: "api",
+  msg: "Request received",
+  method: "POST",
+  path: "/api",
+  timestamp: "2026-05-15T12:00:00Z"
+}
+
+────────────────────────────────────────
+2. WRAP EVERY SERVERLESS FUNCTION
+────────────────────────────────────────
+For each file in netlify/functions:
+
+- Import the logger:
+
+import { logStart, logEnd, logError } from './_utils/logger.js';
+
+- Wrap the handler:
+
+export async function handler(event, context) {
+  const start = Date.now();
+  logStart("FUNCTION_NAME", event);
+
+  try {
+    const response = await actualHandler(event, context);
+    logEnd("FUNCTION_NAME", response.statusCode || 200, Date.now() - start);
+    return response;
+  } catch (err) {
+    logError("FUNCTION_NAME error", { error: err.stack });
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Internal server error" })
+    };
+  }
+}
+
+- Move the original logic into actualHandler().
+
+────────────────────────────────────────
+3. ADD REQUEST LOGGING
+────────────────────────────────────────
+Inside logStart(), include:
+
+- event.httpMethod
+- event.path
+- event.queryStringParameters
+- event.body (if JSON parseable)
+
+Ensure body parsing is wrapped in try/catch.
+
+────────────────────────────────────────
+4. ADD RESPONSE LOGGING
+────────────────────────────────────────
+Inside logEnd(), include:
+
+- statusCode
+- durationMs
+- functionName
+
+Do NOT log full response bodies unless small.
+
+────────────────────────────────────────
+5. ADD ERROR LOGGING
+────────────────────────────────────────
+Inside logError(), include:
+
+- error.message
+- error.stack
+- functionName
+- timestamp
+
+Ensure no secrets are logged.
+
+────────────────────────────────────────
+6. ENSURE COMPATIBILITY
+────────────────────────────────────────
+Verify:
+
+- No function imports native modules
+- No function breaks due to logger import
+- All functions still export handler correctly
+- No circular imports
+
+────────────────────────────────────────
+7. OUTPUT SUMMARY
+────────────────────────────────────────
+At the end, output:
+
+- All files modified
+- All functions wrapped
+- Logger file created
+- Any errors fixed
+- Any TODOs remaining
