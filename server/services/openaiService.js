@@ -1,5 +1,4 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,100 +29,73 @@ function getOpenAI() {
   return _openai;
 }
 
-// ── Lazy ffmpegService loader ─────────────────────────────────────────────────
-let _ffmpegService = null;
-let _ffmpegLoaded  = false;
-
-async function getFfmpegService() {
-  if (_ffmpegLoaded) return _ffmpegService;
-  _ffmpegLoaded = true;
-  try {
-    _ffmpegService = await import('./ffmpegService.js');
-  } catch {
-    _ffmpegService = null;
-  }
-  return _ffmpegService;
-}
+// Map file extension → OpenAI input_audio.format value.
+// ffmpeg is NOT used — audio is passed directly to gpt-4o-audio-preview.
+const EXT_TO_FORMAT = {
+  '.mp3':  'mp3',
+  '.wav':  'wav',
+  '.ogg':  'ogg',
+  '.flac': 'flac',
+  '.aac':  'aac',
+  '.m4a':  'mp4',
+  '.webm': 'webm',
+};
 
 /**
- * Denoises audio using a two-stage pipeline:
+ * Denoises audio using OpenAI gpt-4o-audio-preview.
  *
- * Stage 1 — ffmpeg pre-processing (when available):
- *   Applies `anlmdn` + `afftdn` noise reduction filters.
+ * The file is read from disk, base64-encoded, and submitted directly to the
+ * model — no ffmpeg pre-processing. The model returns cleaned WAV audio.
  *
- * Stage 2 — OpenAI gpt-4o-audio-preview speech-to-speech enhancement.
- *
- * @param {string} inputAudioPath - Path to the input audio file
+ * @param {string} inputAudioPath - Path to the uploaded audio file
  * @returns {Promise<{ cleanedBuffer: Buffer, cleanedFilename: string }>}
  */
 export async function denoiseAudio(inputAudioPath) {
-  const tempDir          = os.tmpdir();
-  const preProcessedPath = path.join(tempDir, `pre-${uuidv4()}.wav`);
-  const finalOutputPath  = path.join(tempDir, `denoised-${uuidv4()}.wav`);
+  // Detect actual format from extension so OpenAI decodes the bytes correctly.
+  // Defaulting to 'wav' when unknown is the safest fallback.
+  const ext    = path.extname(inputAudioPath).toLowerCase();
+  const format = EXT_TO_FORMAT[ext] ?? 'wav';
 
-  let audioPath = inputAudioPath;
+  console.log('[denoise] Reading audio file, format:', format);
+  const audioBuffer = fs.readFileSync(inputAudioPath);
+  const base64Audio = audioBuffer.toString('base64');
 
-  try {
-    // ── Stage 1: ffmpeg noise-reduction pre-pass ──────────────────
-    const ffmpeg = await getFfmpegService();
-    if (ffmpeg?.applyNoiseReduction) {
-      try {
-        console.log('[openai] Stage 1: ffmpeg noise reduction...');
-        await ffmpeg.applyNoiseReduction(inputAudioPath, preProcessedPath);
-        audioPath = preProcessedPath;
-      } catch (ffmpegErr) {
-        console.warn('[openai] ffmpeg pre-pass failed, skipping:', ffmpegErr.message);
-      }
-    } else {
-      console.log('[openai] ffmpeg not available — sending audio directly to AI.');
-    }
+  console.log('[denoise] Calling gpt-4o-audio-preview...');
+  const response = await getOpenAI().chat.completions.create({
+    model:      'gpt-4o-audio-preview',
+    modalities: ['text', 'audio'],
+    audio:      { voice: 'alloy', format: 'wav' },  // output format
+    messages: [
+      {
+        role:    'user',
+        content: [
+          {
+            type: 'text',
+            text:
+              'This audio may contain background noise. Reproduce the speech clearly ' +
+              'and naturally, removing any remaining background sounds. Maintain the ' +
+              'same words, pace, and intent of the original speaker.',
+          },
+          {
+            type:        'input_audio',
+            input_audio: { data: base64Audio, format },  // input format matches file
+          },
+        ],
+      },
+    ],
+  });
 
-    // ── Stage 2: OpenAI gpt-4o-audio-preview ──────────────────────
-    console.log('[openai] Stage 2: OpenAI audio enhancement...');
-    const audioBuffer = fs.readFileSync(audioPath);
-    const base64Audio = audioBuffer.toString('base64');
-
-    const response = await getOpenAI().chat.completions.create({
-      model:      'gpt-4o-audio-preview',
-      modalities: ['text', 'audio'],
-      audio:      { voice: 'alloy', format: 'wav' },
-      messages: [
-        {
-          role:    'user',
-          content: [
-            {
-              type: 'text',
-              text:
-                'This audio may contain background noise. Reproduce the speech clearly ' +
-                'and naturally, removing any remaining background sounds. Maintain the ' +
-                'same words, pace, and intent of the original speaker.',
-            },
-            {
-              type:        'input_audio',
-              input_audio: { data: base64Audio, format: 'wav' },
-            },
-          ],
-        },
-      ],
-    });
-
-    // ── Decode returned audio ──────────────────────────────────────
-    const audioData = response.choices?.[0]?.message?.audio?.data;
-
-    let cleanedBuffer;
-    if (audioData) {
-      cleanedBuffer = Buffer.from(audioData, 'base64');
-      console.log('[openai] AI enhancement successful.');
-    } else {
-      console.warn('[openai] AI returned no audio data — using pre-processed output.');
-      cleanedBuffer = fs.readFileSync(audioPath);
-    }
-
-    const cleanedFilename = `denoised-${uuidv4()}.wav`;
-    return { cleanedBuffer, cleanedFilename };
-  } finally {
-    [preProcessedPath, finalOutputPath].forEach((p) => {
-      if (fs.existsSync(p)) { try { fs.unlinkSync(p); } catch (_) {} }
-    });
+  // Decode the returned audio — fall back to original if model returns nothing
+  const audioData = response.choices?.[0]?.message?.audio?.data;
+  let cleanedBuffer;
+  if (audioData) {
+    cleanedBuffer = Buffer.from(audioData, 'base64');
+    console.log('[denoise] AI enhancement successful.');
+  } else {
+    console.warn('[denoise] AI returned no audio — using original as fallback.');
+    cleanedBuffer = audioBuffer;
   }
+
+  const cleanedFilename = `denoised-${uuidv4()}.wav`;
+  return { cleanedBuffer, cleanedFilename };
 }
