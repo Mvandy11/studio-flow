@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ROLES } from '../lib/roles';
 
@@ -35,47 +35,47 @@ export function AuthProvider({ children }) {
       setUser({ ...sessionUser, role: r, profile });
       setRole(r);
     } catch (_) {
-      // Profile fetch failed — still mark the user as logged in with default role
       setUser({ ...sessionUser, role: ROLES.USER, profile: null });
       setRole(ROLES.USER);
     }
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled      = false;
+    let firstEventSeen = false;
 
-    async function init() {
-      try {
-        // getSession() reads from localStorage — instant, no network call.
-        // getUser() makes a round-trip to Supabase to re-validate the JWT and
-        // can hang indefinitely if the connection is slow or env vars are wrong.
-        const { data: { session } } = await supabase.auth.getSession();
-        if (cancelled) return;
-        await applySession(session?.user ?? null);
-      } catch (_) {
-        if (!cancelled) {
-          setUser(null);
-          setRole(ROLES.USER);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+    // Safety net: if INITIAL_SESSION never fires within 6s, unblock the UI
+    const timeout = setTimeout(() => {
+      if (!firstEventSeen && !cancelled) {
+        firstEventSeen = true;
+        setUser(null);
+        setRole(ROLES.USER);
+        setLoading(false);
       }
-    }
+    }, 6000);
 
-    init();
-
+    // onAuthStateChange fires INITIAL_SESSION synchronously on subscribe.
+    // That event carries a fresh, auto-refreshed token — the correct way to
+    // read the initial auth state in Supabase JS v2.  Do NOT skip it.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (cancelled) return;
-        // INITIAL_SESSION fires synchronously before our init() resolves —
-        // skip it so we don't double-apply and risk a race with setLoading.
-        if (event === 'INITIAL_SESSION') return;
+
         await applySession(session?.user ?? null);
+
+        // Resolve loading after the very first event (INITIAL_SESSION for a
+        // fresh page load, or SIGNED_IN / SIGNED_OUT for in-session changes).
+        if (!firstEventSeen) {
+          firstEventSeen = true;
+          clearTimeout(timeout);
+          if (!cancelled) setLoading(false);
+        }
       }
     );
 
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, [applySession]);
