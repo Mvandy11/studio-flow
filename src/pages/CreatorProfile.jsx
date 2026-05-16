@@ -240,15 +240,14 @@ function PayoutSection({ user }) {
 }
 
 /* ── Account settings section (own profile only) ───────────── */
-function AccountSection({ onLogout }) {
+function AccountSection({ onLogout, userEmail }) {
   const [changingPw, setChangingPw] = useState(false);
   const [pwMsg,      setPwMsg]      = useState('');
 
   async function sendPasswordReset() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) return;
+    if (!userEmail) return;
     setChangingPw(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email);
+    const { error } = await supabase.auth.resetPasswordForEmail(userEmail);
     setChangingPw(false);
     setPwMsg(error ? error.message : 'Check your email for a password reset link.');
   }
@@ -674,7 +673,7 @@ function ProfileView({
           </div>
 
           {/* Account Settings */}
-          <AccountSection onLogout={onLogout} />
+          <AccountSection onLogout={onLogout} userEmail={user?.email} />
         </>
       )}
 

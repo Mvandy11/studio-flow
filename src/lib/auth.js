@@ -3,22 +3,14 @@ import { createProfile } from './profile';
 
 // Sign up with email + password
 export async function signup(email, password) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
+  const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) throw error;
   return data;
 }
 
 // Log in with email + password
 export async function login(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }
@@ -29,10 +21,10 @@ export async function logout() {
   if (error) throw error;
 }
 
-// Get the current user (session-based)
+// Get the current user from the local session (no network call — fast and safe)
 export async function getCurrentUser() {
-  const { data } = await supabase.auth.getUser();
-  return data?.user || null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user || null;
 }
 
 // Listen for auth state changes
@@ -44,15 +36,18 @@ export function onAuthStateChange(callback) {
 
 // Automatically create a profile after signup
 export async function signupAndCreateProfile(email, password, username) {
-  const { user } = await signup(email, password);
+  const data = await signup(email, password);
+  const user = data?.user;
 
-  await createProfile({
-    id: user.id,
-    username,
-    display_name: username,
-    bio: '',
-    avatar_url: '',
-  });
+  if (user?.id) {
+    await createProfile({
+      id: user.id,
+      username,
+      display_name: username,
+      bio: '',
+      avatar_url: '',
+    });
+  }
 
   return user;
 }
