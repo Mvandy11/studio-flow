@@ -7,96 +7,64 @@ const AuthContext = createContext(null);
 // ── Known admin email (permanent, per replit.md) ─────────────────────────────
 const ADMIN_EMAIL = 'obviouslyinspiredstudio@outlook.com';
 
-// ── Server-side profile fetch (uses service role → bypasses RLS) ─────────────
-// Calls GET /api/auth/profile with the user's JWT. The server reads the
-// profiles table with the service-role key so Supabase RLS can never block it.
+// ── Server-side profile fetch (service role → bypasses RLS) ──────────────────
 async function fetchProfileFromServer(jwt) {
   try {
     const res = await fetch('/api/auth/profile', {
       headers: { Authorization: `Bearer ${jwt}` },
     });
-    if (!res.ok) {
-      console.warn('[auth] Server profile fetch returned', res.status);
-      return null;
-    }
+    if (!res.ok) return null;
     const data = await res.json();
-    console.info('[auth] Server profile fetched — role:', data?.role, '| source:', data?._source);
+    console.info('[auth] Server profile — role:', data?.role, '| source:', data?._source);
     return data;
-  } catch (err) {
-    console.warn('[auth] Server profile fetch failed:', err.message);
+  } catch {
     return null;
   }
 }
 
-// ── Client-side profile fetch (anon key — may be blocked by RLS) ─────────────
+// ── Direct Supabase query (anon key — may be blocked by RLS) ─────────────────
 async function fetchProfileFromDB(userId) {
-  return supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle()
-    .then(({ data, error }) => {
-      if (error) {
-        console.warn('[auth] Direct DB profile error:', error.message);
-        return null;
-      }
-      return data || null;
-    })
-    .catch((err) => {
-      console.warn('[auth] Direct DB profile unexpected error:', err.message);
-      return null;
-    });
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) { console.warn('[auth] Direct DB error:', error.message); return null; }
+    return data || null;
+  } catch { return null; }
 }
 
-// ── Role resolution: three-tier fallback ─────────────────────────────────────
-// 1. Server endpoint (service role — always works)
-// 2. Direct Supabase query (anon key — may be blocked by RLS)
-// 3. JWT metadata → then email match (last resort)
-async function resolveProfile(sessionUser) {
+// ── Full async profile resolution (used for non-admin or background update) ───
+// Tries server endpoint → direct DB → JWT metadata in order.
+async function resolveProfileAsync(sessionUser, jwt) {
   if (!sessionUser?.id) return null;
 
-  const userId = sessionUser.id;
+  // Tier 1 — server endpoint with service role (bypasses RLS)
+  if (jwt) {
+    try {
+      const serverProfile = await Promise.race([
+        fetchProfileFromServer(jwt),
+        new Promise((r) => setTimeout(() => r(null), 6000)),
+      ]);
+      if (serverProfile?.role) return serverProfile;
+    } catch { /* fall through */ }
+  }
 
-  // ── Tier 1: get current JWT and ask the server ────────────────────────────
-  let profile = null;
+  // Tier 2 — direct Supabase query (anon key)
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const jwt = session?.access_token;
-    if (jwt) {
-      const timeout = new Promise((r) => setTimeout(() => r(null), 8000));
-      profile = await Promise.race([fetchProfileFromServer(jwt), timeout]);
-    }
-  } catch (err) {
-    console.warn('[auth] Could not get session JWT for server fetch:', err.message);
-  }
+    const dbProfile = await Promise.race([
+      fetchProfileFromDB(sessionUser.id),
+      new Promise((r) => setTimeout(() => r(null), 5000)),
+    ]);
+    if (dbProfile?.role) return dbProfile;
+  } catch { /* fall through */ }
 
-  if (profile?.role) return profile;
+  // Tier 3 — JWT metadata
+  const metaRole = sessionUser.app_metadata?.role || sessionUser.user_metadata?.role;
+  if (metaRole) return { id: sessionUser.id, role: metaRole };
 
-  // ── Tier 2: direct Supabase query ────────────────────────────────────────
-  const timeout = new Promise((r) => setTimeout(() => r(null), 5000));
-  const dbProfile = await Promise.race([fetchProfileFromDB(userId), timeout]);
-  if (dbProfile?.role) {
-    console.info('[auth] Role from direct DB:', dbProfile.role);
-    return dbProfile;
-  }
-
-  // ── Tier 3: JWT metadata ──────────────────────────────────────────────────
-  const metaRole =
-    sessionUser.app_metadata?.role ||
-    sessionUser.user_metadata?.role;
-  if (metaRole) {
-    console.info('[auth] Role from JWT metadata:', metaRole);
-    return { ...(dbProfile ?? {}), id: userId, role: metaRole };
-  }
-
-  // ── Tier 4: known admin email ─────────────────────────────────────────────
-  if (sessionUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-    console.info('[auth] Role from email fallback — assigning admin to:', sessionUser.email);
-    return { ...(dbProfile ?? {}), id: userId, role: 'admin' };
-  }
-
-  console.warn('[auth] Could not resolve role — defaulting to "user". userId:', userId);
-  return dbProfile; // may be null
+  return null;
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -105,14 +73,39 @@ export function AuthProvider({ children }) {
   const [role,    setRole]    = useState(ROLES.USER);
   const [loading, setLoading] = useState(true);
 
-  const applySession = useCallback(async (sessionUser) => {
+  const applySession = useCallback(async (sessionUser, jwt = null) => {
     if (!sessionUser?.id) {
       setUser(null);
       setRole(ROLES.USER);
       return;
     }
+
+    // ── FAST PATH: known admin email ──────────────────────────────────────────
+    // Set admin role immediately (synchronous) so the UI is never blocked
+    // waiting on DB queries. The full profile is still fetched in the background
+    // to populate display_name, avatar_url, etc.
+    const isKnownAdmin = sessionUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    if (isKnownAdmin) {
+      setUser({ ...sessionUser, role: 'admin', profile: null });
+      setRole('admin');
+
+      // Background: fetch full profile to fill in display fields
+      resolveProfileAsync(sessionUser, jwt)
+        .then((profile) => {
+          if (profile) {
+            const r = profile.role || 'admin';
+            setUser((prev) => ({ ...(prev ?? sessionUser), role: r, profile }));
+            setRole(r);
+          }
+        })
+        .catch(() => { /* keep fast-path admin role */ });
+
+      return;
+    }
+
+    // ── NORMAL PATH: async role resolution ───────────────────────────────────
     try {
-      const profile = await resolveProfile(sessionUser);
+      const profile = await resolveProfileAsync(sessionUser, jwt);
       const r       = profile?.role ?? ROLES.USER;
       setUser({ ...sessionUser, role: r, profile: profile ?? null });
       setRole(r);
@@ -126,7 +119,7 @@ export function AuthProvider({ children }) {
   const refreshProfile = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
-    await applySession(session.user);
+    await applySession(session.user, session.access_token);
   }, [applySession]);
 
   // ── Auth state subscription ───────────────────────────────────────────────
@@ -134,9 +127,10 @@ export function AuthProvider({ children }) {
     let cancelled      = false;
     let firstEventSeen = false;
 
+    // Safety net: if INITIAL_SESSION never fires within 6 s, unblock the UI.
     const safetyTimeout = setTimeout(() => {
       if (!firstEventSeen && !cancelled) {
-        console.warn('[auth] INITIAL_SESSION did not fire within 6 s — defaulting to signed-out');
+        console.warn('[auth] INITIAL_SESSION did not fire in 6 s — defaulting to signed-out');
         firstEventSeen = true;
         setUser(null);
         setRole(ROLES.USER);
@@ -150,10 +144,10 @@ export function AuthProvider({ children }) {
 
         const isSubsequent = firstEventSeen &&
           (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED');
-
         if (isSubsequent) setLoading(true);
 
-        await applySession(session?.user ?? null);
+        // Pass the JWT from the session directly — avoids a second getSession() call
+        await applySession(session?.user ?? null, session?.access_token ?? null);
 
         if (!firstEventSeen) {
           firstEventSeen = true;
@@ -174,25 +168,19 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // Eagerly resolve the profile/role so UI updates immediately after sign-in
-    const profile = await resolveProfile(data.user);
-    const r       = profile?.role ?? ROLES.USER;
-    setUser({ ...data.user, role: r, profile: profile ?? null });
-    setRole(r);
+    // Eagerly apply session with the JWT from the sign-in response
+    await applySession(data.user, data.session?.access_token);
     return data;
-  }, []);
+  }, [applySession]);
 
   const signup = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
     if (data.user?.id) {
-      const profile = await resolveProfile(data.user);
-      const r       = profile?.role ?? ROLES.USER;
-      setUser({ ...data.user, role: r, profile: profile ?? null });
-      setRole(r);
+      await applySession(data.user, data.session?.access_token);
     }
     return data;
-  }, []);
+  }, [applySession]);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
