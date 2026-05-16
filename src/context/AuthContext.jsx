@@ -6,12 +6,16 @@ const AuthContext = createContext(null);
 
 async function fetchProfile(userId) {
   if (!userId) return null;
-  const { data } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle();
-  return data || null;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    return data || null;
+  } catch (_) {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }) {
@@ -25,22 +29,37 @@ export function AuthProvider({ children }) {
       setRole(ROLES.USER);
       return;
     }
-
-    const profile = await fetchProfile(sessionUser.id);
-    const r       = profile?.role ?? ROLES.USER;
-    setUser({ ...sessionUser, role: r, profile });
-    setRole(r);
+    try {
+      const profile = await fetchProfile(sessionUser.id);
+      const r       = profile?.role ?? ROLES.USER;
+      setUser({ ...sessionUser, role: r, profile });
+      setRole(r);
+    } catch (_) {
+      // Profile fetch failed — still mark the user as logged in with default role
+      setUser({ ...sessionUser, role: ROLES.USER, profile: null });
+      setRole(ROLES.USER);
+    }
   }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
-      const { data: { user: sessionUser } } = await supabase.auth.getUser();
-      if (cancelled) return;
-
-      await applySession(sessionUser ?? null);
-      if (!cancelled) setLoading(false);
+      try {
+        // getSession() reads from localStorage — instant, no network call.
+        // getUser() makes a round-trip to Supabase to re-validate the JWT and
+        // can hang indefinitely if the connection is slow or env vars are wrong.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (cancelled) return;
+        await applySession(session?.user ?? null);
+      } catch (_) {
+        if (!cancelled) {
+          setUser(null);
+          setRole(ROLES.USER);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
     init();
@@ -48,6 +67,8 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (cancelled) return;
+        // INITIAL_SESSION fires synchronously before our init() resolves —
+        // skip it so we don't double-apply and risk a race with setLoading.
         if (event === 'INITIAL_SESSION') return;
         await applySession(session?.user ?? null);
       }
