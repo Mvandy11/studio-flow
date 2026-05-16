@@ -16,6 +16,7 @@ import slotCreationRouter from './routes/slotCreation.js';
 import eventsRouter from './routes/events.js';
 import testWinnerPullRouter from './routes/testWinnerPull.js';
 import analyticsRouter from './routes/analytics.js';
+import adminWinnersRouter from './routes/adminWinners.js';
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/event-slots',           eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);
 // More-specific /api/admin/* routes MUST come before the catch-all /api/admin
 app.use('/api/admin/analytics',       analyticsRouter);
+app.use('/api/admin/winners',         adminWinnersRouter);
 app.use('/api/admin',                 adminApprovalRouter);
 app.use('/api/slots',                 slotCreationRouter);
 app.use('/api/events',                eventsRouter);

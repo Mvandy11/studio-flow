@@ -58,24 +58,20 @@ export default function AdminWinnersDashboard() {
     loadAll();
   }, [authLoading, role]);
 
-  // ── Load ─────────────────────────────────────────────────────────
+  // ── Load (server-side to bypass Supabase RLS on winner_history) ──
   async function loadAll() {
     setLoading(true);
     setError(null);
     try {
-      const [winnersRes, contestsRes, eventsRes] = await Promise.all([
-        supabase
-          .from('winner_history')
-          .select('id, user_id, event_id, contest_id, place_number, payout_amount, created_at')
-          .order('created_at', { ascending: false }),
-        supabase.from('contests').select('id, title').order('title', { ascending: true }),
-        supabase.from('events').select('id, title').order('title', { ascending: true }),
-      ]);
-
-      if (winnersRes.error) throw winnersRes.error;
-      setWinners(winnersRes.data || []);
-      setContests(contestsRes.data || []);
-      setEvents(eventsRes.data || []);
+      const token = await getToken();
+      const resp = await fetch('/api/admin/winners', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || `Server error ${resp.status}`);
+      setWinners(json.winners   || []);
+      setContests(json.contests || []);
+      setEvents(json.events     || []);
     } catch (err) {
       setError(err.message || 'Failed to load winner history.');
     } finally {

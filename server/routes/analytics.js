@@ -15,27 +15,30 @@ function afterCutoff(arr, cutoff) {
 
 // GET /api/admin/analytics?range=7d|30d|90d|all
 router.get('/', async (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-  if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  const r = profile?.role;
-  if (r !== 'admin' && r !== 'creator_admin') {
-    return res.status(403).json({ error: 'Admin only' });
-  }
-
-  const range  = req.query.range || 'all';
-  const cutoff = cutoffDate(range);
-
+  // Everything inside one try/catch — async throws outside try/catch crash Node
   try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Safe destructuring — data may be null when token is invalid
+    const authResp = await supabase.auth.getUser(token);
+    const user = authResp.data?.user;
+    if (authResp.error || !user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const r = profile?.role;
+    if (r !== 'admin' && r !== 'creator_admin') {
+      return res.status(403).json({ error: 'Admin only' });
+    }
+
+    const range  = req.query.range || 'all';
+    const cutoff = cutoffDate(range);
+
     // ── Fetch raw data in parallel ──────────────────────────────
     const [contestsRes, eventsRes, profilesRes, ticketsRes, winnersRes, entriesRes] =
       await Promise.all([
@@ -112,7 +115,6 @@ router.get('/', async (req, res) => {
       allProfiles.reduce((acc, p) => {
         if (!p.created_at) return acc;
         const d = new Date(p.created_at);
-        // ISO week key: YYYY-WNN
         const week = `${d.getFullYear()}-W${String(Math.ceil(
           ((d - new Date(d.getFullYear(), 0, 1)) / 86400000 + 1) / 7
         )).padStart(2, '0')}`;
