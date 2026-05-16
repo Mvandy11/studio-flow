@@ -1,0 +1,58 @@
+You are the Replit Agent working inside the StudioFlow codebase. The Supabase database and RLS policies are fully repaired, and the admin profile is readable with role='admin'. The remaining issues are:
+
+1. The admin menu does not appear after login.
+2. AI tools (Denoise, Upscale, Enhance) return “Server error”.
+
+Your task is to repair ONLY the admin gating logic and the AI tools API routes.
+
+===========================
+ADMIN MENU FIX
+===========================
+
+1. Locate all components that control admin UI visibility:
+- AdminSidebar
+- AdminLayout
+- useAdmin hook
+- useProfile hook
+- any role-based gating in pages/admin/*
+
+2. Update the gating logic so that:
+- profile.role === 'admin' enables admin UI
+- remove any checks for profile.isAdmin, profile.admin, user.isAdmin, or incorrect capitalization
+- ensure admin UI does NOT hide while profile is still loading
+- ensure admin UI renders immediately once profile.role === 'admin'
+
+3. Ensure no component returns null or hides UI before profile is loaded.
+
+===========================
+AI TOOLS FIX
+===========================
+
+1. Locate all API routes for AI tools:
+- /api/denoise
+- /api/upscale
+- /api/enhance
+(or whichever folder contains these endpoints)
+
+2. Fix the following issues:
+- Ensure the correct environment variable is used for Replicate API key (REPLICATE_API_KEY)
+- Ensure the request body is parsed correctly (req.json() or req.body depending on framework)
+- Ensure the endpoint returns a proper JSON response
+- Add error handling that returns { error: true, message } instead of crashing
+- Ensure the frontend calls the correct route path
+
+3. Validate that the Replicate client is initialized correctly:
+- import Replicate from "replicate";
+- const replicate = new Replicate({ auth: process.env.REPLICATE_API_KEY });
+
+4. Ensure the model names are correct and not outdated.
+
+===========================
+OUTPUT
+===========================
+
+At the end, output:
+- Files modified
+- Exact gating logic applied
+- Exact fixes made to AI routes
+- Any missing environment variables

@@ -37,10 +37,13 @@ const upload = multer({
  * and returns metadata.
  */
 router.post('/upscale', upload.single('file'), async (req, res) => {
-  // Guard: fail fast if the Replicate token is missing rather than hanging
-  if (!process.env.REPLICATE_API_TOKEN) {
+  // Guard: fail fast with a clear message if neither Replicate key is set.
+  // Checks REPLICATE_API_KEY first (preferred), then the legacy REPLICATE_API_TOKEN alias.
+  if (!process.env.REPLICATE_API_KEY && !process.env.REPLICATE_API_TOKEN) {
     return res.status(503).json({
-      error: 'AI upscaling is not available — REPLICATE_API_TOKEN is not configured.',
+      error:    'AI upscaling is not available — Replicate API key is not configured.',
+      missing:  'REPLICATE_API_KEY',
+      hint:     'Add REPLICATE_API_KEY to your environment secrets and restart the server.',
     });
   }
 
