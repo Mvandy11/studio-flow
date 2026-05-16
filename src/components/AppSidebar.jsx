@@ -123,6 +123,16 @@ export default function AppSidebar({ open, onClose }) {
                 <span className="app-sidebar__link-icon">🏆</span>
                 Winners
               </NavLink>
+              <NavLink
+                to="/admin/analytics"
+                className={({ isActive }) =>
+                  `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`
+                }
+                onClick={onClose}
+              >
+                <span className="app-sidebar__link-icon">📊</span>
+                Analytics
+              </NavLink>
             </nav>
             <div className="app-sidebar__divider" />
           </>

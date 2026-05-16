@@ -1,0 +1,157 @@
+You are the Replit Agent working inside the StudioFlow codebase. Your task is to build a complete Admin Analytics Dashboard that gives administrators a high‑level overview of platform activity, including contests, events, users, submissions, revenue, and winner statistics.
+
+This dashboard must be accessible only to admins and must load real data from Supabase.
+
+Perform the following tasks:
+
+────────────────────────────────────────
+1. CREATE THE ADMIN ANALYTICS PAGE
+────────────────────────────────────────
+Add a new route:
+- /admin/analytics
+
+Create a component:
+- AdminAnalyticsDashboard.jsx (or .tsx)
+
+This page must be gated by:
+profile.role === 'admin'
+
+────────────────────────────────────────
+2. FETCH ALL REQUIRED ANALYTICS DATA
+────────────────────────────────────────
+Implement Supabase queries for:
+
+1) Total number of contests:
+select count(*) from contests;
+
+2) Total number of events:
+select count(*) from events;
+
+3) Total number of users:
+select count(*) from profiles;
+
+4) Total ticket purchases:
+select count(*) from ticket_purchases;
+
+5) Total revenue:
+select sum(ticket_price * quantity) from ticket_purchases;
+
+6) Total winners selected:
+select count(*) from winner_history;
+
+7) Unique winners:
+select count(distinct user_id) from winner_history;
+
+8) Recent activity (last 7 days):
+- new users
+- new contests
+- new events
+- new ticket purchases
+- new winners
+
+────────────────────────────────────────
+3. BUILD ANALYTICS CARDS
+────────────────────────────────────────
+At the top of the dashboard, create metric cards for:
+
+- Total Contests
+- Total Events
+- Total Users
+- Total Ticket Purchases
+- Total Revenue
+- Total Winners
+- Unique Winners
+
+Each card should include:
+- Title
+- Value
+- Icon
+- Subtext (e.g., “+12 this week”)
+
+────────────────────────────────────────
+4. ADD CHARTS (LINE + BAR + PIE)
+────────────────────────────────────────
+Use any existing chart library in the repo (or add a lightweight one).
+
+Charts required:
+
+1) Line chart: Ticket purchases over time  
+2) Bar chart: Revenue per event  
+3) Pie chart: Winner distribution by place number  
+4) Bar chart: New users per week  
+
+Ensure charts are responsive and styled consistently with the rest of the admin UI.
+
+────────────────────────────────────────
+5. ADD RECENT ACTIVITY FEED
+────────────────────────────────────────
+Create a feed showing the last 20 admin‑relevant events:
+
+- New user registered
+- New contest created
+- New event created
+- Ticket purchased
+- Winner selected
+
+Each item should show:
+- Timestamp
+- Type
+- Summary text
+
+────────────────────────────────────────
+6. ADD TOP PERFORMING EVENTS + CONTESTS
+────────────────────────────────────────
+Create two tables:
+
+1) Top Events (by ticket sales)
+Columns:
+- Event name
+- Tickets sold
+- Revenue
+- Date
+
+2) Top Contests (by participation)
+Columns:
+- Contest name
+- Total entries
+- Unique participants
+- Winners selected
+
+────────────────────────────────────────
+7. ADD FILTERS
+────────────────────────────────────────
+Add filters at the top of the dashboard:
+
+- Date range (7 days, 30 days, 90 days, all time)
+- Event filter
+- Contest filter
+
+Ensure all charts + metrics update when filters change.
+
+────────────────────────────────────────
+8. ADD LOADING + ERROR STATES
+────────────────────────────────────────
+Implement:
+- Loading spinners
+- “No data available” states
+- Error messages for failed Supabase queries
+
+────────────────────────────────────────
+9. CLEAN UP OLD ANALYTICS CODE
+────────────────────────────────────────
+Remove:
+- Deprecated analytics components
+- Old dashboard logic
+- Unused queries
+- Dead code paths
+
+────────────────────────────────────────
+10. OUTPUT SUMMARY
+────────────────────────────────────────
+At the end, output:
+- Files created
+- Files modified
+- Components added
+- Charts implemented
+- Queries added
+- Confirmation that the Admin Analytics Dashboard is fully functional

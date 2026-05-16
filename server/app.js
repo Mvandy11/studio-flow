@@ -14,6 +14,7 @@ import adminApprovalRouter from './routes/adminApproval.js';
 import slotCreationRouter from './routes/slotCreation.js';
 import eventsRouter from './routes/events.js';
 import testWinnerPullRouter from './routes/testWinnerPull.js';
+import analyticsRouter from './routes/analytics.js';
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/admin',                 adminApprovalRouter);
 app.use('/api/slots',                 slotCreationRouter);
 app.use('/api/events',                eventsRouter);
 app.use('/api/test-winner-pull',      testWinnerPullRouter);
+app.use('/api/admin/analytics',       analyticsRouter);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
