@@ -1,0 +1,134 @@
+You are the Replit Agent working inside the StudioFlow codebase. Your task is to fully repair the entire admin UI so that:
+
+- Admin pages load correctly
+- Admin sidebar appears only for admins
+- Admin routes are protected
+- Admin dashboard loads real data
+- Admin contest/event/submission/announcement pages render correctly
+- Admin profile fetch logic is correct
+- Admin gating is consistent across the entire app
+
+Perform the following tasks:
+
+────────────────────────────────────────
+1. LOCATE ALL ADMIN UI COMPONENTS
+────────────────────────────────────────
+Search for components and pages including:
+- AdminSidebar
+- AdminDashboard
+- AdminContests
+- AdminEvents
+- AdminAnnouncements
+- AdminSubmissions
+- AdminAcademy
+- AdminSubscription
+- Any route-level admin guards
+
+Identify all files that conditionally render admin UI.
+
+────────────────────────────────────────
+2. FIX PROFILE FETCH LOGIC
+────────────────────────────────────────
+Ensure the frontend fetches the profile using:
+
+const { data: { user } } = await supabase.auth.getUser();
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)
+  .single();
+
+Fix any of the following issues:
+- Missing .single()
+- Missing await
+- Incorrect table name
+- Incorrect id comparison
+- Silent failures returning null
+- Incorrect role field name
+
+Ensure profile.role is correctly read.
+
+────────────────────────────────────────
+3. FIX ADMIN GATING
+────────────────────────────────────────
+Ensure the admin check is EXACTLY:
+
+if (profile?.role !== 'admin') {
+  redirect('/');
+}
+
+Apply this consistently to:
+- Admin routes
+- Admin pages
+- Admin components
+- Admin sidebar visibility
+
+Remove any outdated or incorrect checks such as:
+- user.isAdmin
+- profile.admin === true
+- role === 'creator_admin' (unless intentionally used)
+
+────────────────────────────────────────
+4. FIX LOADING STATES
+────────────────────────────────────────
+Ensure admin UI does NOT disappear while loading.
+
+Replace any logic like:
+if (!profile) return null;
+
+With:
+if (loading) return <LoadingSpinner />;
+
+Ensure admin UI only hides when the user is confirmed NOT an admin.
+
+────────────────────────────────────────
+5. FIX ADMIN SIDEBAR VISIBILITY
+────────────────────────────────────────
+Ensure the sidebar shows ONLY when:
+profile.role === 'admin'
+
+Fix:
+- Desktop sidebar
+- Mobile sidebar
+- Any conditional rendering
+
+────────────────────────────────────────
+6. FIX ADMIN DASHBOARD DATA FETCHING
+────────────────────────────────────────
+Ensure the dashboard fetches:
+- Active contests count
+- Active events count
+- Total submissions
+- Total users (if applicable)
+
+Fix any broken Supabase queries.
+
+────────────────────────────────────────
+7. FIX EMPTY STATES + ERROR STATES
+────────────────────────────────────────
+Ensure admin pages show:
+- “No contests yet”
+- “No events yet”
+- “No submissions yet”
+
+instead of blank screens.
+
+────────────────────────────────────────
+8. CLEAN UP OLD CODE
+────────────────────────────────────────
+Remove:
+- Deprecated admin logic
+- Old role checks
+- Unused components
+- Dead code paths
+
+────────────────────────────────────────
+9. OUTPUT SUMMARY
+────────────────────────────────────────
+At the end, output:
+- Files inspected
+- Files modified
+- All admin gating fixes applied
+- All sidebar fixes applied
+- All dashboard fixes applied
+- Confirmation that admin UI is fully functional

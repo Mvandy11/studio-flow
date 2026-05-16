@@ -580,14 +580,19 @@ router.post('/:id/pull-winners', async (req, res) => {
           .eq('id', w.userId)
           .maybeSingle();
 
-        const { data: authData } = await supabase.auth.admin.getUserById(w.userId)
-          .catch(() => ({ data: null }));
+        let email = null;
+        const { data: authData, error: authErr } = await supabase.auth.admin.getUserById(w.userId);
+        if (authErr) {
+          console.warn(`[pull-winners] getUserById failed for ${w.userId}:`, authErr.message);
+        } else {
+          email = authData?.user?.email || null;
+        }
 
         return {
           ...w,
-          username:    p?.display_name || p?.username || null,
-          avatarUrl:   p?.avatar_url   || null,
-          email:       authData?.user?.email || null,
+          username:  p?.display_name || p?.username || null,
+          avatarUrl: p?.avatar_url   || null,
+          email,
         };
       }),
     );
