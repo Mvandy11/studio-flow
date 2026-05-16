@@ -4,37 +4,99 @@ import { ROLES } from '../lib/roles';
 
 const AuthContext = createContext(null);
 
-// ── Profile fetch with hard 5-second timeout ─────────────────────────────────
-// Using Promise.race with a resolving timeout (not rejecting) means
-// fetchProfile ALWAYS completes within 5 s and never hangs login.
-async function fetchProfile(userId) {
-  if (!userId) return null;
+// ── Known admin email (permanent, per replit.md) ─────────────────────────────
+const ADMIN_EMAIL = 'obviouslyinspiredstudio@outlook.com';
 
-  const query = supabase
+// ── Server-side profile fetch (uses service role → bypasses RLS) ─────────────
+// Calls GET /api/auth/profile with the user's JWT. The server reads the
+// profiles table with the service-role key so Supabase RLS can never block it.
+async function fetchProfileFromServer(jwt) {
+  try {
+    const res = await fetch('/api/auth/profile', {
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    if (!res.ok) {
+      console.warn('[auth] Server profile fetch returned', res.status);
+      return null;
+    }
+    const data = await res.json();
+    console.info('[auth] Server profile fetched — role:', data?.role, '| source:', data?._source);
+    return data;
+  } catch (err) {
+    console.warn('[auth] Server profile fetch failed:', err.message);
+    return null;
+  }
+}
+
+// ── Client-side profile fetch (anon key — may be blocked by RLS) ─────────────
+async function fetchProfileFromDB(userId) {
+  return supabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
     .maybeSingle()
     .then(({ data, error }) => {
       if (error) {
-        console.error('[auth] fetchProfile DB error:', error.message);
+        console.warn('[auth] Direct DB profile error:', error.message);
         return null;
       }
       return data || null;
     })
     .catch((err) => {
-      console.error('[auth] fetchProfile unexpected error:', err.message);
+      console.warn('[auth] Direct DB profile unexpected error:', err.message);
       return null;
     });
+}
 
-  const timeout = new Promise((resolve) =>
-    setTimeout(() => {
-      console.warn('[auth] fetchProfile timed out (5 s) for userId:', userId);
-      resolve(null);
-    }, 5000)
-  );
+// ── Role resolution: three-tier fallback ─────────────────────────────────────
+// 1. Server endpoint (service role — always works)
+// 2. Direct Supabase query (anon key — may be blocked by RLS)
+// 3. JWT metadata → then email match (last resort)
+async function resolveProfile(sessionUser) {
+  if (!sessionUser?.id) return null;
 
-  return Promise.race([query, timeout]);
+  const userId = sessionUser.id;
+
+  // ── Tier 1: get current JWT and ask the server ────────────────────────────
+  let profile = null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const jwt = session?.access_token;
+    if (jwt) {
+      const timeout = new Promise((r) => setTimeout(() => r(null), 8000));
+      profile = await Promise.race([fetchProfileFromServer(jwt), timeout]);
+    }
+  } catch (err) {
+    console.warn('[auth] Could not get session JWT for server fetch:', err.message);
+  }
+
+  if (profile?.role) return profile;
+
+  // ── Tier 2: direct Supabase query ────────────────────────────────────────
+  const timeout = new Promise((r) => setTimeout(() => r(null), 5000));
+  const dbProfile = await Promise.race([fetchProfileFromDB(userId), timeout]);
+  if (dbProfile?.role) {
+    console.info('[auth] Role from direct DB:', dbProfile.role);
+    return dbProfile;
+  }
+
+  // ── Tier 3: JWT metadata ──────────────────────────────────────────────────
+  const metaRole =
+    sessionUser.app_metadata?.role ||
+    sessionUser.user_metadata?.role;
+  if (metaRole) {
+    console.info('[auth] Role from JWT metadata:', metaRole);
+    return { ...(dbProfile ?? {}), id: userId, role: metaRole };
+  }
+
+  // ── Tier 4: known admin email ─────────────────────────────────────────────
+  if (sessionUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    console.info('[auth] Role from email fallback — assigning admin to:', sessionUser.email);
+    return { ...(dbProfile ?? {}), id: userId, role: 'admin' };
+  }
+
+  console.warn('[auth] Could not resolve role — defaulting to "user". userId:', userId);
+  return dbProfile; // may be null
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -43,7 +105,6 @@ export function AuthProvider({ children }) {
   const [role,    setRole]    = useState(ROLES.USER);
   const [loading, setLoading] = useState(true);
 
-  // Apply a session user: fetch their profile, derive role, update context state.
   const applySession = useCallback(async (sessionUser) => {
     if (!sessionUser?.id) {
       setUser(null);
@@ -51,26 +112,17 @@ export function AuthProvider({ children }) {
       return;
     }
     try {
-      const profile = await fetchProfile(sessionUser.id);
+      const profile = await resolveProfile(sessionUser);
       const r       = profile?.role ?? ROLES.USER;
-
-      if (!profile) {
-        console.warn('[auth] No profile row found — role defaults to "user". userId:', sessionUser.id);
-      } else {
-        console.info('[auth] Profile loaded — role:', r, '| email:', sessionUser.email);
-      }
-
       setUser({ ...sessionUser, role: r, profile: profile ?? null });
       setRole(r);
     } catch (err) {
       console.error('[auth] applySession error:', err);
-      // Still keep the user signed in — just with the default role
       setUser({ ...sessionUser, role: ROLES.USER, profile: null });
       setRole(ROLES.USER);
     }
   }, []);
 
-  // Re-fetch the profile from Supabase on demand (e.g. after a role upgrade).
   const refreshProfile = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
@@ -82,7 +134,6 @@ export function AuthProvider({ children }) {
     let cancelled      = false;
     let firstEventSeen = false;
 
-    // Safety net: if INITIAL_SESSION never fires within 6 s, unblock the UI.
     const safetyTimeout = setTimeout(() => {
       if (!firstEventSeen && !cancelled) {
         console.warn('[auth] INITIAL_SESSION did not fire within 6 s — defaulting to signed-out');
@@ -93,10 +144,6 @@ export function AuthProvider({ children }) {
       }
     }, 6000);
 
-    // Supabase v2: onAuthStateChange fires INITIAL_SESSION synchronously on
-    // subscribe with a fresh auto-refreshed token.  For subsequent events
-    // (SIGNED_IN / SIGNED_OUT / USER_UPDATED) we briefly re-lock loading so
-    // that admin-gated pages wait for the new role before deciding to redirect.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (cancelled) return;
@@ -104,11 +151,7 @@ export function AuthProvider({ children }) {
         const isSubsequent = firstEventSeen &&
           (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED');
 
-        if (isSubsequent) {
-          // Brief re-lock so role-gated pages see authLoading=true while the
-          // fresh profile is fetched, preventing a premature redirect.
-          setLoading(true);
-        }
+        if (isSubsequent) setLoading(true);
 
         await applySession(session?.user ?? null);
 
@@ -131,12 +174,10 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // Eagerly set user/role so the UI updates before onAuthStateChange SIGNED_IN
-    // fires.  fetchProfile has a 5 s timeout so this can't hang indefinitely.
-    const sessionUser = data.user;
-    const profile     = await fetchProfile(sessionUser?.id);
-    const r           = profile?.role ?? ROLES.USER;
-    setUser({ ...sessionUser, role: r, profile: profile ?? null });
+    // Eagerly resolve the profile/role so UI updates immediately after sign-in
+    const profile = await resolveProfile(data.user);
+    const r       = profile?.role ?? ROLES.USER;
+    setUser({ ...data.user, role: r, profile: profile ?? null });
     setRole(r);
     return data;
   }, []);
@@ -144,11 +185,10 @@ export function AuthProvider({ children }) {
   const signup = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-    const sessionUser = data.user;
-    if (sessionUser?.id) {
-      const profile = await fetchProfile(sessionUser.id);
+    if (data.user?.id) {
+      const profile = await resolveProfile(data.user);
       const r       = profile?.role ?? ROLES.USER;
-      setUser({ ...sessionUser, role: r, profile: profile ?? null });
+      setUser({ ...data.user, role: r, profile: profile ?? null });
       setRole(r);
     }
     return data;
