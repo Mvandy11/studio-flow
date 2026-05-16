@@ -38,6 +38,7 @@ import SubmissionsPage from './pages/SubmissionsPage';
 import EventSlotView from './pages/EventSlotView';
 import SubscriptionPage from './pages/Subscription';
 import AdminEventRequests from './pages/AdminEventRequests';
+import AdminWinnersDashboard from './pages/AdminWinnersDashboard';
 import Dashboard from './pages/Dashboard.tsx';
 import DevSessionEditor from './pages/SessionEditor.tsx';
 import DevFeed from './pages/Feed.tsx';
@@ -93,6 +94,7 @@ export default function App() {
           <Route path="/submissions"            element={<SubmissionsPage />} />
           <Route path="/subscription"           element={<SubscriptionPage />} />
           <Route path="/admin/event-requests"   element={<AdminEventRequests />} />
+          <Route path="/admin/winners"          element={<AdminWinnersDashboard />} />
 
           {/* ── Account ── */}
           <Route path="/earnings" element={<EarningsDashboard />} />

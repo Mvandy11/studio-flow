@@ -98,6 +98,17 @@ export default function MobileDrawer({ open, onClose }) {
                 <span className="mob-drawer__link-icon">🗂</span>
                 Event Requests
               </NavLink>
+              <NavLink
+                to="/admin/winners"
+                className={({ isActive }) =>
+                  `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
+                }
+                onClick={onClose}
+                style={{ color: 'var(--accent-gold)' }}
+              >
+                <span className="mob-drawer__link-icon">🏆</span>
+                Winners
+              </NavLink>
             </>
           )}
         </nav>
