@@ -92,7 +92,7 @@ export default function ContestDetailPage() {
     try {
       const { data, error: hErr } = await supabase
         .from('winner_history')
-        .select('id, place_number, payout_amount, created_at, user_id, profiles(username, display_name)')
+        .select('id, place_number, payout_amount, created_at, user_id')
         .eq('contest_id', id)
         .order('place_number', { ascending: true });
 

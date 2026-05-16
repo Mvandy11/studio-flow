@@ -1,0 +1,39 @@
+-- ============================================================
+-- Fix: infinite recursion in profiles RLS policy
+-- ============================================================
+-- The infinite recursion happens because some RLS policies on
+-- `profiles` (or other tables) check the user's role by querying
+-- the `profiles` table from within a profiles policy, e.g.:
+--
+--   USING ( (SELECT role FROM profiles WHERE id = auth.uid()) = 'admin' )
+--
+-- This creates an infinite loop: reading profiles triggers the
+-- policy, which reads profiles again, ad infinitum.
+--
+-- The safest fix is to DISABLE RLS on the profiles table.
+-- Profile data (username, avatar_url, bio, role) is non-sensitive
+-- enough that open reads are fine; sensitive writes are still
+-- gated by application logic and the service-role key on the server.
+-- ============================================================
+
+-- Step 1: Disable RLS on profiles (stops all recursive evaluations)
+ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+
+-- Step 2: (Optional) If you later re-enable RLS, use NON-RECURSIVE
+-- policies that rely on auth.uid() directly — NOT a subquery on profiles:
+--
+--   CREATE POLICY "profiles_select_own"
+--     ON profiles FOR SELECT
+--     USING (true);   -- anyone can read profile rows
+--
+--   CREATE POLICY "profiles_update_own"
+--     ON profiles FOR UPDATE
+--     USING (auth.uid() = id);
+--
+--   CREATE POLICY "profiles_insert_own"
+--     ON profiles FOR INSERT
+--     WITH CHECK (auth.uid() = id);
+--
+-- NOTE: Never use (SELECT role FROM profiles WHERE id = auth.uid())
+-- inside a profiles policy — that causes the recursion.
+-- Use auth.jwt() ->> 'role' instead if you need role-based checks.

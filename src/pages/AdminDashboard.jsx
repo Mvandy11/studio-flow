@@ -52,29 +52,32 @@ export default function AdminDashboard() {
 
   async function loadAll() {
     setLoading(true);
-    const [
-      { data: c },
-      { data: e },
-      { data: s },
-      { data: dash },
-    ] = await Promise.all([
-      supabase.from('contests').select('*').order('created_at', { ascending: false }).limit(50),
-      supabase.from('events').select('*').order('created_at', { ascending: false }).limit(50),
-      supabase.from('submissions').select('*, contests(title)').not('contest_id', 'is', null).order('created_at', { ascending: false }).limit(100),
-      supabase.from('admin_contest_dashboard').select('*').limit(100)
-        .then(({ data, error }) => {
-          if (error) {
-            console.warn('[AdminDashboard] admin_contest_dashboard query failed (RLS or view missing):', error.message);
+    let c = [], e = [], s = [], dash = [];
+    try {
+      const results = await Promise.all([
+        supabase.from('contests').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('events').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('submissions').select('*, contests(title)').not('contest_id', 'is', null).order('created_at', { ascending: false }).limit(100),
+        supabase.from('admin_contest_dashboard').select('*').limit(100)
+          .then(({ data, error }) => {
+            if (error) {
+              console.warn('[AdminDashboard] admin_contest_dashboard:', error.message);
+              return { data: [] };
+            }
+            return { data: data ?? [] };
+          })
+          .catch((err) => {
+            console.warn('[AdminDashboard] admin_contest_dashboard unexpected:', err?.message);
             return { data: [] };
-          }
-          console.log('[AdminDashboard] admin_contest_dashboard loaded', { rows: data?.length ?? 0 });
-          return { data: data ?? [] };
-        })
-        .catch((err) => {
-          console.warn('[AdminDashboard] admin_contest_dashboard unexpected error:', err?.message);
-          return { data: [] };
-        }),
-    ]);
+          }),
+      ]);
+      c    = results[0].data || [];
+      e    = results[1].data || [];
+      s    = results[2].data || [];
+      dash = results[3].data || [];
+    } catch (err) {
+      console.warn('[AdminDashboard] loadAll error:', err?.message);
+    }
 
     let anns = [];
     let genSubs = [];
