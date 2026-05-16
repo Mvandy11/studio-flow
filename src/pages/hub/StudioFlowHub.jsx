@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
+import { supabase } from '../../lib/supabase.js';
 import { api } from '../../lib/api.js';
 import HomeTab       from './tabs/HomeTab.jsx';
 import ContestsTab   from './tabs/ContestsTab.jsx';
@@ -31,16 +32,24 @@ export default function StudioFlowHub() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const [contData, evData] = await Promise.all([
-          api('/api/contests?status=active&limit=1'),
-          api('/api/events?type=upcoming'),
+        const [contData, evData, memberRes] = await Promise.all([
+          // All contests (any status) so the count is never misleadingly 0
+          api('/api/contests'),
+          api('/api/events'),
+          // Head-only count from profiles table (no data transfer)
+          supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true }),
         ]);
+
         setStats({
-          activeContests: contData.count  ?? (contData.data?.length  ?? 0),
-          upcomingEvents: evData.data?.length ?? 0,
-          totalMembers:   0,
+          activeContests: contData.data?.length  ?? 0,
+          upcomingEvents: evData.data?.length    ?? 0,
+          totalMembers:   memberRes.count        ?? 0,
         });
-      } catch (_) {}
+      } catch (err) {
+        console.error('[hub] loadStats error:', err.message ?? err);
+      }
     }
     loadStats();
   }, []);
@@ -70,10 +79,10 @@ export default function StudioFlowHub() {
         )}
       </nav>
 
-      {activeTab === 'Home'             && <HomeTab onTabChange={setActiveTab} stats={stats} />}
-      {activeTab === 'Contests'         && <ContestsTab />}
-      {activeTab === 'Events'           && <EventsTab />}
-      {activeTab === 'Submissions'      && <SubmissionsTab />}
+      {activeTab === 'Home'              && <HomeTab onTabChange={setActiveTab} stats={stats} />}
+      {activeTab === 'Contests'          && <ContestsTab />}
+      {activeTab === 'Events'            && <EventsTab />}
+      {activeTab === 'Submissions'       && <SubmissionsTab />}
       {activeTab === 'Creator Dashboard' && <AdminTab />}
     </div>
   );

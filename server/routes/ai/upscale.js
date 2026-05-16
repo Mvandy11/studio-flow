@@ -37,6 +37,13 @@ const upload = multer({
  * and returns metadata.
  */
 router.post('/upscale', upload.single('file'), async (req, res) => {
+  // Guard: fail fast if the Replicate token is missing rather than hanging
+  if (!process.env.REPLICATE_API_TOKEN) {
+    return res.status(503).json({
+      error: 'AI upscaling is not available — REPLICATE_API_TOKEN is not configured.',
+    });
+  }
+
   if (!req.file) {
     return res
       .status(400)

@@ -19,14 +19,27 @@ async function getSharp() {
   return _sharp;
 }
 
-// ── Lazy OpenAI client (avoids crash on boot if key is missing) ──
+// ── Lazy OpenAI client (uses Replit AI Integration keys) ─────
+// This project routes OpenAI calls through the Replit AI Integration proxy,
+// which provides AI_INTEGRATIONS_OPENAI_API_KEY + AI_INTEGRATIONS_OPENAI_BASE_URL.
+// Falls back to OPENAI_API_KEY for local / non-Replit environments.
 let _openai = null;
 function getOpenAI() {
   if (!_openai) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY environment variable is not set.');
+    const apiKey  = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+
+    if (!apiKey) {
+      throw new Error(
+        'OpenAI API key is not configured. ' +
+        'Enable the OpenAI integration in Replit, or set OPENAI_API_KEY.'
+      );
     }
-    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    _openai = new OpenAI({
+      apiKey,
+      ...(baseURL ? { baseURL } : {}),
+    });
   }
   return _openai;
 }

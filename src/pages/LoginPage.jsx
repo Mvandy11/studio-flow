@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
+// Maximum time to wait for Supabase auth before showing an error.
+const AUTH_TIMEOUT_MS = 15_000;
+
+function withTimeout(promise, ms, message) {
+  const timer = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(message)), ms)
+  );
+  return Promise.race([promise, timer]);
+}
+
 export default function LoginPage() {
   const { login, signup } = useAuth();
   const navigate = useNavigate();
@@ -17,11 +27,15 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      if (mode === 'login') {
-        await login(email, password);
-      } else {
-        await signup(email, password);
-      }
+      const action = mode === 'login'
+        ? login(email, password)
+        : signup(email, password);
+
+      await withTimeout(
+        action,
+        AUTH_TIMEOUT_MS,
+        'Request timed out — check your connection and try again.'
+      );
       navigate('/');
     } catch (err) {
       setError(err.message || 'Authentication failed. Please try again.');
