@@ -23,7 +23,8 @@ async function requireAdmin(req, res) {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profile?.role !== 'creator_admin') {
+  const r = profile?.role;
+  if (r !== 'admin' && r !== 'creator_admin') {
     res.status(403).json({ error: 'Admin access required.' });
     return null;
   }

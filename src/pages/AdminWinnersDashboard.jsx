@@ -66,7 +66,7 @@ export default function AdminWinnersDashboard() {
       const [winnersRes, contestsRes, eventsRes] = await Promise.all([
         supabase
           .from('winner_history')
-          .select('id, user_id, event_id, contest_id, place_number, payout_amount, created_at, profiles(username, display_name)')
+          .select('id, user_id, event_id, contest_id, place_number, payout_amount, created_at')
           .order('created_at', { ascending: false }),
         supabase.from('contests').select('id, title').order('title', { ascending: true }),
         supabase.from('events').select('id, title').order('title', { ascending: true }),
@@ -161,7 +161,7 @@ export default function AdminWinnersDashboard() {
   }
 
   function winnerName(w) {
-    return w.profiles?.display_name || w.profiles?.username || w.user_id?.slice(0, 8) + '…';
+    return w.user_id ? w.user_id.slice(0, 12) + '…' : '—';
   }
 
   function contestTitle(id) {

@@ -27,7 +27,8 @@ router.get('/', async (req, res) => {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profile?.role !== 'creator_admin') {
+  const r = profile?.role;
+  if (r !== 'admin' && r !== 'creator_admin') {
     return res.status(403).json({ error: 'Admin only' });
   }
 

@@ -36,11 +36,12 @@ app.use('/api/payments',              paymentsRouter);
 app.use('/api/submissions',           submissionsRouter);
 app.use('/api/event-slots',           eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);
+// More-specific /api/admin/* routes MUST come before the catch-all /api/admin
+app.use('/api/admin/analytics',       analyticsRouter);
 app.use('/api/admin',                 adminApprovalRouter);
 app.use('/api/slots',                 slotCreationRouter);
 app.use('/api/events',                eventsRouter);
 app.use('/api/test-winner-pull',      testWinnerPullRouter);
-app.use('/api/admin/analytics',       analyticsRouter);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
