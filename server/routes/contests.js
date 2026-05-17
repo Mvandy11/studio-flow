@@ -227,6 +227,22 @@ router.post('/:id/entries', upload.single('file'), async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
+    // ── Subscription gate ─────────────────────────────────────────
+    const { data: entrantProfile } = await supabase
+      .from('profiles')
+      .select('subscription_active, role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const isEntrantAdmin =
+      entrantProfile?.role === 'admin' || entrantProfile?.role === 'creator_admin';
+    if (!isEntrantAdmin && !entrantProfile?.subscription_active) {
+      return res.status(403).json({
+        error: 'An active subscription is required to enter contests.',
+        requiresSubscription: true,
+      });
+    }
+
     const { data: contest } = await supabase
       .from('contests')
       .select('*')

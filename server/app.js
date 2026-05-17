@@ -17,6 +17,7 @@ import eventsRouter from './routes/events.js';
 import testWinnerPullRouter from './routes/testWinnerPull.js';
 import analyticsRouter from './routes/analytics.js';
 import adminWinnersRouter from './routes/adminWinners.js';
+import freeChatRouter from './routes/freeChat.js';
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/admin',                 adminApprovalRouter);
 app.use('/api/slots',                 slotCreationRouter);
 app.use('/api/events',                eventsRouter);
 app.use('/api/test-winner-pull',      testWinnerPullRouter);
+app.use('/api/free-chat',            freeChatRouter);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {

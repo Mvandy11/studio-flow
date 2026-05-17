@@ -110,11 +110,31 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-/* ── POST /api/events (creator_admin only) ───────────────────── */
+/* ── POST /api/events (subscribers and admins) ───────────────── */
 router.post('/', async (req, res) => {
   try {
-    const admin = await requireAdmin(req, res);
-    if (!admin) return;
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+    const { data: authResp, error: authErr } = await supabase.auth.getUser(authHeader.slice(7));
+    const creator = authResp?.user;
+    if (authErr || !creator) return res.status(401).json({ error: 'Authentication required.' });
+
+    const { data: creatorProfile } = await supabase
+      .from('profiles')
+      .select('role, subscription_active')
+      .eq('id', creator.id)
+      .maybeSingle();
+
+    const isAdmin =
+      creatorProfile?.role === 'admin' || creatorProfile?.role === 'creator_admin';
+    if (!isAdmin && !creatorProfile?.subscription_active) {
+      return res.status(403).json({
+        error: 'An active subscription is required to create events.',
+        requiresSubscription: true,
+      });
+    }
 
     const {
       title, description,
@@ -145,8 +165,8 @@ router.post('/', async (req, res) => {
       stage_room_id: stage_room_id || live_room_id || null,
       stream_key, stream_url,
       status,
-      created_by: admin.id,
-      creator_id: admin.id,
+      created_by: creator.id,
+      creator_id: creator.id,
     };
 
     const { data, error } = await supabase

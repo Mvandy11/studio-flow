@@ -17,6 +17,7 @@ const MODE_OPTIONS = [
 export default function CreateEventPage() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const isSubscribed = isCreatorAdmin(role) || !!user?.profile?.subscription_active;
 
   const [form, setForm] = useState({
     title:           '',
@@ -49,6 +50,7 @@ export default function CreateEventPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!user)              { setErrorMsg('You must be signed in.');  return; }
+    if (!isSubscribed)      { setErrorMsg('An active subscription is required to create events.'); return; }
     if (!form.title.trim()) { setErrorMsg('Title is required.');      return; }
     if (backstagePass && bpEnabled && seatLimit < 1) {
       setErrorMsg('Seat limit must be at least 1.');
@@ -134,6 +136,18 @@ export default function CreateEventPage() {
   return (
     <div className="cinematic-layout cinematic-fade">
       <h2 className="cinematic-title">✦ Create Event</h2>
+
+      {user && !isSubscribed && (
+        <div style={{ padding:'1.25rem', borderRadius:'12px', background:'rgba(251,191,36,0.08)', border:'1px solid rgba(251,191,36,0.25)', marginBottom:'1.5rem' }}>
+          <p style={{ margin:'0 0 0.5rem', fontWeight:600, color:'#fbbf24' }}>🔒 Subscription Required</p>
+          <p style={{ margin:'0 0 0.75rem', fontSize:'0.875rem', color:'rgba(255,255,255,0.7)' }}>
+            An active Studio Flow subscription is needed to create events.
+          </p>
+          <a href="/subscription" className="btn btn--primary" style={{ fontSize:'0.875rem', textDecoration:'none' }}>
+            Upgrade your plan →
+          </a>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="cinematic-card-xl" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
