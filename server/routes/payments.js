@@ -1,12 +1,21 @@
 /**
  * /api/payments — Subscription, donation, and custom event payment endpoints.
+ * Stripe webhook validates signatures when STRIPE_WEBHOOK_SECRET is set.
+ * On verified events, profiles.subscription_active is kept in sync.
  */
 import express from 'express';
 import { randomUUID } from 'crypto';
+import Stripe from 'stripe';
 import supabase from '../supabase.js';
 import { subscriptionLink, donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
 const router = express.Router();
+
+// Stripe client — only constructed when the key is present
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) return null;
+  return new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-11-20.acacia' });
+}
 
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
@@ -22,7 +31,70 @@ async function requireAuth(req, res) {
   return user;
 }
 
-// ── SUBSCRIPTION ──────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Set subscription_active on the profiles row identified by email.
+ * Falls back to customer email lookup via Stripe if direct email lookup fails.
+ */
+async function setSubscriptionActiveByEmail(email, active) {
+  if (!email) {
+    console.error('[payments/webhook] setSubscriptionActiveByEmail: no email provided');
+    return;
+  }
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ subscription_active: active, updated_at: new Date().toISOString() })
+    .eq('email', email.toLowerCase())
+    .select('id');
+
+  if (error) {
+    console.error('[payments/webhook] profiles update error:', error.message);
+  } else {
+    console.info(
+      `[payments/webhook] subscription_active=${active} set for email=${email} (${data?.length ?? 0} rows)`,
+    );
+  }
+}
+
+/**
+ * Retrieve the customer email from Stripe given a customer ID.
+ * Returns null if stripe is not configured or lookup fails.
+ */
+async function getEmailFromStripeCustomer(customerId) {
+  const stripe = getStripe();
+  if (!stripe || !customerId) return null;
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    return customer?.deleted ? null : (customer.email ?? null);
+  } catch (err) {
+    console.error('[payments/webhook] customer retrieve error:', err.message);
+    return null;
+  }
+}
+
+// ── Shared webhook event parser ─────────────────────────────────────────────
+/**
+ * Parse and optionally verify a Stripe webhook payload.
+ * - If STRIPE_WEBHOOK_SECRET + stripe-signature header are present → verified
+ * - Otherwise → parsed as JSON (dev/test fallback)
+ */
+function parseWebhookEvent(req) {
+  const sig           = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripe        = getStripe();
+
+  if (stripe && sig && webhookSecret) {
+    // req.body is a raw Buffer (express.raw middleware applied by caller)
+    return stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+  }
+
+  // Dev fallback: accept unsigned payloads
+  const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
+  return typeof raw === 'string' ? JSON.parse(raw) : raw;
+}
+
+// ── SUBSCRIPTION ────────────────────────────────────────────────────────────
 
 // POST /api/payments/create-subscription
 router.post('/create-subscription', async (req, res) => {
@@ -35,41 +107,107 @@ router.post('/create-subscription', async (req, res) => {
   }
 });
 
-// POST /api/payments/subscription-webhook
-router.post('/subscription-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  try {
-    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-
-    if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
-      const sub = event.data?.object;
-      if (sub?.customer && sub?.id) {
-        await supabase.from('subscription_status').upsert({
-          id:                     randomUUID(),
-          stripe_customer_id:     sub.customer,
-          stripe_subscription_id: sub.id,
-          is_active:              sub.status === 'active',
-          updated_at:             new Date().toISOString(),
-        }, { onConflict: 'stripe_customer_id' });
-      }
+/**
+ * POST /api/payments/subscription-webhook
+ *
+ * Handles Stripe subscription lifecycle events.
+ * Stripe must be configured to send these to: /api/payments/subscription-webhook
+ *
+ * Events handled:
+ *   checkout.session.completed          → subscription_active = true
+ *   customer.subscription.created       → subscription_active = true  (if active)
+ *   customer.subscription.updated       → subscription_active = (status === 'active')
+ *   customer.subscription.deleted       → subscription_active = false
+ *   customer.subscription.canceled      → subscription_active = false  (alias)
+ *   customer.subscription.unpaid        → subscription_active = false
+ */
+router.post(
+  '/subscription-webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    let event;
+    try {
+      event = parseWebhookEvent(req);
+    } catch (err) {
+      console.error('[payments/webhook] Signature verification failed:', err.message);
+      return res.status(400).json({ error: `Webhook error: ${err.message}` });
     }
 
-    if (event.type === 'customer.subscription.deleted') {
-      const sub = event.data?.object;
-      if (sub?.customer) {
-        await supabase
-          .from('subscription_status')
-          .update({ is_active: false, updated_at: new Date().toISOString() })
-          .eq('stripe_customer_id', sub.customer);
+    console.info('[payments/webhook] Received event:', event.type);
+
+    try {
+      // ── checkout.session.completed ───────────────────────────
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const email   = session.customer_details?.email?.toLowerCase();
+
+        if (email) {
+          await setSubscriptionActiveByEmail(email, true);
+        }
+
+        // Also upsert subscription_status table for legacy support
+        const sub = session.subscription;
+        if (sub && session.customer) {
+          await supabase.from('subscription_status').upsert({
+            id:                     randomUUID(),
+            stripe_customer_id:     session.customer,
+            stripe_subscription_id: sub,
+            is_active:              true,
+            updated_at:             new Date().toISOString(),
+          }, { onConflict: 'stripe_customer_id' });
+        }
       }
+
+      // ── customer.subscription.created / updated ───────────────
+      if (
+        event.type === 'customer.subscription.created' ||
+        event.type === 'customer.subscription.updated'
+      ) {
+        const sub   = event.data.object;
+        const active = sub.status === 'active';
+        const email  = await getEmailFromStripeCustomer(sub.customer);
+
+        if (email) await setSubscriptionActiveByEmail(email, active);
+
+        if (sub.customer && sub.id) {
+          await supabase.from('subscription_status').upsert({
+            id:                     randomUUID(),
+            stripe_customer_id:     sub.customer,
+            stripe_subscription_id: sub.id,
+            is_active:              active,
+            updated_at:             new Date().toISOString(),
+          }, { onConflict: 'stripe_customer_id' });
+        }
+      }
+
+      // ── subscription deleted / canceled / unpaid ──────────────
+      if (
+        event.type === 'customer.subscription.deleted' ||
+        event.type === 'customer.subscription.canceled' ||
+        event.type === 'customer.subscription.unpaid'
+      ) {
+        const sub   = event.data.object;
+        const email = await getEmailFromStripeCustomer(sub.customer);
+
+        if (email) await setSubscriptionActiveByEmail(email, false);
+
+        if (sub.customer) {
+          await supabase
+            .from('subscription_status')
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .eq('stripe_customer_id', sub.customer);
+        }
+      }
+
+      res.json({ received: true });
+    } catch (err) {
+      console.error('[payments/webhook] Handler error:', err.message);
+      res.status(500).json({ error: err.message });
     }
+  },
+);
 
-    res.json({ received: true });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// ── DONATIONS ─────────────────────────────────────────────────
+// ── DONATIONS ───────────────────────────────────────────────────────────────
 
 // POST /api/payments/create-donation
 router.post('/create-donation', async (req, res) => {
@@ -84,9 +222,14 @@ router.post('/create-donation', async (req, res) => {
 
 // POST /api/payments/donation-webhook
 router.post('/donation-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  let event;
   try {
-    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    event = parseWebhookEvent(req);
+  } catch (err) {
+    return res.status(400).json({ error: `Webhook error: ${err.message}` });
+  }
 
+  try {
     if (event.type === 'checkout.session.completed' || event.type === 'payment_intent.succeeded') {
       const obj    = event.data?.object;
       const amount = obj?.amount_total
@@ -104,11 +247,11 @@ router.post('/donation-webhook', express.raw({ type: 'application/json' }), asyn
 
     res.json({ received: true });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ── CUSTOM EVENT PAYMENTS ─────────────────────────────────────
+// ── CUSTOM EVENT PAYMENTS ────────────────────────────────────────────────────
 
 // POST /api/payments/create-event-payment
 router.post('/create-event-payment', async (req, res) => {
@@ -140,9 +283,14 @@ router.post('/create-event-payment', async (req, res) => {
 
 // POST /api/payments/event-webhook
 router.post('/event-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  let event;
   try {
-    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    event = parseWebhookEvent(req);
+  } catch (err) {
+    return res.status(400).json({ error: `Webhook error: ${err.message}` });
+  }
 
+  try {
     if (event.type === 'checkout.session.completed') {
       const session      = event.data?.object;
       const eventSlotId  = session?.client_reference_id;
@@ -162,7 +310,7 @@ router.post('/event-webhook', express.raw({ type: 'application/json' }), async (
 
     res.json({ received: true });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 

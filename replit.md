@@ -185,16 +185,47 @@ Run these migrations in order in your Supabase SQL editor:
 
 ## Environment Variables
 
-| Variable | Used By |
-|----------|---------|
-| `AI_INTEGRATIONS_OPENAI_BASE_URL` | server AI routes |
-| `AI_INTEGRATIONS_OPENAI_API_KEY` | server AI routes |
-| `SUPABASE_URL` / `VITE_SUPABASE_URL` | frontend + server |
-| `SUPABASE_SERVICE_ROLE_KEY` | server (storage/DB writes) |
-| `VITE_SUPABASE_ANON_KEY` | frontend (read queries) |
-| `REPLICATE_API_TOKEN` | upscale tool |
-| `SUPABASE_STORAGE_BUCKET` | server (default: `studio-flow-library`) |
-| `SMTP_HOST` | contest email notifications (optional) |
-| `SMTP_PORT` | contest email notifications (optional) |
-| `SMTP_USER` | contest email notifications (optional) |
-| `SMTP_PASS` | contest email notifications (optional) |
+| Variable | Used By | Required |
+|----------|---------|----------|
+| `AI_INTEGRATIONS_OPENAI_BASE_URL` | server AI routes | Yes |
+| `AI_INTEGRATIONS_OPENAI_API_KEY` | server AI routes | Yes |
+| `SUPABASE_URL` / `VITE_SUPABASE_URL` | frontend + server | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | server (storage/DB writes) | Yes |
+| `VITE_SUPABASE_ANON_KEY` | frontend (read queries) | Yes |
+| `STRIPE_SECRET_KEY` | Stripe webhook customer lookup + SDK init | Yes (for webhooks) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signature verification | Yes (for webhooks) |
+| `REPLICATE_API_TOKEN` | upscale tool | Optional |
+| `SUPABASE_STORAGE_BUCKET` | server (default: `studio-flow-library`) | Optional |
+| `SMTP_HOST` | contest email notifications | Optional |
+| `SMTP_PORT` | contest email notifications | Optional |
+| `SMTP_USER` | contest email notifications | Optional |
+| `SMTP_PASS` | contest email notifications | Optional |
+
+---
+
+## Stripe Webhook Setup
+
+1. In your [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks), add an endpoint:
+   - **URL**: `https://<your-domain>/api/payments/subscription-webhook`
+   - **Events to listen for**:
+     - `checkout.session.completed`
+     - `customer.subscription.created`
+     - `customer.subscription.updated`
+     - `customer.subscription.deleted`
+     - `customer.subscription.unpaid`
+2. Copy the **Signing secret** → set it as `STRIPE_WEBHOOK_SECRET` in Replit Secrets.
+3. Set `STRIPE_SECRET_KEY` to your Stripe secret key in Replit Secrets.
+
+When `checkout.session.completed` fires, the server finds the matching user by email and sets `profiles.subscription_active = true`. Deletion/cancellation events set it back to `false`.
+
+---
+
+## SQL Migrations (run in order in Supabase SQL Editor)
+
+| File | Purpose |
+|------|---------|
+| `server/db/migrations/auto_create_profile_trigger.sql` | Trigger that auto-creates a `profiles` row on every new signup |
+| `server/db/migrations/rls_full_audit.sql` | Full RLS audit — profiles, submissions, contests, contest_entries, contest_votes, events |
+| `server/db/migrations/rls_submissions_subscription_gate.sql` | Subscription gate INSERT policy on `submissions` |
+| `server/db/migrations/add_rls_policies_contest_tables.sql` | Creates `contest_entries` + `contest_votes` tables with RLS |
+| `server/db/migrations/unify_schema_v2.sql` | Full schema bootstrap (events, contests, submissions, etc.) |

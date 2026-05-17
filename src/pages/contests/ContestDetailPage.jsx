@@ -122,13 +122,33 @@ export default function ContestDetailPage() {
 
       // 1. Upload file directly to Supabase storage (if provided)
       if (subFile) {
-        const ext = subFile.name.split('.').pop();
+        const ext = subFile.name.split('.').pop().toLowerCase();
         const filename = `${crypto.randomUUID()}.${ext}`;
         const storagePath = `contest-entries/${id}/${filename}`;
 
+        // Explicit MIME map — browser subFile.type is often wrong for video files
+        const MIME_MAP = {
+          mp4:  'video/mp4',
+          mov:  'video/quicktime',
+          avi:  'video/x-msvideo',
+          webm: 'video/webm',
+          mkv:  'video/x-matroska',
+          m4v:  'video/mp4',
+          jpg:  'image/jpeg',
+          jpeg: 'image/jpeg',
+          png:  'image/png',
+          gif:  'image/gif',
+          webp: 'image/webp',
+          pdf:  'application/pdf',
+          mp3:  'audio/mpeg',
+          wav:  'audio/wav',
+          ogg:  'audio/ogg',
+        };
+        const contentType = MIME_MAP[ext] || subFile.type || 'application/octet-stream';
+
         const { error: uploadErr } = await supabase.storage
           .from('studio-flow-library')
-          .upload(storagePath, subFile, { contentType: subFile.type, upsert: false });
+          .upload(storagePath, subFile, { contentType, upsert: false });
 
         if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
 
