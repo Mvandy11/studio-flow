@@ -1,0 +1,228 @@
+You are the Build Agent for StudioFlow.
+
+Your task is to repair and fully align the StudioFlow Replit project with the updated Supabase schema and platform features. The following issues must be fixed:
+
+====================================================
+PART 0 — CRITICAL BUGS TO FIX IMMEDIATELY
+====================================================
+
+1. FREE CHAT IS BROKEN
+The frontend is still querying the old table:
+    public.free_chat_posts
+This table does NOT exist.
+
+Replace ALL references to:
+    supabase.from("free_chat_posts")
+with:
+    supabase.from("realtime.messages")
+
+Update fields to match realtime.messages:
+- content
+- user_id
+- channel_id
+- parent_message_id
+- is_announcement
+- created_at
+
+Remove any references to:
+- title
+- image_url
+- free_chat_posts.id
+
+2. MEMBERSHIP IS NOT REGISTERING
+Stripe webhook must write to:
+    public.memberships
+
+Fix webhook:
+- Verify Stripe signature
+- Use service_role key
+- On subscription created/renewed:
+      upsert into memberships (user_id, status='active', plan='creator')
+- On subscription canceled:
+      update memberships set status='canceled' where user_id = X
+
+Remove any references to old tables:
+- subscriptions
+- profiles.subscription_status
+- profiles.plan
+
+====================================================
+PART 1 — UPDATE SUPABASE CLIENT + TYPES
+====================================================
+
+Create or update:
+/src/lib/supabaseClient.ts
+/src/lib/types.ts
+
+Types required:
+- Membership
+- Contest
+- ContestEntry
+- ContestVote
+- Message
+- Reaction
+- ChatReadState
+- Profile
+
+====================================================
+PART 2 — CHAT SYSTEM REPAIR + UPGRADE
+====================================================
+
+Create or update:
+/src/modules/chat
+    messages.ts
+    channels.ts
+    presence.ts
+    typing.ts
+    reactions.ts
+    threads.ts
+    announcements.ts
+    unread.ts
+
+Implement:
+
+1. getMessages(channelId)
+2. sendMessage({ content, channelId, parentMessageId?, isAnnouncement? })
+3. subscribeToMessages(channelId)
+4. useChatChannel(contestId?)
+5. Presence via Supabase Realtime Presence
+6. Typing indicators via Presence
+7. Reactions using realtime.message_reactions
+8. Threaded replies using parent_message_id
+9. Unread badges using public.chat_read_state
+10. Admin announcements using is_announcement flag
+
+====================================================
+PART 3 — CHAT UI REPAIR
+====================================================
+
+Update components:
+/src/components/chat
+    ChatWindow.tsx
+    MessageList.tsx
+    MessageInput.tsx
+    ChannelList.tsx
+    ThreadView.tsx
+
+Fix:
+- Replace free_chat_posts logic with realtime.messages
+- Add channel selector (General, Announcements, Contest Chat)
+- Add typing indicator display
+- Add online presence indicator
+- Add unread badges
+- Add reactions UI
+- Add threaded replies UI
+- Add announcement styling
+
+====================================================
+PART 4 — MEMBERSHIP SYSTEM REPAIR
+====================================================
+
+Create:
+/src/modules/memberships
+    getMembership.ts
+    useMembership.ts
+    requireMembership.ts
+
+Fix UI:
+- Membership page must read from public.memberships
+- Creator-only features must check membership.status === 'active'
+- Contest entry form must require active membership
+
+====================================================
+PART 5 — STRIPE WEBHOOK REPAIR
+====================================================
+
+Fix file:
+/api/stripe/webhook.js
+
+Requirements:
+- Verify signature
+- Use service_role key
+- Upsert into public.memberships
+- Handle cancellation
+- Log errors to console for debugging
+
+====================================================
+PART 6 — CONTEST ENTRIES + VOTES REPAIR
+====================================================
+
+Create:
+/src/modules/contestEntries
+    createContestEntry.ts
+    getContestEntries.ts
+    deleteContestEntry.ts
+
+/src/modules/votes
+    voteOnEntry.ts
+    getVotes.ts
+
+Fix UI:
+- Contest page must load contest_entries
+- Replace old submissions table
+- Add vote button
+- Add vote count
+- Add video player using videos bucket
+
+====================================================
+PART 7 — VIDEO UPLOAD REPAIR
+====================================================
+
+Create:
+/src/modules/videos/uploadVideo.ts
+
+Implement:
+- Upload to storage bucket "videos"
+- Return public URL
+- Use supabase.storage.from("videos")
+
+====================================================
+PART 8 — ADMIN BYPASS
+====================================================
+
+Create:
+/src/lib/isAdmin.ts
+
+Implement:
+- Fetch profile.role
+- Return true if role === 'admin'
+
+Update UI:
+- Admin can delete entries
+- Admin can delete messages
+- Admin can send announcements
+
+====================================================
+PART 9 — CLEANUP
+====================================================
+
+Remove:
+- All references to free_chat_posts
+- All references to old membership fields
+- All references to old submissions table
+- All unused chat logic
+- All unused contest logic
+
+====================================================
+FINAL EXPECTATION
+====================================================
+
+After this repair, StudioFlow must support:
+
+- Fully working Free Chat
+- Real-time messages
+- Presence indicators
+- Typing indicators
+- Reactions
+- Threaded replies
+- Unread badges
+- Contest-specific channels
+- Admin announcements
+- Working membership system
+- Working Stripe webhook
+- Working contest entries
+- Working voting system
+- Working video uploads
+- Full Supabase schema alignment
+
+End of instructions.

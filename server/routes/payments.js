@@ -48,20 +48,26 @@ async function upsertMembershipByEmail(email, isActive, stripeCustomerId, stripe
     .maybeSingle();
   if (!profile?.id) return;
 
-  await supabase
+  const payload = {
+    user_id:                profile.id,
+    tier:                   'monthly',
+    is_active:              isActive,
+    stripe_customer_id:     stripeCustomerId ?? null,
+    stripe_subscription_id: stripeSubId ?? null,
+    updated_at:             new Date().toISOString(),
+  };
+  // Only set started_at when activating (don't overwrite it on cancel/update)
+  if (isActive) payload.started_at = new Date().toISOString();
+
+  const { error: upsertErr } = await supabase
     .from('memberships')
-    .upsert(
-      {
-        user_id:                  profile.id,
-        tier:                     'monthly',
-        is_active:                isActive,
-        stripe_customer_id:       stripeCustomerId ?? null,
-        stripe_subscription_id:   stripeSubId ?? null,
-        started_at:               isActive ? new Date().toISOString() : undefined,
-        updated_at:               new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    );
+    .upsert(payload, { onConflict: 'user_id' });
+
+  if (upsertErr) {
+    console.error('[payments/webhook] memberships upsert error:', upsertErr.message);
+  } else {
+    console.info(`[payments/webhook] memberships upserted for user=${profile.id} is_active=${isActive}`);
+  }
 }
 
 /**
