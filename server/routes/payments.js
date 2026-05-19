@@ -34,6 +34,37 @@ async function requireAuth(req, res) {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /**
+ * Upsert a row in public.memberships keyed by email → user_id lookup.
+ * Works alongside profiles.subscription_active for full coverage.
+ */
+async function upsertMembershipByEmail(email, isActive, stripeCustomerId, stripeSubId) {
+  if (!email) return;
+  const lc = email.toLowerCase();
+  // Look up the user_id from profiles
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', lc)
+    .maybeSingle();
+  if (!profile?.id) return;
+
+  await supabase
+    .from('memberships')
+    .upsert(
+      {
+        user_id:                  profile.id,
+        tier:                     'monthly',
+        is_active:                isActive,
+        stripe_customer_id:       stripeCustomerId ?? null,
+        stripe_subscription_id:   stripeSubId ?? null,
+        started_at:               isActive ? new Date().toISOString() : undefined,
+        updated_at:               new Date().toISOString(),
+      },
+      { onConflict: 'user_id' },
+    );
+}
+
+/**
  * Set subscription_active on the profiles row identified by email.
  * Falls back to customer email lookup via Stripe if direct email lookup fails.
  */
@@ -143,6 +174,7 @@ router.post(
 
         if (email) {
           await setSubscriptionActiveByEmail(email, true);
+          await upsertMembershipByEmail(email, true, session.customer, session.subscription);
         }
 
         // Also upsert subscription_status table for legacy support
@@ -167,7 +199,10 @@ router.post(
         const active = sub.status === 'active';
         const email  = await getEmailFromStripeCustomer(sub.customer);
 
-        if (email) await setSubscriptionActiveByEmail(email, active);
+        if (email) {
+          await setSubscriptionActiveByEmail(email, active);
+          await upsertMembershipByEmail(email, active, sub.customer, sub.id);
+        }
 
         if (sub.customer && sub.id) {
           await supabase.from('subscription_status').upsert({
@@ -189,7 +224,10 @@ router.post(
         const sub   = event.data.object;
         const email = await getEmailFromStripeCustomer(sub.customer);
 
-        if (email) await setSubscriptionActiveByEmail(email, false);
+        if (email) {
+          await setSubscriptionActiveByEmail(email, false);
+          await upsertMembershipByEmail(email, false, sub.customer, sub.id);
+        }
 
         if (sub.customer) {
           await supabase

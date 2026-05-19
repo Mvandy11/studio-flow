@@ -34,9 +34,10 @@ const NAV_SECTIONS = [
   {
     label: 'Account',
     items: [
-      { to: '/earnings',         icon: '◎', label: 'Earnings' },
+      { to: '/earnings',         icon: '◎',  label: 'Earnings' },
       { to: '/settings/payouts', icon: '💳', label: 'Payout Settings' },
-      { to: '/profile',          icon: '◉', label: 'Profile' },
+      { to: '/membership',       icon: '🌟', label: 'Membership' },
+      { to: '/profile',          icon: '◉',  label: 'Profile' },
     ],
   },
 ];

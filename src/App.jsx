@@ -45,6 +45,7 @@ import DevSessionEditor from './pages/SessionEditor.tsx';
 import DevFeed from './pages/Feed.tsx';
 import DevChat from './pages/Chat.tsx';
 import FreeChatPage from './pages/FreeChatPage';
+import MembershipPage from './pages/MembershipPage';
 
 export default function App() {
   return (
@@ -96,6 +97,7 @@ export default function App() {
           <Route path="/custom-event-request"   element={<CustomEventRequestPage />} />
           <Route path="/submissions"            element={<SubmissionsPage />} />
           <Route path="/subscription"           element={<SubscriptionPage />} />
+          <Route path="/membership"             element={<MembershipPage />} />
           <Route path="/admin/event-requests"   element={<AdminEventRequests />} />
           <Route path="/admin/winners"            element={<AdminWinnersDashboard />} />
           <Route path="/admin/analytics"         element={<AdminAnalyticsDashboard />} />

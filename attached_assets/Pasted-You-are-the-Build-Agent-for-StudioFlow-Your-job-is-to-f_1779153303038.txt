@@ -1,0 +1,184 @@
+You are the Build Agent for StudioFlow.
+
+Your job is to fully integrate the newly created Supabase tables and RLS policies into the StudioFlow Replit project. Supabase is now correctly configured with:
+
+- public.memberships
+- public.contest_entries
+- public.contest_votes
+- public.contests (existing)
+- realtime.messages (chat)
+- storage bucket: videos
+
+Your task is to update the Replit project so the frontend and backend use these tables correctly.
+
+---------------------------------------
+PART 1 — SUPABASE CLIENT + TYPES
+---------------------------------------
+1. Create or update /src/lib/supabaseClient.ts to export a typed Supabase client.
+2. Add /src/lib/types.ts with interfaces:
+   - Membership
+   - Contest
+   - ContestEntry
+   - ContestVote
+   - Profile
+3. Ensure all types match the new Supabase schema.
+
+---------------------------------------
+PART 2 — MEMBERSHIP SYSTEM
+---------------------------------------
+Add a membership module:
+
+/src/modules/memberships
+  - getMembership.ts
+  - requireMembership.ts
+  - useMembership.ts (React hook)
+
+Implement:
+- getMembership(userId): fetch row from public.memberships
+- useMembership(): returns membership + loading state
+- requireMembership(): gate premium features
+
+Update UI:
+- If no membership or status != 'active', show “Upgrade to Creator” banner.
+- If membership.active, allow contest entry submission.
+
+---------------------------------------
+PART 3 — CONTEST ENTRIES
+---------------------------------------
+Add module:
+
+/src/modules/contestEntries
+  - createContestEntry.ts
+  - getContestEntries.ts
+  - deleteContestEntry.ts (admin only)
+
+Implement:
+- createContestEntry(contestId, userId, videoUrl, title, description)
+- getContestEntries(contestId): public read
+- deleteContestEntry(id): admin only
+
+Update UI:
+- Replace old submissions logic with contest_entries.
+- Display entries with video player using videos bucket URLs.
+
+---------------------------------------
+PART 4 — VOTING SYSTEM
+---------------------------------------
+Add module:
+
+/src/modules/votes
+  - voteOnEntry.ts
+  - getVotes.ts
+
+Implement:
+- voteOnEntry(entryId, userId)
+- getVotes(entryId): public read
+
+Update UI:
+- Add “Vote” button on each entry.
+- Prevent duplicate votes (unique constraint).
+- Show vote count.
+
+---------------------------------------
+PART 5 — VIDEO UPLOAD FLOW
+---------------------------------------
+Add module:
+
+/src/modules/videos
+  - uploadVideo.ts
+
+Implement:
+- Upload to storage bucket "videos"
+- Return public URL
+- Use supabase.storage.from("videos").upload()
+
+Update UI:
+- Contest entry form should upload video first, then create contest entry with video_url.
+
+---------------------------------------
+PART 6 — STRIPE WEBHOOK HANDLER
+---------------------------------------
+Add server function:
+
+/api/stripe/webhook.js
+
+Implement:
+- Verify Stripe signature
+- On subscription created/renewed:
+    upsert into public.memberships (user_id, status='active', plan='creator')
+- On subscription canceled:
+    update memberships set status='canceled'
+- Use service_role key for DB writes.
+
+---------------------------------------
+PART 7 — ADMIN BYPASS
+---------------------------------------
+Add helper:
+
+/src/lib/isAdmin.ts
+
+Implement:
+- Fetch profile.role
+- Return true if role === 'admin'
+
+Update:
+- Admin UI should show delete buttons for entries and votes.
+- Admin can see all entries regardless of user_id.
+
+---------------------------------------
+PART 8 — CHAT FIX
+---------------------------------------
+Update chat module to use realtime.messages:
+
+/src/modules/chat
+  - sendMessage.ts
+  - getMessages.ts
+  - subscribeToMessages.ts
+
+Ensure:
+- Authenticated users can send messages
+- Messages load in real time
+- Admin bypass works
+
+---------------------------------------
+PART 9 — ROUTES + UI UPDATES
+---------------------------------------
+Update pages:
+
+/src/pages/contest/[id].tsx
+  - Load contest
+  - Load contest_entries
+  - Load votes
+  - Show video player
+  - Show vote button
+  - Show entry submission form (if membership active)
+
+/src/pages/membership.tsx
+  - Show membership status
+  - Show upgrade button
+
+---------------------------------------
+PART 10 — CLEANUP + CONSISTENCY
+---------------------------------------
+- Remove old submissions table references.
+- Remove old video logic.
+- Remove old membership placeholders.
+- Ensure all Supabase calls use the new tables.
+- Ensure all components use the new modules.
+
+---------------------------------------
+FINAL EXPECTATION
+---------------------------------------
+When finished, StudioFlow should support:
+
+- Free chat (working)
+- Public contests (working)
+- Public contest entries (working)
+- Public video loading (working)
+- Authenticated entry submission (working)
+- Authenticated voting (working)
+- Membership gating (working)
+- Stripe webhook membership updates (working)
+- Admin bypass everywhere (working)
+
+End of instructions.
