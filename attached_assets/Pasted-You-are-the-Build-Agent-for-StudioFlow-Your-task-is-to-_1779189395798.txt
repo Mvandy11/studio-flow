@@ -1,0 +1,188 @@
+You are the Build Agent for StudioFlow.
+
+Your task is to upgrade the chat system with advanced social features:
+- Typing indicators
+- Online presence
+- Unread message badges
+- Message reactions
+- Threaded replies
+- Chat channels per contest
+- Admin announcements
+
+The backend is Supabase with:
+- realtime.messages
+- realtime.message_reactions (to be used)
+- public.chat_read_state (optional, if present)
+- public.profiles
+- is_admin() helper in RLS
+
+---------------------------------------
+PART 1 — CHAT MODULE STRUCTURE
+---------------------------------------
+Create or update:
+
+/src/modules/chat
+  presence.ts
+  typing.ts
+  channels.ts
+  messages.ts
+  reactions.ts
+  threads.ts
+  announcements.ts
+  unread.ts
+
+Each file should export clean, typed functions/hooks.
+
+---------------------------------------
+PART 2 — CHANNELS PER CONTEST
+---------------------------------------
+In channels.ts:
+
+- Implement getChannelIdForContest(contestId: string): string
+  - "general" for global chat
+  - "contest_{id}" for contest-specific channels
+- Implement useChatChannel(contestId?: string) hook:
+  - Returns currentChannelId
+  - Handles switching channels
+
+Update chat UI to:
+- Show channel selector (General, Announcements, Contest-specific if on contest page)
+- Filter messages by channel_id
+
+---------------------------------------
+PART 3 — MESSAGES (BASE)
+---------------------------------------
+In messages.ts:
+
+- getMessages(channelId: string)
+- sendMessage({ channelId, parentMessageId?, content, isAnnouncement? })
+- subscribeToMessages(channelId: string, callback)
+
+Use:
+- supabase.from("realtime.messages")
+- Realtime subscription filtered by channel_id
+
+---------------------------------------
+PART 4 — TYPING INDICATORS
+---------------------------------------
+In typing.ts:
+
+- Use Supabase Realtime Presence on channel "chat_typing_{channelId}"
+- Implement:
+  - startTyping(userId, channelId)
+  - stopTyping(userId, channelId)
+  - useTypingUsers(channelId): returns list of users currently typing
+
+UI:
+- Show "X is typing..." under the input when any user is typing in that channel.
+
+---------------------------------------
+PART 5 — ONLINE PRESENCE
+---------------------------------------
+In presence.ts:
+
+- Use Supabase Realtime Presence on channel "chat_presence"
+- Implement:
+  - useOnlineUsers(): returns list of online userIds
+- Integrate with profile data to show names/avatars.
+
+UI:
+- Show green dot next to online users in chat user list (or next to messages).
+
+---------------------------------------
+PART 6 — UNREAD MESSAGE BADGES
+---------------------------------------
+In unread.ts:
+
+- If public.chat_read_state exists, use it.
+- Implement:
+  - markChannelRead(userId, channelId, timestamp)
+  - useUnreadCount(userId, channelId): counts messages where created_at > last_read_at
+
+UI:
+- Show unread badge next to each channel in the channel list.
+- When user views a channel, update last_read_at.
+
+---------------------------------------
+PART 7 — MESSAGE REACTIONS
+---------------------------------------
+In reactions.ts:
+
+- Use table realtime.message_reactions
+- Implement:
+  - addReaction(messageId, emoji)
+  - removeReaction(messageId, emoji)
+  - useReactions(messageId): subscribe to reactions for that message
+
+UI:
+- On hover/long-press of a message, show reaction picker (at least 👍 ❤️ 🔥).
+- Show reaction counts under each message.
+
+---------------------------------------
+PART 8 — THREADED REPLIES
+---------------------------------------
+In threads.ts:
+
+- Use parent_message_id on realtime.messages
+- Implement:
+  - getThread(parentMessageId)
+  - replyToMessage(parentMessageId, content, channelId)
+- Update subscribeToMessages to:
+  - Return messages with parent_message_id = null for main feed
+  - Threads loaded separately per parent
+
+UI:
+- Each message has "Reply" button.
+- Clicking opens a thread view (side panel or inline).
+- Thread shows parent message + replies.
+
+---------------------------------------
+PART 9 — ADMIN ANNOUNCEMENTS
+---------------------------------------
+In announcements.ts:
+
+- Implement sendAnnouncement(channelId, content) that sets isAnnouncement = true.
+- Only allow if current user is admin (use isAdmin helper).
+
+UI:
+- Admin-only toggle or separate "Announcement" composer.
+- Announcement messages styled differently (highlighted, banner-like).
+- Announcements also appear in "Announcements" channel.
+
+---------------------------------------
+PART 10 — UI INTEGRATION
+---------------------------------------
+Update chat UI components:
+
+/src/components/chat
+  ChatWindow.tsx
+  MessageList.tsx
+  MessageInput.tsx
+  ChannelList.tsx
+  ThreadView.tsx
+
+Requirements:
+- ChannelList shows:
+  - General
+  - Announcements
+  - Contest-specific channel when on a contest page
+- MessageList:
+  - Groups threads
+  - Shows reactions
+  - Shows announcement styling
+- MessageInput:
+  - Triggers typing indicators
+  - Supports reply mode (shows "Replying to X" state)
+- ThreadView:
+  - Shows parent message + replies
+- Presence:
+  - Show online users somewhere in the chat UI.
+
+---------------------------------------
+PART 11 — CLEANUP
+---------------------------------------
+- Remove any old, hard-coded chat logic.
+- Ensure all chat behavior flows through the new modules.
+- Keep everything typed and modular.
+
+End of instructions.

@@ -46,6 +46,7 @@ import DevFeed from './pages/Feed.tsx';
 import DevChat from './pages/Chat.tsx';
 import FreeChatPage from './pages/FreeChatPage';
 import MembershipPage from './pages/MembershipPage';
+import ChatPage from './pages/ChatPage';
 
 export default function App() {
   return (
@@ -91,6 +92,8 @@ export default function App() {
           {/* ── Community ── */}
           <Route path="/announcements" element={<AnnouncementsPage />} />
           <Route path="/free-chat" element={<FreeChatPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/contest/:contestId" element={<ChatPage />} />
           <Route path="/education"              element={<EducationPage />} />
           <Route path="/event-slot/:slotId"     element={<EventSlotUpload />} />
           <Route path="/event-view/:slotId"     element={<EventSlotView />} />

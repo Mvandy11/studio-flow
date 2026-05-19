@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { to: '/submissions',          label: 'Submissions',   icon: '📬' },
   { to: '/announcements',        label: 'Announcements', icon: '📢' },
   { to: '/free-chat',            label: 'Free Chat',     icon: '💬' },
+  { to: '/chat',                 label: 'Live Chat',     icon: '🗨️' },
   { to: '/creator-academy',      label: 'Academy',       icon: '🎓' },
   { to: '/earnings',             label: 'Earnings',      icon: '◎' },
   { to: '/settings/payouts',     label: 'Payout Settings', icon: '💳' },

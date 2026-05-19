@@ -63,9 +63,17 @@ export interface ContestVote {
 }
 
 export interface ChatMessage {
-  id: string;
-  session_id: string;
-  sender_id: string;
-  message: string;
-  created_at: string;
+  id:                string;
+  session_id:        string;
+  sender_id:         string;
+  message:           string;
+  created_at:        string;
+  /** Channel the message belongs to (e.g. 'general', 'announcements', 'contest_<id>') */
+  channel_id:        string;
+  /** If set, this message is a reply inside a thread */
+  parent_message_id: string | null;
+  /** True for admin broadcast messages */
+  is_announcement:   boolean;
+  /** Joined from profiles when available */
+  display_name?:     string | null;
 }
