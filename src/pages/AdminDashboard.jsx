@@ -9,6 +9,37 @@ import { api } from '../lib/api.js';
 
 const TABS = ['Overview', 'Contests', 'Events', 'Submissions', 'Announcements', 'Requests', 'Moderation'];
 
+// Build last-6-months subscription activity from memberships rows
+function buildMonthlyHistory(rows) {
+  const now    = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months.push({
+      key,
+      label:     d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      newSubs:   0,
+      cancelled: 0,
+    });
+  }
+  const monthMap = Object.fromEntries(months.map((m) => [m.key, m]));
+
+  for (const row of rows) {
+    // Count new subscribers by when they started
+    if (row.started_at) {
+      const k = row.started_at.slice(0, 7); // "YYYY-MM"
+      if (monthMap[k]) monthMap[k].newSubs++;
+    }
+    // Approximate cancellations: is_active=false rows, bucketed by updated_at month
+    if (row.is_active === false && row.updated_at) {
+      const k = row.updated_at.slice(0, 7);
+      if (monthMap[k]) monthMap[k].cancelled++;
+    }
+  }
+  return months;
+}
+
 export default function AdminDashboard() {
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -31,6 +62,9 @@ export default function AdminDashboard() {
   // Editable subscriber override
   const [editingSubCount, setEditingSubCount] = useState(false);
   const [subCountInput,   setSubCountInput]   = useState('');
+
+  // Monthly subscription history (last 6 months)
+  const [subHistory, setSubHistory] = useState([]);
 
   // Announcement form
   const [showAnnForm, setShowAnnForm] = useState(false);
@@ -186,6 +220,18 @@ export default function AdminDashboard() {
     const liveSubCount = subRes.status === 'fulfilled' ? (subRes.value.count ?? 0) : 0;
     const storedSub    = localStorage.getItem('admin_subscriber_count');
     setSubscriberCount(storedSub !== null ? Number(storedSub) : liveSubCount);
+
+    // Monthly membership history (last 6 months) — graceful if table missing
+    try {
+      const { data: memRows } = await supabase
+        .from('memberships')
+        .select('started_at, is_active, updated_at')
+        .order('started_at', { ascending: false })
+        .limit(500);
+      setSubHistory(buildMonthlyHistory(memRows || []));
+    } catch (_) {
+      setSubHistory(buildMonthlyHistory([]));
+    }
 
     setStats({
       contests:      (c || []).length,
@@ -461,6 +507,66 @@ export default function AdminDashboard() {
         {/* ── Overview ── */}
         {activeTab === 'Overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+            {/* ── Subscription Activity (monthly) ── */}
+            <div>
+              <div className="admin-section-header" style={{ marginBottom: '0.75rem' }}>
+                <h2 className="admin-section-title">Subscription Activity</h2>
+                <span style={{ fontSize: '0.72rem', color: 'rgba(200,200,215,0.4)' }}>last 6 months · auto-updates on payment &amp; cancellation</span>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                      <th style={{ textAlign: 'left',   padding: '0.4rem 0.75rem', color: 'rgba(200,200,215,0.45)', fontWeight: 600 }}>Month</th>
+                      <th style={{ textAlign: 'center', padding: '0.4rem 0.75rem', color: 'rgba(200,200,215,0.45)', fontWeight: 600 }}>New</th>
+                      <th style={{ textAlign: 'center', padding: '0.4rem 0.75rem', color: 'rgba(200,200,215,0.45)', fontWeight: 600 }}>Cancelled / Lapsed</th>
+                      <th style={{ textAlign: 'center', padding: '0.4rem 0.75rem', color: 'rgba(200,200,215,0.45)', fontWeight: 600 }}>Net</th>
+                      <th style={{ textAlign: 'left',   padding: '0.4rem 0.75rem', color: 'rgba(200,200,215,0.45)', fontWeight: 600 }}>Bar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subHistory.map((row, i) => {
+                      const net       = row.newSubs - row.cancelled;
+                      const isLatest  = i === subHistory.length - 1;
+                      const barMax    = Math.max(...subHistory.map((r) => r.newSubs), 1);
+                      const barWidth  = Math.round((row.newSubs / barMax) * 100);
+                      return (
+                        <tr
+                          key={row.key}
+                          style={{
+                            borderBottom:  '1px solid rgba(255,255,255,0.04)',
+                            background:    isLatest ? 'rgba(192,132,252,0.04)' : 'transparent',
+                          }}
+                        >
+                          <td style={{ padding: '0.5rem 0.75rem', fontWeight: isLatest ? 700 : 400, color: isLatest ? '#c084fc' : 'inherit' }}>
+                            {row.label}{isLatest ? ' ●' : ''}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: '#86efac', fontWeight: 600 }}>
+                            {row.newSubs > 0 ? `+${row.newSubs}` : '—'}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: row.cancelled > 0 ? '#f87171' : 'rgba(200,200,215,0.3)' }}>
+                            {row.cancelled > 0 ? `-${row.cancelled}` : '—'}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '0.5rem 0.75rem', color: net > 0 ? '#86efac' : net < 0 ? '#f87171' : 'rgba(200,200,215,0.4)', fontWeight: 600 }}>
+                            {net > 0 ? `+${net}` : net === 0 ? '0' : net}
+                          </td>
+                          <td style={{ padding: '0.5rem 0.75rem', minWidth: '100px' }}>
+                            <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${barWidth}%`, borderRadius: '3px', background: 'linear-gradient(90deg, #c084fc, #818cf8)', transition: 'width 0.4s ease' }} />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {subHistory.every((r) => r.newSubs === 0 && r.cancelled === 0) && (
+                  <p className="admin-empty" style={{ marginTop: '0.5rem' }}>No subscription activity yet — data appears here once Stripe payments start flowing.</p>
+                )}
+              </div>
+            </div>
+
             <div className="admin-section-header">
               <h2 className="admin-section-title">Recent Contest Entries</h2>
             </div>
