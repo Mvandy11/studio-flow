@@ -71,8 +71,29 @@ async function upsertMembershipByEmail(email, isActive, stripeCustomerId, stripe
 }
 
 /**
+ * Set subscription_active on the profiles row identified by user UUID.
+ * Primary lookup — used when metadata.user_id is present on the Stripe object.
+ */
+async function setSubscriptionActiveByUserId(userId, active) {
+  if (!userId) return;
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ subscription_active: active, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select('id');
+
+  if (error) {
+    console.error('[payments/webhook] profiles update by user_id error:', error.message);
+  } else {
+    console.info(
+      `[payments/webhook] subscription_active=${active} set for user_id=${userId} (${data?.length ?? 0} rows)`,
+    );
+  }
+}
+
+/**
  * Set subscription_active on the profiles row identified by email.
- * Falls back to customer email lookup via Stripe if direct email lookup fails.
+ * Fallback when metadata.user_id is not present on the Stripe object.
  */
 async function setSubscriptionActiveByEmail(email, active) {
   if (!email) {
@@ -91,6 +112,59 @@ async function setSubscriptionActiveByEmail(email, active) {
     console.info(
       `[payments/webhook] subscription_active=${active} set for email=${email} (${data?.length ?? 0} rows)`,
     );
+  }
+}
+
+/**
+ * Resolve the best way to update a profile from a Stripe event object.
+ * Priority: metadata.user_id > customer_details.email > Stripe customer email lookup.
+ * Returns { userId, email } — at least one will be set if resolution succeeds.
+ */
+async function resolveSubscriptionTarget(stripeObject, customerId) {
+  const userId = stripeObject?.metadata?.user_id ?? null;
+  const directEmail =
+    stripeObject?.customer_details?.email?.toLowerCase() ??
+    stripeObject?.customer_email?.toLowerCase() ??
+    null;
+  const lookedUpEmail =
+    !directEmail && customerId ? await getEmailFromStripeCustomer(customerId) : directEmail;
+
+  return { userId, email: lookedUpEmail };
+}
+
+/**
+ * Update profiles + memberships using the resolved target.
+ * Prefers user_id update (direct, no email dependency); also runs email update as a safety net.
+ */
+async function applySubscriptionStatus(target, isActive, customerId, subscriptionId) {
+  const { userId, email } = target;
+
+  if (userId) {
+    await setSubscriptionActiveByUserId(userId, isActive);
+    // Also update memberships table by user_id directly
+    const payload = {
+      user_id:                userId,
+      tier:                   'monthly',
+      is_active:              isActive,
+      stripe_customer_id:     customerId ?? null,
+      stripe_subscription_id: subscriptionId ?? null,
+      updated_at:             new Date().toISOString(),
+    };
+    if (isActive) payload.started_at = new Date().toISOString();
+    const { error } = await supabase
+      .from('memberships')
+      .upsert(payload, { onConflict: 'user_id' });
+    if (error) console.error('[payments/webhook] memberships upsert error:', error.message);
+  }
+
+  // Always also try email path as belt-and-suspenders fallback
+  if (email) {
+    await setSubscriptionActiveByEmail(email, isActive);
+    await upsertMembershipByEmail(email, isActive, customerId, subscriptionId);
+  }
+
+  if (!userId && !email) {
+    console.warn('[payments/webhook] Could not resolve user — no metadata.user_id or email on Stripe object');
   }
 }
 
@@ -150,13 +224,19 @@ router.post('/create-subscription', async (req, res) => {
  * Handles Stripe subscription lifecycle events.
  * Stripe must be configured to send these to: /api/payments/subscription-webhook
  *
+ * User resolution priority:
+ *   1. metadata.user_id on the Stripe object  (fastest — no Stripe API call)
+ *   2. customer_details.email / customer_email on the object
+ *   3. Stripe customer email lookup by customer ID
+ *
  * Events handled:
  *   checkout.session.completed          → subscription_active = true
- *   customer.subscription.created       → subscription_active = true  (if active)
+ *   customer.subscription.created       → subscription_active = true  (if status === 'active')
  *   customer.subscription.updated       → subscription_active = (status === 'active')
  *   customer.subscription.deleted       → subscription_active = false
- *   customer.subscription.canceled      → subscription_active = false  (alias)
+ *   customer.subscription.canceled      → subscription_active = false
  *   customer.subscription.unpaid        → subscription_active = false
+ *   invoice.payment_failed              → subscription_active = false
  */
 router.post(
   '/subscription-webhook',
@@ -173,74 +253,79 @@ router.post(
     console.info('[payments/webhook] Received event:', event.type);
 
     try {
-      // ── checkout.session.completed ───────────────────────────
+      const obj = event.data.object;
+
+      // ── checkout.session.completed ──────────────────────────────────────────
       if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-        const email   = session.customer_details?.email?.toLowerCase();
+        const target = await resolveSubscriptionTarget(obj, obj.customer);
+        await applySubscriptionStatus(target, true, obj.customer, obj.subscription);
 
-        if (email) {
-          await setSubscriptionActiveByEmail(email, true);
-          await upsertMembershipByEmail(email, true, session.customer, session.subscription);
-        }
-
-        // Also upsert subscription_status table for legacy support
-        const sub = session.subscription;
-        if (sub && session.customer) {
+        // Legacy subscription_status table
+        if (obj.subscription && obj.customer) {
           await supabase.from('subscription_status').upsert({
             id:                     randomUUID(),
-            stripe_customer_id:     session.customer,
-            stripe_subscription_id: sub,
+            stripe_customer_id:     obj.customer,
+            stripe_subscription_id: obj.subscription,
             is_active:              true,
             updated_at:             new Date().toISOString(),
           }, { onConflict: 'stripe_customer_id' });
         }
       }
 
-      // ── customer.subscription.created / updated ───────────────
-      if (
+      // ── customer.subscription.created / updated ─────────────────────────────
+      else if (
         event.type === 'customer.subscription.created' ||
         event.type === 'customer.subscription.updated'
       ) {
-        const sub   = event.data.object;
-        const active = sub.status === 'active';
-        const email  = await getEmailFromStripeCustomer(sub.customer);
+        const active = obj.status === 'active';
+        const target = await resolveSubscriptionTarget(obj, obj.customer);
+        await applySubscriptionStatus(target, active, obj.customer, obj.id);
 
-        if (email) {
-          await setSubscriptionActiveByEmail(email, active);
-          await upsertMembershipByEmail(email, active, sub.customer, sub.id);
-        }
-
-        if (sub.customer && sub.id) {
+        if (obj.customer && obj.id) {
           await supabase.from('subscription_status').upsert({
             id:                     randomUUID(),
-            stripe_customer_id:     sub.customer,
-            stripe_subscription_id: sub.id,
+            stripe_customer_id:     obj.customer,
+            stripe_subscription_id: obj.id,
             is_active:              active,
             updated_at:             new Date().toISOString(),
           }, { onConflict: 'stripe_customer_id' });
         }
       }
 
-      // ── subscription deleted / canceled / unpaid ──────────────
-      if (
+      // ── subscription deleted / canceled / unpaid ────────────────────────────
+      else if (
         event.type === 'customer.subscription.deleted' ||
         event.type === 'customer.subscription.canceled' ||
         event.type === 'customer.subscription.unpaid'
       ) {
-        const sub   = event.data.object;
-        const email = await getEmailFromStripeCustomer(sub.customer);
+        const target = await resolveSubscriptionTarget(obj, obj.customer);
+        await applySubscriptionStatus(target, false, obj.customer, obj.id);
 
-        if (email) {
-          await setSubscriptionActiveByEmail(email, false);
-          await upsertMembershipByEmail(email, false, sub.customer, sub.id);
-        }
-
-        if (sub.customer) {
+        if (obj.customer) {
           await supabase
             .from('subscription_status')
             .update({ is_active: false, updated_at: new Date().toISOString() })
-            .eq('stripe_customer_id', sub.customer);
+            .eq('stripe_customer_id', obj.customer);
         }
+      }
+
+      // ── invoice.payment_failed ──────────────────────────────────────────────
+      else if (event.type === 'invoice.payment_failed') {
+        // obj is an Invoice — customer is the customer ID
+        const target = await resolveSubscriptionTarget(obj, obj.customer);
+        await applySubscriptionStatus(target, false, obj.customer, obj.subscription);
+
+        if (obj.customer) {
+          await supabase
+            .from('subscription_status')
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .eq('stripe_customer_id', obj.customer);
+        }
+        console.info('[payments/webhook] Payment failed — subscription deactivated');
+      }
+
+      else {
+        console.info('[payments/webhook] Unhandled event type:', event.type);
       }
 
       res.json({ received: true });

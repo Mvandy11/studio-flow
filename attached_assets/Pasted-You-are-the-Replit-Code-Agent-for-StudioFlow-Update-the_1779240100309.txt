@@ -1,0 +1,177 @@
+You are the Replit Code Agent for StudioFlow. Update the entire codebase to match the new membership rules and fix all logic that depends on subscription status.
+
+===========================
+1. REMOVE OLD MEMBERSHIP GATING
+===========================
+Search the entire repo and remove or rewrite any logic that prevents non‑subscribers from:
+- entering contests
+- submitting contest entries
+- participating in free chat
+- accessing general site features
+
+Delete or rewrite any checks like:
+- profile.subscription_active required for contest entry
+- subscription gating on free chat
+- subscription gating on general features
+
+===========================
+2. ENFORCE NEW MEMBERSHIP RULES
+===========================
+Implement the updated business logic:
+
+A. Everyone can enter contests  
+B. Only subscribers can win cash prizes  
+C. Only subscribers can create events  
+
+Update backend routes accordingly:
+- Contest entry: NO subscription check
+- Event creation: MUST check subscription_active
+- Payout logic: MUST check subscription_active
+
+===========================
+3. FIX MEMBERSHIP STATUS SYNC
+===========================
+Ensure the Stripe webhook handler:
+- correctly identifies the user via metadata.user_id
+- sets profiles.subscription_active = true on subscription creation/renewal
+- sets profiles.subscription_active = false on cancellation or payment failure
+
+Ensure the frontend refreshes the session after Stripe redirects:
+- supabase.auth.refreshSession()
+- re-fetch the profile
+
+Ensure the UI updates immediately when subscription_active changes.
+
+===========================
+4. CLEAN UP OLD SCHEMA REFERENCES
+===========================
+Search the entire repo for outdated fields and replace them:
+
+Replace all references to:
+- "message" → "content" (chat_messages table)
+- old chat schema fields
+- old membership fields
+- deprecated contest gating logic
+
+Ensure all Supabase queries use the correct columns:
+- chat_messages: id, user_id, content, channel_id, parent_message_id, is_announcement, created_at
+- message_reactions: id, message_id, user_id, reaction, created_at
+- chat_read_state: id, user_id, channel_id, last_read_at
+
+===========================
+5. UPDATE REALTIME SUBSCRIPTIONS
+===========================
+Ensure the frontend subscribes to realtime events for:
+- chat_messages (insert, update, delete)
+- message_reactions (insert, delete)
+- chat_read_state (update)
+- contest_entries (insert)
+- contest_votes (insert)
+
+Remove any subscriptions to old or nonexistent tables.
+
+===========================
+6. CLEANUP & REBUILD
+===========================
+- Remove unused imports and dead code.
+- Fix TypeScript errors caused by schema updates.
+- Rebuild the project.
+- Verify:
+  - Sending chat messages works
+  - Reactions work
+  - Unread badges update
+  - Contest entries submit correctly
+  - Event creation is subscriber‑only
+  - Payout logic blocks non‑subscribers
+  - No membership caching issues remain
+
+===========================
+7. ADD THIS STRIPE WEBHOOK FILE
+===========================
+Create a new file at:
+  /api/stripe/webhook.js
+(or the correct server route folder if the project uses Express)
+
+Insert the following code exactly:
+
+---------------------------------------
+BEGIN FILE: /api/stripe/webhook.js
+---------------------------------------
+import Stripe from "stripe";
+import { supabaseAdmin } from "../../utils/supabaseAdmin";
+import { buffer } from "micro";
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
+  }
+
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+  try {
+    const buf = await buffer(req);
+    event = stripe.webhooks.constructEvent(
+      buf,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  const data = event.data.object;
+  const userId = data?.metadata?.user_id;
+
+  async function setSubscriptionStatus(isActive) {
+    if (!userId) return;
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        subscription_active: isActive,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+  }
+
+  switch (event.type) {
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "checkout.session.completed":
+      await setSubscriptionStatus(true);
+      break;
+
+    case "customer.subscription.deleted":
+    case "invoice.payment_failed":
+      await setSubscriptionStatus(false);
+      break;
+
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+
+  res.json({ received: true });
+}
+---------------------------------------
+END FILE
+---------------------------------------
+
+===========================
+8. OUTPUT SUMMARY
+===========================
+After completing all changes, output a summary including:
+- Files modified
+- Logic updated
+- Schema references fixed
+- Membership logic updated
+- Realtime subscriptions updated
+- Any remaining issues detected
