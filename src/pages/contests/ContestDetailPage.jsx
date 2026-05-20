@@ -228,9 +228,9 @@ export default function ContestDetailPage() {
   async function loadComments(entryId) {
     setLoadingComments((prev) => new Set([...prev, entryId]));
     const { data } = await supabase
-      .from('comments')
+      .from('contest_comments')
       .select('*')
-      .eq('submission_id', entryId)
+      .eq('entry_id', entryId)
       .order('created_at', { ascending: true });
     setEntryComments((prev) => ({ ...prev, [entryId]: data || [] }));
     setLoadingComments((prev) => { const s = new Set(prev); s.delete(entryId); return s; });
@@ -253,12 +253,11 @@ export default function ContestDetailPage() {
     const text = (commentInputs[entryId] || '').trim();
     if (!text || !user) return;
     setSubmittingComment(entryId);
-    const { error } = await supabase.from('comments').insert({
-      submission_id: entryId,
-      user_id:       user.id,
-      user_name:     user.user_metadata?.name || user.email?.split('@')[0] || 'Creator',
-      user_email:    user.email,
-      text,
+    const { error } = await supabase.from('contest_comments').insert({
+      entry_id:  entryId,
+      user_id:   user.id,
+      user_name: user.user_metadata?.name || user.email?.split('@')[0] || 'Creator',
+      content:   text,
     });
     if (!error) {
       setCommentInputs((prev) => ({ ...prev, [entryId]: '' }));
@@ -271,7 +270,7 @@ export default function ContestDetailPage() {
     if (!user) return;
     setDeletingComment(commentId);
     const { error } = await supabase
-      .from('comments')
+      .from('contest_comments')
       .delete()
       .eq('id', commentId)
       .eq('user_id', user.id);
@@ -981,7 +980,7 @@ export default function ContestDetailPage() {
                                   </button>
                                 )}
                               </div>
-                              <p className="contest-comment__text">{c.text}</p>
+                              <p className="contest-comment__text">{c.content}</p>
                             </div>
                           ))}
                         </div>
