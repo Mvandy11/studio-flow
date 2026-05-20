@@ -52,8 +52,8 @@ export default function MessageList({
         <MessageRow
           key={msg.id}
           msg={msg}
-          isSelf={msg.sender_id === currentUserId}
-          isOnline={onlineUserIds.has(msg.sender_id)}
+          isSelf={msg.user_id === currentUserId}
+          isOnline={onlineUserIds.has(msg.user_id)}
           onReply={() => onReply(msg)}
           onOpenThread={() => onOpenThread(msg)}
         />

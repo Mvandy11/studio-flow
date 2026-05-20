@@ -13,7 +13,7 @@ export function useChat(sessionId: string) {
 export function useSendMessage() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { session_id: string; message: string; sender_id?: string }) =>
+    mutationFn: (input: { session_id: string; content: string; user_id?: string }) =>
       mockSupabase.sendMessage(input),
     onSuccess: (_data, { session_id }) => {
       queryClient.invalidateQueries({ queryKey: ['dev:chat', session_id] });

@@ -28,8 +28,8 @@ export interface FeedEvent {
 export interface ChatMessage {
   id: string;
   session_id: string;
-  sender_id: string;
-  message: string;
+  user_id: string;
+  content: string;
   created_at: string;
   reaction?: string;
 }
@@ -201,60 +201,60 @@ export const chatMessages: ChatMessage[] = [
   {
     id: 'msg-1',
     session_id: 'session-1',
-    sender_id: 'creator-2',
-    message: 'This album sounds INCREDIBLE 🔥',
+    user_id: 'creator-2',
+    content: 'This album sounds INCREDIBLE 🔥',
     created_at: m(20),
     reaction: '🔥',
   },
   {
     id: 'msg-2',
     session_id: 'session-1',
-    sender_id: 'creator-3',
-    message: 'The second track gives me chills every time',
+    user_id: 'creator-3',
+    content: 'The second track gives me chills every time',
     created_at: m(18),
   },
   {
     id: 'msg-3',
     session_id: 'session-1',
-    sender_id: 'dev-user',
-    message: 'Aria, how long did this album take to make?',
+    user_id: 'dev-user',
+    content: 'Aria, how long did this album take to make?',
     created_at: m(15),
   },
   {
     id: 'msg-4',
     session_id: 'session-1',
-    sender_id: 'creator-1',
-    message: 'Two years in the making 🎵 worth every second',
+    user_id: 'creator-1',
+    content: 'Two years in the making 🎵 worth every second',
     created_at: m(14),
     reaction: '❤️',
   },
   {
     id: 'msg-5',
     session_id: 'session-1',
-    sender_id: 'creator-2',
-    message: 'The production quality is insane for an independent release',
+    user_id: 'creator-2',
+    content: 'The production quality is insane for an independent release',
     created_at: m(12),
   },
   {
     id: 'msg-6',
     session_id: 'session-1',
-    sender_id: 'dev-user',
-    message: 'Will there be a vinyl pressing?',
+    user_id: 'dev-user',
+    content: 'Will there be a vinyl pressing?',
     created_at: m(10),
   },
   {
     id: 'msg-7',
     session_id: 'session-1',
-    sender_id: 'creator-1',
-    message: 'YES — limited run of 500. Backstage Pass holders get first access 🎟️',
+    user_id: 'creator-1',
+    content: 'YES — limited run of 500. Backstage Pass holders get first access 🎟️',
     created_at: m(8),
     reaction: '🎉',
   },
   {
     id: 'msg-8',
     session_id: 'session-1',
-    sender_id: 'creator-3',
-    message: 'Already saving up for that vinyl 💿',
+    user_id: 'creator-3',
+    content: 'Already saving up for that vinyl 💿',
     created_at: m(5),
   },
 ];

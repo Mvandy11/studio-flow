@@ -49,8 +49,8 @@ export default function SessionPage() {
           {messages.map((m) => (
             <ChatBubble
               key={m.id}
-              message={m.message}
-              isSelf={m.sender_id === user?.id}
+              message={m.content}
+              isSelf={m.user_id === user?.id}
             />
           ))}
         </div>

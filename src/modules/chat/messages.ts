@@ -3,7 +3,7 @@ import type { ChatMessage } from '../../lib/types';
 
 export interface SendMessageOptions {
   channelId:        string;
-  senderId:         string;
+  userId:           string;
   content:          string;
   parentMessageId?: string | null;
   isAnnouncement?:  boolean;
@@ -37,17 +37,17 @@ export async function getMessages(
 
 /** Send a message to a channel, optionally as a reply or announcement. */
 export async function sendMessage(opts: SendMessageOptions): Promise<ChatMessage> {
-  const { channelId, senderId, content, parentMessageId, isAnnouncement } = opts;
+  const { channelId, userId, content, parentMessageId, isAnnouncement } = opts;
 
   const { data, error } = await supabase
     .from('chat_messages')
     .insert({
       channel_id:        channelId,
-      sender_id:         senderId,
-      message:           content,
+      user_id:           userId,
+      content,
       parent_message_id: parentMessageId ?? null,
       is_announcement:   isAnnouncement  ?? false,
-      // session_id matches channel so existing RLS / queries still work
+      // session_id mirrors channel_id so existing stage/session queries still work
       session_id:        channelId,
     })
     .select()
@@ -58,9 +58,7 @@ export async function sendMessage(opts: SendMessageOptions): Promise<ChatMessage
 }
 
 /**
- * Subscribe to all changes (INSERT / UPDATE / DELETE) for top-level messages
- * on a channel via Supabase Realtime.
- *
+ * Subscribe to INSERT / UPDATE / DELETE on top-level messages for a channel.
  * Returns an unsubscribe function — call it on component unmount.
  *
  * Requires Realtime enabled on `chat_messages` in
@@ -72,32 +70,23 @@ export function subscribeToMessages(
 ): () => void {
   const ch = supabase
     .channel(`msgs:${channelId}`)
-    // New message
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${channelId}` },
       (payload) => {
         const msg = payload.new as ChatMessage;
-        // Only surface top-level messages to the main feed
         if (!msg.parent_message_id) handlers.onInsert(msg);
       },
     )
-    // Message deleted (admin or own)
     .on(
       'postgres_changes',
       { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${channelId}` },
-      (payload) => {
-        const id = (payload.old as { id: string }).id;
-        handlers.onDelete?.(id);
-      },
+      (payload) => handlers.onDelete?.((payload.old as { id: string }).id),
     )
-    // Message edited (future feature)
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${channelId}` },
-      (payload) => {
-        handlers.onUpdate?.(payload.new as ChatMessage);
-      },
+      (payload) => handlers.onUpdate?.(payload.new as ChatMessage),
     )
     .subscribe();
 

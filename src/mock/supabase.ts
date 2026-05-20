@@ -90,15 +90,15 @@ export const mockSupabase = {
   /** Send a chat message */
   sendMessage: async (input: {
     session_id: string;
-    message: string;
-    sender_id?: string;
+    content: string;
+    user_id?: string;
   }): Promise<ChatMessage> => {
     await delay(80);
     const msg: ChatMessage = {
       id: `msg-${Date.now()}`,
       session_id: input.session_id,
-      sender_id: input.sender_id ?? DEV_USER.id,
-      message: input.message,
+      user_id: input.user_id ?? DEV_USER.id,
+      content: input.content,
       created_at: new Date().toISOString(),
     };
     _chat = [..._chat, msg];

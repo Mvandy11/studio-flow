@@ -18,7 +18,7 @@ export async function getThread(parentMessageId: string): Promise<ChatMessage[]>
 export async function replyToMessage(
   parentMessageId: string,
   channelId:       string,
-  senderId:        string,
+  userId:          string,
   content:         string,
 ): Promise<ChatMessage> {
   const { data, error } = await supabase
@@ -26,8 +26,8 @@ export async function replyToMessage(
     .insert({
       parent_message_id: parentMessageId,
       channel_id:        channelId,
-      sender_id:         senderId,
-      message:           content,
+      user_id:           userId,
+      content,
       session_id:        channelId,
       is_announcement:   false,
     })
@@ -40,8 +40,8 @@ export async function replyToMessage(
 
 /** Hook: load a thread and subscribe to live replies. */
 export function useThread(parentMessageId: string | null) {
-  const [replies,  setReplies]  = useState<ChatMessage[]>([]);
-  const [loading,  setLoading]  = useState(false);
+  const [replies,    setReplies]    = useState<ChatMessage[]>([]);
+  const [loading,    setLoading]    = useState(false);
   const [replyCount, setReplyCount] = useState(0);
 
   useEffect(() => {

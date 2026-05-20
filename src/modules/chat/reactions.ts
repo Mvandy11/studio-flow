@@ -5,42 +5,44 @@ export interface Reaction {
   id:         string;
   message_id: string;
   user_id:    string;
-  emoji:      string;
+  /** Matches message_reactions.reaction column */
+  reaction:   string;
   created_at: string;
 }
 
 export interface ReactionGroup {
-  emoji: string;
-  count: number;
+  /** The emoji/reaction string */
+  reaction: string;
+  count:    number;
   /** IDs of users who reacted */
-  userIds: string[];
+  userIds:  string[];
 }
 
-/** Add an emoji reaction. No-ops on duplicate (unique constraint). */
+/** Add a reaction. No-ops on duplicate (unique constraint). */
 export async function addReaction(
   messageId: string,
   userId:    string,
-  emoji:     string,
+  reaction:  string,
 ): Promise<void> {
   const { error } = await supabase
     .from('message_reactions')
-    .insert({ message_id: messageId, user_id: userId, emoji });
+    .insert({ message_id: messageId, user_id: userId, reaction });
 
   if (error && error.code !== '23505') throw new Error(error.message);
 }
 
-/** Remove a specific emoji reaction. */
+/** Remove a specific reaction. */
 export async function removeReaction(
   messageId: string,
   userId:    string,
-  emoji:     string,
+  reaction:  string,
 ): Promise<void> {
   await supabase
     .from('message_reactions')
     .delete()
     .eq('message_id', messageId)
     .eq('user_id', userId)
-    .eq('emoji', emoji);
+    .eq('reaction', reaction);
 }
 
 /** Subscribe to live reactions for a single message. */
@@ -57,7 +59,7 @@ export function useReactions(messageId: string | null) {
       .eq('message_id', messageId)
       .then(({ data }) => setReactions((data ?? []) as Reaction[]));
 
-    // Realtime
+    // Realtime: subscribe to INSERT and DELETE
     const ch = supabase
       .channel(`reactions:${messageId}`)
       .on(
@@ -75,12 +77,12 @@ export function useReactions(messageId: string | null) {
     return () => { supabase.removeChannel(ch); };
   }, [messageId]);
 
-  /** Aggregate reactions into groups by emoji. */
+  /** Aggregate reactions into groups by reaction string. */
   const grouped: ReactionGroup[] = Object.values(
     reactions.reduce<Record<string, ReactionGroup>>((acc, r) => {
-      if (!acc[r.emoji]) acc[r.emoji] = { emoji: r.emoji, count: 0, userIds: [] };
-      acc[r.emoji].count++;
-      acc[r.emoji].userIds.push(r.user_id);
+      if (!acc[r.reaction]) acc[r.reaction] = { reaction: r.reaction, count: 0, userIds: [] };
+      acc[r.reaction].count++;
+      acc[r.reaction].userIds.push(r.user_id);
       return acc;
     }, {}),
   );

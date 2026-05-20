@@ -40,7 +40,7 @@ export function subscribeToMessages(roomId, callback) {
 export async function sendMessage(roomId, user, text) {
   const { error } = await supabase
     .from('chat_messages')
-    .insert({ session_id: roomId, sender_id: user.id, message: text });
+    .insert({ session_id: roomId, channel_id: roomId, user_id: user.id, content: text });
 
   if (error) throw error;
 }

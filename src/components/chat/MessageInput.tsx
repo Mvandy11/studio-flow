@@ -65,7 +65,7 @@ export default function MessageInput({
       {replyingTo && (
         <div className="chat-reply-bar">
           <span>↩ Replying to</span>
-          <span className="chat-reply-bar__text">{replyingTo.message}</span>
+          <span className="chat-reply-bar__text">{replyingTo.content}</span>
           <button className="chat-reply-bar__close" onClick={onCancelReply} title="Cancel reply">✕</button>
         </div>
       )}

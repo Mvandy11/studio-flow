@@ -89,7 +89,7 @@ export default function ChatWindow({ contestId, className = '' }: ChatWindowProp
       } else {
         await sendMessage({
           channelId:       currentChannelId,
-          senderId:        user.id,
+          userId:          user.id,
           content,
           parentMessageId: replyingTo?.id ?? null,
         });

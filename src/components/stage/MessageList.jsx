@@ -12,7 +12,8 @@ export default function MessageList({ messages, pinnedMessage, currentUserId, cr
       {pinnedMessage && (
         <div className="stage-pinned-message">
           <span style={{ marginRight: '0.4rem' }}>📌</span>
-          {pinnedMessage.message ?? pinnedMessage}
+          {/* pinnedMessage is a broadcast payload — may be a plain string or object */}
+          {typeof pinnedMessage === 'string' ? pinnedMessage : (pinnedMessage.content ?? pinnedMessage.message ?? '')}
         </div>
       )}
 
@@ -23,25 +24,23 @@ export default function MessageList({ messages, pinnedMessage, currentUserId, cr
       )}
 
       {messages.map((m) => {
-        const isSelf = m.sender_id === currentUserId;
-        const isFromCreator = m.sender_id === creatorId;
+        const isSelf        = m.user_id === currentUserId;
+        const isFromCreator = m.user_id === creatorId;
 
         return (
           <div
             key={m.id}
             className={[
               'stage-message',
-              isSelf ? 'stage-message--self' : '',
+              isSelf        ? 'stage-message--self'    : '',
               isFromCreator ? 'stage-message--creator' : '',
             ]
               .filter(Boolean)
               .join(' ')}
           >
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', flexWrap: 'wrap' }}>
-              {isFromCreator && (
-                <span className="stage-creator-badge">Creator</span>
-              )}
-              <span className="stage-message-text">{m.message}</span>
+              {isFromCreator && <span className="stage-creator-badge">Creator</span>}
+              <span className="stage-message-text">{m.content}</span>
             </div>
 
             {isCreator && !isSelf && (

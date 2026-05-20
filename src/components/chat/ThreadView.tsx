@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { replyToMessage } from '../../modules/chat/threads';
-import { useThread } from '../../modules/chat/threads';
+import { replyToMessage, useThread } from '../../modules/chat/threads';
 import type { ChatMessage } from '../../lib/types';
 import MessageInput from './MessageInput';
 
@@ -40,8 +39,8 @@ export default function ThreadView({ parentMessage, channelId, onClose }: Thread
     }
   }
 
-  const senderName = (msg: ChatMessage) =>
-    (msg as any).display_name || msg.sender_id.slice(0, 8);
+  const displayName = (msg: ChatMessage) =>
+    msg.display_name || msg.user_id.slice(0, 8);
 
   return (
     <div className="chat-thread-view">
@@ -55,13 +54,13 @@ export default function ThreadView({ parentMessage, channelId, onClose }: Thread
       <div className="chat-thread-view__parent">
         <div className="chat-thread-view__parent-label">Original message</div>
         <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-          {senderName(parentMessage)}
+          {displayName(parentMessage)}
           <span style={{ marginLeft: '0.5rem', fontWeight: 400, fontSize: '0.7rem', color: 'var(--text-muted, #555)' }}>
             {formatTime(parentMessage.created_at)}
           </span>
         </div>
         <div style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.5, wordBreak: 'break-word' }}>
-          {parentMessage.message}
+          {parentMessage.content}
         </div>
       </div>
 
@@ -80,7 +79,7 @@ export default function ThreadView({ parentMessage, channelId, onClose }: Thread
         )}
 
         {replies.map((reply) => {
-          const isSelf = reply.sender_id === user?.id;
+          const isSelf = reply.user_id === user?.id;
           return (
             <div key={reply.id} style={{ display: 'flex', gap: '0.4rem', padding: '0.3rem 0' }}>
               <div
@@ -88,20 +87,21 @@ export default function ThreadView({ parentMessage, channelId, onClose }: Thread
                   width: 26, height: 26, borderRadius: '50%',
                   background: isSelf ? 'rgba(79,142,247,0.2)' : 'rgba(255,255,255,0.06)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.65rem', fontWeight: 700, flexShrink: 0, color: isSelf ? '#6ea8ff' : '#999',
+                  fontSize: '0.65rem', fontWeight: 700, flexShrink: 0,
+                  color: isSelf ? '#6ea8ff' : '#999',
                 }}
               >
-                {reply.sender_id.slice(0, 2).toUpperCase()}
+                {reply.user_id.slice(0, 2).toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.1rem' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>{senderName(reply)}</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>{displayName(reply)}</span>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-muted, #555)' }}>
                     {formatTime(reply.created_at)}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.45, wordBreak: 'break-word' }}>
-                  {reply.message}
+                  {reply.content}
                 </div>
               </div>
             </div>

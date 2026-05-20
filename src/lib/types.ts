@@ -65,8 +65,10 @@ export interface ContestVote {
 export interface ChatMessage {
   id:                string;
   session_id:        string;
-  sender_id:         string;
-  message:           string;
+  /** Matches chat_messages.user_id — the author's auth.users UUID */
+  user_id:           string;
+  /** Matches chat_messages.content */
+  content:           string;
   created_at:        string;
   /** Channel the message belongs to (e.g. 'general', 'announcements', 'contest_<id>') */
   channel_id:        string;

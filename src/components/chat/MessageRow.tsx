@@ -11,16 +11,15 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 function formatTime(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1)  return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffMins = Math.floor((now.getTime() - d.getTime()) / 60000);
+  if (diffMins < 1)    return 'just now';
+  if (diffMins < 60)   return `${diffMins}m ago`;
   if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
   return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
-function senderInitial(id: string): string {
-  return id.slice(0, 2).toUpperCase();
+function userInitial(userId: string): string {
+  return userId.slice(0, 2).toUpperCase();
 }
 
 interface MessageRowProps {
@@ -37,20 +36,20 @@ export default function MessageRow({ msg, isSelf, isOnline, onReply, onOpenThrea
   const { replyCount } = useThread(msg.id);
   const [showPicker, setShowPicker] = useState(false);
 
-  async function handleReaction(emoji: string) {
+  async function handleReaction(reactionStr: string) {
     if (!user?.id) return;
-    const alreadyReacted = grouped.find((g) => g.emoji === emoji)?.userIds.includes(user.id);
+    const alreadyReacted = grouped.find((g) => g.reaction === reactionStr)?.userIds.includes(user.id);
     if (alreadyReacted) {
-      await removeReaction(msg.id, user.id, emoji);
+      await removeReaction(msg.id, user.id, reactionStr);
     } else {
-      await addReaction(msg.id, user.id, emoji);
+      await addReaction(msg.id, user.id, reactionStr);
     }
     setShowPicker(false);
   }
 
-  const isAnnouncement = (msg as any).is_announcement;
-  const senderName = (msg as any).display_name || msg.sender_id.slice(0, 8);
-  const initial = senderInitial(msg.sender_id);
+  const isAnnouncement = msg.is_announcement;
+  const senderName = msg.display_name || msg.user_id.slice(0, 8);
+  const initial = userInitial(msg.user_id);
 
   return (
     <div className={`chat-msg${isAnnouncement ? ' chat-msg--announcement' : ''}`}>
@@ -72,7 +71,8 @@ export default function MessageRow({ msg, isSelf, isOnline, onReply, onOpenThrea
           <span className="chat-msg__time">{formatTime(msg.created_at)}</span>
         </div>
 
-        <div className="chat-msg__text">{msg.message}</div>
+        {/* Message content */}
+        <div className="chat-msg__text">{msg.content}</div>
 
         {/* Reactions */}
         {grouped.length > 0 && (
@@ -81,12 +81,12 @@ export default function MessageRow({ msg, isSelf, isOnline, onReply, onOpenThrea
               const iMine = user?.id ? g.userIds.includes(user.id) : false;
               return (
                 <button
-                  key={g.emoji}
+                  key={g.reaction}
                   className={`chat-reaction-btn${iMine ? ' chat-reaction-btn--active' : ''}`}
-                  onClick={() => handleReaction(g.emoji)}
+                  onClick={() => handleReaction(g.reaction)}
                   title={`${g.count} reaction${g.count !== 1 ? 's' : ''}`}
                 >
-                  {g.emoji} <span>{g.count}</span>
+                  {g.reaction} <span>{g.count}</span>
                 </button>
               );
             })}
@@ -103,7 +103,6 @@ export default function MessageRow({ msg, isSelf, isOnline, onReply, onOpenThrea
 
       {/* Hover actions */}
       <div className="chat-msg__actions">
-        {/* Reaction picker */}
         <div style={{ position: 'relative' }}>
           <button
             className="chat-msg__action-btn"

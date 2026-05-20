@@ -25,12 +25,7 @@ export function useRealtimeChat(sessionId, userId) {
       .channel(`session-chat:${sessionId}`)
       .on(
         'postgres_changes',
-        {
-          event:  'INSERT',
-          schema: 'public',
-          table:  'chat_messages',
-          filter: `session_id=eq.${sessionId}`,
-        },
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${sessionId}` },
         (payload) => {
           setMessages((prev) => {
             if (prev.some((m) => m.id === payload.new.id)) return prev;
@@ -40,12 +35,7 @@ export function useRealtimeChat(sessionId, userId) {
       )
       .on(
         'postgres_changes',
-        {
-          event:  'DELETE',
-          schema: 'public',
-          table:  'chat_messages',
-          filter: `session_id=eq.${sessionId}`,
-        },
+        { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${sessionId}` },
         (payload) => {
           setMessages((prev) => prev.filter((m) => m.id !== payload.old.id));
         },
@@ -62,9 +52,9 @@ export function useRealtimeChat(sessionId, userId) {
       .from('chat_messages')
       .insert({
         session_id: sessionId,
-        channel_id: sessionId,   // keep schema consistent
-        sender_id:  userId,
-        message:    text.trim(),
+        channel_id: sessionId,
+        user_id:    userId,
+        content:    text.trim(),
       });
   }
 

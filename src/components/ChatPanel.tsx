@@ -32,7 +32,7 @@ export default function ChatPanel({ sessionId }: ChatPanelProps) {
   function handleSend() {
     const trimmed = text.trim();
     if (!trimmed) return;
-    sendMsg({ session_id: sessionId, message: trimmed, sender_id: DEV_USER.id });
+    sendMsg({ session_id: sessionId, content: trimmed, user_id: DEV_USER.id });
     setText('');
   }
 
@@ -58,10 +58,12 @@ export default function ChatPanel({ sessionId }: ChatPanelProps) {
           display: 'flex', flexDirection: 'column', gap: '0.5rem',
         }}
       >
-        {isLoading && <p style={{ color: '#666', fontSize: '0.8rem', textAlign: 'center', marginTop: '1rem' }}>Loading chat…</p>}
+        {isLoading && (
+          <p style={{ color: '#666', fontSize: '0.8rem', textAlign: 'center', marginTop: '1rem' }}>Loading chat…</p>
+        )}
 
         {messages.map((m) => {
-          const isSelf = m.sender_id === DEV_USER.id;
+          const isSelf = m.user_id === DEV_USER.id;
           return (
             <div
               key={m.id}
@@ -71,8 +73,12 @@ export default function ChatPanel({ sessionId }: ChatPanelProps) {
                 gap: '0.15rem',
               }}
             >
-              <span style={{ fontSize: '0.68rem', color: '#666', paddingLeft: isSelf ? 0 : '0.25rem', paddingRight: isSelf ? '0.25rem' : 0 }}>
-                {senderName(m.sender_id)}
+              <span style={{
+                fontSize: '0.68rem', color: '#666',
+                paddingLeft: isSelf ? 0 : '0.25rem',
+                paddingRight: isSelf ? '0.25rem' : 0,
+              }}>
+                {senderName(m.user_id)}
               </span>
               <div
                 style={{
@@ -82,8 +88,7 @@ export default function ChatPanel({ sessionId }: ChatPanelProps) {
                   borderRadius: '10px', fontSize: '0.83rem', color: '#d0d0e8', lineHeight: 1.45,
                 }}
               >
-                {m.message}
-                {m.reaction && <span style={{ marginLeft: '0.4rem' }}>{m.reaction}</span>}
+                {m.content}
               </div>
             </div>
           );

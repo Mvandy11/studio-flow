@@ -10,7 +10,7 @@ import type { ChatMessage } from '../../lib/types';
 export async function sendAnnouncement(
   channelId: string,
   content:   string,
-  senderId:  string,
+  userId:    string,
   role?:     string | null,
 ): Promise<ChatMessage> {
   if (!isAdminRole(role)) {
@@ -21,8 +21,8 @@ export async function sendAnnouncement(
     .from('chat_messages')
     .insert({
       channel_id:      channelId,
-      sender_id:       senderId,
-      message:         content,
+      user_id:         userId,
+      content,
       is_announcement: true,
       session_id:      channelId,
     })
@@ -37,8 +37,8 @@ export async function sendAnnouncement(
       .from('chat_messages')
       .insert({
         channel_id:      'announcements',
-        sender_id:       senderId,
-        message:         content,
+        user_id:         userId,
+        content,
         is_announcement: true,
         session_id:      'announcements',
       });
