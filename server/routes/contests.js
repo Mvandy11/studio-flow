@@ -227,22 +227,6 @@ router.post('/:id/entries', upload.single('file'), async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    // ── Subscription gate ─────────────────────────────────────────
-    const { data: entrantProfile } = await supabase
-      .from('profiles')
-      .select('subscription_active, role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const isEntrantAdmin =
-      entrantProfile?.role === 'admin' || entrantProfile?.role === 'creator_admin';
-    if (!isEntrantAdmin && !entrantProfile?.subscription_active) {
-      return res.status(403).json({
-        error: 'An active subscription is required to enter contests.',
-        requiresSubscription: true,
-      });
-    }
-
     const { data: contest } = await supabase
       .from('contests')
       .select('*')
@@ -445,10 +429,42 @@ router.post('/:id/payout', async (req, res) => {
 
     const prizeShare = Math.round((prizePool / winners.length) * 100) / 100;
 
+    // ── Check subscription status for each winner before paying out ───────────
+    const winnerUserIds = winners.map((w) => w.submissions?.user_id || w.user_id).filter(Boolean);
+
+    const { data: winnerProfiles } = await supabase
+      .from('profiles')
+      .select('id, subscription_active')
+      .in('id', winnerUserIds);
+
+    const subscribedIds = new Set(
+      (winnerProfiles || []).filter((p) => p.subscription_active).map((p) => p.id),
+    );
+
+    const blocked = [];
+    const payoutTargets = [];
+
+    for (const w of winners) {
+      const uid = w.submissions?.user_id || w.user_id;
+      if (!uid) continue;
+      if (subscribedIds.has(uid)) {
+        payoutTargets.push({ ...w, _uid: uid });
+      } else {
+        blocked.push(uid);
+      }
+    }
+
+    if (payoutTargets.length === 0) {
+      return res.status(403).json({
+        error: 'No eligible winners have an active subscription. Only subscribers can receive cash prizes.',
+        blocked,
+      });
+    }
+
     const results = await Promise.allSettled(
-      winners.map((w) =>
+      payoutTargets.map((w) =>
         supabase.from('earnings').insert({
-          creator_id: w.submissions?.user_id || w.user_id,
+          creator_id: w._uid,
           contest_id: req.params.id,
           amount:     prizeShare,
           source:     'contest_prize',
@@ -459,7 +475,16 @@ router.post('/:id/payout', async (req, res) => {
 
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
 
-    res.json({ success: true, winners: succeeded, prizeShare, total: prizePool });
+    res.json({
+      success: true,
+      winners: succeeded,
+      prizeShare,
+      total: prizePool,
+      blocked_non_subscribers: blocked,
+      ...(blocked.length > 0 && {
+        warning: `${blocked.length} winner(s) skipped — no active subscription.`,
+      }),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

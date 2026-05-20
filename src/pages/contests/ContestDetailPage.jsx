@@ -12,7 +12,6 @@ export default function ContestDetailPage() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const isAdmin = isCreatorAdmin(role);
-  const isSubscribed = isAdmin || !!user?.profile?.subscription_active;
 
   const [contest,       setContest]       = useState(null);
   const [entries,       setEntries]       = useState([]);
@@ -112,7 +111,6 @@ export default function ContestDetailPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!user)            { setSubError('You must be logged in to submit.'); return; }
-    if (!isSubscribed)    { setSubError('An active subscription is required to enter contests.'); return; }
     if (!subTitle.trim()) { setSubError('Please enter a title.'); return; }
 
     setSubmitting(true);
@@ -757,19 +755,7 @@ export default function ContestDetailPage() {
       )}
 
       {/* ── Submission Form ── */}
-      {user && !isSubscribed && !subSuccess && (
-        <div style={{ padding:'1.25rem', borderRadius:'12px', background:'rgba(251,191,36,0.08)', border:'1px solid rgba(251,191,36,0.25)', marginBottom:'1.5rem' }}>
-          <p style={{ margin:'0 0 0.5rem', fontWeight:600, color:'#fbbf24' }}>🔒 Subscription Required</p>
-          <p style={{ margin:'0 0 0.75rem', fontSize:'0.875rem', color:'rgba(255,255,255,0.7)' }}>
-            An active Studio Flow subscription is needed to enter contests.
-          </p>
-          <a href="/subscription" className="btn btn--primary" style={{ fontSize:'0.875rem', textDecoration:'none' }}>
-            Upgrade your plan →
-          </a>
-        </div>
-      )}
-
-      {user && isSubscribed && !subSuccess && (
+      {user && !subSuccess && (
         <div className="contest-submit-form">
           <h2 className="contest-submit-form__title">Submit Your Entry</h2>
           {subError && <p style={{ color:'#fca5a5', margin:0 }}>{subError}</p>}

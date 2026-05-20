@@ -1,23 +1,37 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { popTicketIntent } from '../lib/stripeLinks';
+import { supabase } from '../lib/supabase';
 
 /**
  * Stripe returns here after a successful payment.
- * Reads the saved intent from localStorage and shows confirmation.
+ * Reads the saved intent from localStorage, refreshes the Supabase session
+ * so subscription_active is current, then shows confirmation.
  */
 export default function PaymentSuccess() {
-  const [status,   setStatus]   = useState('loading');
-  const [intent,   setIntent]   = useState(null);
+  const [status, setStatus] = useState('loading');
+  const [intent, setIntent] = useState(null);
 
   useEffect(() => {
-    const saved = popTicketIntent();
-    if (!saved) {
-      setStatus('no-intent');
-      return;
+    async function init() {
+      // Refresh Supabase session so subscription_active is up-to-date
+      // after Stripe redirects back (the webhook may have already fired).
+      try {
+        await supabase.auth.refreshSession();
+      } catch (_) {
+        // Non-fatal — proceed even if refresh fails
+      }
+
+      const saved = popTicketIntent();
+      if (!saved) {
+        setStatus('no-intent');
+        return;
+      }
+      setIntent(saved);
+      setStatus('success');
     }
-    setIntent(saved);
-    setStatus('success');
+
+    init();
   }, []);
 
   const backHref = intent?.category === 'contest' ? '/contests' : '/events/' + (intent?.eventId || '');
