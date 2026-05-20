@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { api } from '../lib/api.js';
+import { useAuth } from '../hooks/useAuth';
+import { useMembership } from '../hooks/useMembership';
 
 export default function SubscriptionPage() {
+  const { user } = useAuth();
+  const { isActive, tier, loading: membershipLoading } = useMembership(user);
+
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
 
@@ -38,44 +43,90 @@ export default function SubscriptionPage() {
           Support the creator community and unlock your place in the Studio Flow ecosystem.
         </p>
 
-        {/* Plan card */}
-        <div style={planBox}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>Studio Flow Membership</span>
-            <span style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--accent-gold, #f5a623)' }}>$30/month</span>
+        {/* ── Membership status badge ── */}
+        {user && !membershipLoading && (
+          <div style={{
+            display:        'inline-flex',
+            alignItems:     'center',
+            gap:            '0.5rem',
+            padding:        '0.45rem 1rem',
+            borderRadius:   '50px',
+            marginBottom:   '1.25rem',
+            fontSize:       '0.82rem',
+            fontWeight:     700,
+            letterSpacing:  '0.03em',
+            background:     isActive
+              ? 'rgba(134,239,172,0.12)'
+              : 'rgba(156,163,175,0.1)',
+            border:         isActive
+              ? '1px solid rgba(134,239,172,0.35)'
+              : '1px solid rgba(156,163,175,0.2)',
+            color:          isActive ? '#86efac' : 'rgba(200,200,215,0.5)',
+          }}>
+            <span style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              background: isActive ? '#86efac' : 'rgba(200,200,215,0.35)',
+              flexShrink: 0,
+              boxShadow: isActive ? '0 0 6px #86efac' : 'none',
+            }} />
+            {isActive ? `Active Subscriber · ${tier === 'monthly' ? 'Monthly' : tier}` : 'Inactive — not yet subscribed'}
           </div>
-
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {[
-              '🏆 Enter monthly contests — free, always',
-              '❤️ Like and support creator submissions',
-              '📢 Early access to announcements',
-              '🎁 $10 from your subscription funds the monthly Reward Pool',
-              '🎬 Access creator events and education sessions',
-            ].map((item, i) => (
-              <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.75)' }}>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Reward pool callout */}
-        <div style={poolNote}>
-          <strong style={{ color: 'var(--accent-gold, #f5a623)' }}>💰 $10 of every membership</strong> goes directly into the monthly Reward Pool, distributed to contest winners.
-        </div>
-
-        {error && (
-          <div style={errorBox}>{error}</div>
         )}
 
-        <button onClick={handleSubscribe} disabled={loading} style={btn(loading)}>
-          {loading ? 'Redirecting…' : 'Subscribe Now — $30/month'}
-        </button>
+        {/* ── Already subscribed view ── */}
+        {isActive && !membershipLoading ? (
+          <div style={activeBox}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
+            <p style={{ margin: '0 0 0.35rem', fontWeight: 700, fontSize: '1rem', color: '#86efac' }}>
+              You're an active Studio Flow Member
+            </p>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(200,200,215,0.55)' }}>
+              Your membership is current. All perks and contest access are unlocked. To manage or
+              cancel, visit your Stripe billing portal.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Plan card */}
+            <div style={planBox}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>Studio Flow Membership</span>
+                <span style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--accent-gold, #f5a623)' }}>$30/month</span>
+              </div>
 
-        <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)', textAlign: 'center' }}>
-          Studio Flow uses a subscription, donation, and custom event payment system.
-        </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {[
+                  '🏆 Enter monthly contests — free, always',
+                  '❤️ Like and support creator submissions',
+                  '📢 Early access to announcements',
+                  '🎁 $10 from your subscription funds the monthly Reward Pool',
+                  '🎬 Access creator events and education sessions',
+                ].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.75)' }}>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Reward pool callout */}
+            <div style={poolNote}>
+              <strong style={{ color: 'var(--accent-gold, #f5a623)' }}>💰 $10 of every membership</strong> goes directly into the monthly Reward Pool, distributed to contest winners.
+            </div>
+
+            {error && (
+              <div style={errorBox}>{error}</div>
+            )}
+
+            <button onClick={handleSubscribe} disabled={loading} style={btn(loading)}>
+              {loading ? 'Redirecting…' : 'Subscribe Now — $30/month'}
+            </button>
+
+            <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)', textAlign: 'center' }}>
+              Studio Flow uses a subscription, donation, and custom event payment system.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -91,67 +142,75 @@ const page = {
 };
 
 const card = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background:   'rgba(255,255,255,0.04)',
+  border:       '1px solid rgba(255,255,255,0.08)',
   borderRadius: '22px',
-  padding: '2.5rem 2rem',
-  maxWidth: '520px',
-  width: '100%',
-  textAlign: 'center',
+  padding:      '2.5rem 2rem',
+  maxWidth:     '520px',
+  width:        '100%',
+  textAlign:    'center',
 };
 
 const title = {
-  fontSize: '1.6rem',
+  fontSize:   '1.6rem',
   fontWeight: 800,
-  color: '#fff',
-  margin: '0 0 0.5rem',
+  color:      '#fff',
+  margin:     '0 0 0.5rem',
 };
 
 const subtitle = {
-  color: 'rgba(200,200,215,0.6)',
-  fontSize: '0.95rem',
-  margin: '0 0 1.75rem',
+  color:     'rgba(200,200,215,0.6)',
+  fontSize:  '0.95rem',
+  margin:    '0 0 1.25rem',
+};
+
+const activeBox = {
+  background:   'rgba(134,239,172,0.06)',
+  border:       '1px solid rgba(134,239,172,0.2)',
+  borderRadius: '14px',
+  padding:      '1.5rem',
+  marginTop:    '0.5rem',
 };
 
 const planBox = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '14px',
-  padding: '1.25rem',
-  marginBottom: '1.25rem',
-  textAlign: 'left',
+  background:    'rgba(255,255,255,0.04)',
+  border:        '1px solid rgba(255,255,255,0.1)',
+  borderRadius:  '14px',
+  padding:       '1.25rem',
+  marginBottom:  '1.25rem',
+  textAlign:     'left',
 };
 
 const poolNote = {
-  background: 'rgba(245,166,35,0.08)',
-  border: '1px solid rgba(245,166,35,0.2)',
-  borderRadius: '10px',
-  padding: '0.75rem 1rem',
-  fontSize: '0.85rem',
-  color: 'rgba(255,255,255,0.7)',
-  marginBottom: '1.5rem',
-  textAlign: 'left',
+  background:    'rgba(245,166,35,0.08)',
+  border:        '1px solid rgba(245,166,35,0.2)',
+  borderRadius:  '10px',
+  padding:       '0.75rem 1rem',
+  fontSize:      '0.85rem',
+  color:         'rgba(255,255,255,0.7)',
+  marginBottom:  '1.5rem',
+  textAlign:     'left',
 };
 
 const errorBox = {
-  background: 'rgba(239,68,68,0.1)',
-  border: '1px solid rgba(239,68,68,0.3)',
-  borderRadius: '8px',
-  padding: '0.6rem 0.875rem',
-  color: '#fca5a5',
-  fontSize: '0.875rem',
-  marginBottom: '1rem',
-  textAlign: 'left',
+  background:    'rgba(239,68,68,0.1)',
+  border:        '1px solid rgba(239,68,68,0.3)',
+  borderRadius:  '8px',
+  padding:       '0.6rem 0.875rem',
+  color:         '#fca5a5',
+  fontSize:      '0.875rem',
+  marginBottom:  '1rem',
+  textAlign:     'left',
 };
 
 const btn = (disabled) => ({
-  width: '100%',
-  padding: '0.85rem',
+  width:        '100%',
+  padding:      '0.85rem',
   borderRadius: '12px',
-  background: disabled ? 'rgba(245,166,35,0.4)' : 'var(--accent-gold, #f5a623)',
-  color: '#000',
-  fontWeight: 800,
-  fontSize: '1rem',
-  border: 'none',
-  cursor: disabled ? 'not-allowed' : 'pointer',
+  background:   disabled ? 'rgba(245,166,35,0.4)' : 'var(--accent-gold, #f5a623)',
+  color:        '#000',
+  fontWeight:   800,
+  fontSize:     '1rem',
+  border:       'none',
+  cursor:       disabled ? 'not-allowed' : 'pointer',
 });
