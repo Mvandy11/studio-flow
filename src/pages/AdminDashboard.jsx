@@ -79,9 +79,28 @@ export default function AdminDashboard() {
       })
       .subscribe();
 
+    // Stripe payment → subscription_active flips to true → re-fetch live subscriber count
+    const subscribersCh = supabase
+      .channel('admin-subscribers-watch')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, async () => {
+        const { count } = await supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_active', true);
+        if (count !== null) {
+          setSubscriberCount(count);
+          // Keep the localStorage override in sync so it doesn't stale on next reload
+          if (localStorage.getItem('admin_subscriber_count') !== null) {
+            localStorage.setItem('admin_subscriber_count', String(count));
+          }
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(entriesCh);
       supabase.removeChannel(profilesCh);
+      supabase.removeChannel(subscribersCh);
     };
   }, [authLoading, role]);
 
