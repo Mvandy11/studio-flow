@@ -40,7 +40,7 @@ export default function SessionPage() {
           <LivePlayer url={session.livestream_url} label={session.title} />
         )}
 
-        <h2>Live Chat</h2>
+        <h2>Free Chat</h2>
 
         <div
           className="cinematic-card cinematic-stagger"

@@ -28,7 +28,6 @@ const NAV_SECTIONS = [
       { to: '/submissions',          icon: '📬', label: 'Submissions' },
       { to: '/announcements',        icon: '📢', label: 'Announcements' },
       { to: '/free-chat',            icon: '💬', label: 'Free Chat' },
-      { to: '/chat',                 icon: '🗨️', label: 'Live Chat' },
       { to: '/creator-academy',      icon: '🎓', label: 'Academy' },
     ],
   },

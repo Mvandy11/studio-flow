@@ -47,7 +47,7 @@ export default function ChatPanel({ sessionId }: ChatPanelProps) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '340px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <span className="cinematic-label" style={{ fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Live Chat
+          Free Chat
         </span>
         <span style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: 700 }}>● LIVE</span>
       </div>
