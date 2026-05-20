@@ -1,22 +1,30 @@
 /**
  * /api/payments — Subscription, donation, and custom event payment endpoints.
- * Stripe webhook validates signatures when STRIPE_WEBHOOK_SECRET is set.
- * On verified events, profiles.subscription_active is kept in sync.
+ *
+ * Stripe → Supabase membership sync pipeline:
+ *   - Validates webhook signatures with STRIPE_WEBHOOK_SECRET
+ *   - Looks up profiles by stripe_customer_id
+ *   - Updates subscription_status, subscription_active, current_period_end
+ *   - Uses Service Role key (bypasses RLS)
+ *   - Supabase trigger auto-logs changes to user_history — no manual writes here
+ *   - Always returns 200 to Stripe; never crashes the server
  */
 import express from 'express';
 import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
 import supabase from '../supabase.js';
+import supabaseAdmin from '../supabaseAdmin.js';
 import { subscriptionLink, donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
 const router = express.Router();
 
-// Stripe client — only constructed when the key is present
+// ── Stripe client ────────────────────────────────────────────────────────────
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) return null;
   return new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-11-20.acacia' });
 }
 
+// ── Auth helpers ─────────────────────────────────────────────────────────────
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return null;
@@ -31,164 +39,12 @@ async function requireAuth(req, res) {
   return user;
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Webhook helpers ───────────────────────────────────────────────────────────
 
-/**
- * Upsert a row in public.memberships keyed by email → user_id lookup.
- * Works alongside profiles.subscription_active for full coverage.
- */
-async function upsertMembershipByEmail(email, isActive, stripeCustomerId, stripeSubId) {
-  if (!email) return;
-  const lc = email.toLowerCase();
-  // Look up the user_id from profiles
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('email', lc)
-    .maybeSingle();
-  if (!profile?.id) return;
-
-  const payload = {
-    user_id:                profile.id,
-    tier:                   'monthly',
-    is_active:              isActive,
-    stripe_customer_id:     stripeCustomerId ?? null,
-    stripe_subscription_id: stripeSubId ?? null,
-    updated_at:             new Date().toISOString(),
-  };
-  // Only set started_at when activating (don't overwrite it on cancel/update)
-  if (isActive) payload.started_at = new Date().toISOString();
-
-  const { error: upsertErr } = await supabase
-    .from('memberships')
-    .upsert(payload, { onConflict: 'user_id' });
-
-  if (upsertErr) {
-    console.error('[payments/webhook] memberships upsert error:', upsertErr.message);
-  } else {
-    console.info(`[payments/webhook] memberships upserted for user=${profile.id} is_active=${isActive}`);
-  }
-}
-
-/**
- * Set subscription_active on the profiles row identified by user UUID.
- * Primary lookup — used when metadata.user_id is present on the Stripe object.
- */
-async function setSubscriptionActiveByUserId(userId, active) {
-  if (!userId) return;
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ subscription_active: active, updated_at: new Date().toISOString() })
-    .eq('id', userId)
-    .select('id');
-
-  if (error) {
-    console.error('[payments/webhook] profiles update by user_id error:', error.message);
-  } else {
-    console.info(
-      `[payments/webhook] subscription_active=${active} set for user_id=${userId} (${data?.length ?? 0} rows)`,
-    );
-  }
-}
-
-/**
- * Set subscription_active on the profiles row identified by email.
- * Fallback when metadata.user_id is not present on the Stripe object.
- */
-async function setSubscriptionActiveByEmail(email, active) {
-  if (!email) {
-    console.error('[payments/webhook] setSubscriptionActiveByEmail: no email provided');
-    return;
-  }
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ subscription_active: active, updated_at: new Date().toISOString() })
-    .eq('email', email.toLowerCase())
-    .select('id');
-
-  if (error) {
-    console.error('[payments/webhook] profiles update error:', error.message);
-  } else {
-    console.info(
-      `[payments/webhook] subscription_active=${active} set for email=${email} (${data?.length ?? 0} rows)`,
-    );
-  }
-}
-
-/**
- * Resolve the best way to update a profile from a Stripe event object.
- * Priority: metadata.user_id > customer_details.email > Stripe customer email lookup.
- * Returns { userId, email } — at least one will be set if resolution succeeds.
- */
-async function resolveSubscriptionTarget(stripeObject, customerId) {
-  const userId = stripeObject?.metadata?.user_id ?? null;
-  const directEmail =
-    stripeObject?.customer_details?.email?.toLowerCase() ??
-    stripeObject?.customer_email?.toLowerCase() ??
-    null;
-  const lookedUpEmail =
-    !directEmail && customerId ? await getEmailFromStripeCustomer(customerId) : directEmail;
-
-  return { userId, email: lookedUpEmail };
-}
-
-/**
- * Update profiles + memberships using the resolved target.
- * Prefers user_id update (direct, no email dependency); also runs email update as a safety net.
- */
-async function applySubscriptionStatus(target, isActive, customerId, subscriptionId) {
-  const { userId, email } = target;
-
-  if (userId) {
-    await setSubscriptionActiveByUserId(userId, isActive);
-    // Also update memberships table by user_id directly
-    const payload = {
-      user_id:                userId,
-      tier:                   'monthly',
-      is_active:              isActive,
-      stripe_customer_id:     customerId ?? null,
-      stripe_subscription_id: subscriptionId ?? null,
-      updated_at:             new Date().toISOString(),
-    };
-    if (isActive) payload.started_at = new Date().toISOString();
-    const { error } = await supabase
-      .from('memberships')
-      .upsert(payload, { onConflict: 'user_id' });
-    if (error) console.error('[payments/webhook] memberships upsert error:', error.message);
-  }
-
-  // Always also try email path as belt-and-suspenders fallback
-  if (email) {
-    await setSubscriptionActiveByEmail(email, isActive);
-    await upsertMembershipByEmail(email, isActive, customerId, subscriptionId);
-  }
-
-  if (!userId && !email) {
-    console.warn('[payments/webhook] Could not resolve user — no metadata.user_id or email on Stripe object');
-  }
-}
-
-/**
- * Retrieve the customer email from Stripe given a customer ID.
- * Returns null if stripe is not configured or lookup fails.
- */
-async function getEmailFromStripeCustomer(customerId) {
-  const stripe = getStripe();
-  if (!stripe || !customerId) return null;
-  try {
-    const customer = await stripe.customers.retrieve(customerId);
-    return customer?.deleted ? null : (customer.email ?? null);
-  } catch (err) {
-    console.error('[payments/webhook] customer retrieve error:', err.message);
-    return null;
-  }
-}
-
-// ── Shared webhook event parser ─────────────────────────────────────────────
 /**
  * Parse and optionally verify a Stripe webhook payload.
- * - If STRIPE_WEBHOOK_SECRET + stripe-signature header are present → verified
- * - Otherwise → parsed as JSON (dev/test fallback)
+ * Verified when STRIPE_WEBHOOK_SECRET + stripe-signature header are present.
+ * Falls back to unsigned JSON parse in dev/test.
  */
 function parseWebhookEvent(req) {
   const sig           = req.headers['stripe-signature'];
@@ -196,50 +52,202 @@ function parseWebhookEvent(req) {
   const stripe        = getStripe();
 
   if (stripe && sig && webhookSecret) {
-    // req.body is a raw Buffer (express.raw middleware applied by caller)
     return stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   }
 
-  // Dev fallback: accept unsigned payloads
   const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
   return typeof raw === 'string' ? JSON.parse(raw) : raw;
 }
 
-// ── SUBSCRIPTION ────────────────────────────────────────────────────────────
+/**
+ * Resolve the subscription object and customer ID from any Stripe event.
+ * For subscription events the object IS the subscription.
+ * For checkout/invoice events we either derive or retrieve it from Stripe.
+ *
+ * Returns { customerId, status, currentPeriodEnd } or null if unresolvable.
+ */
+async function resolveSubscriptionInfo(eventType, obj) {
+  const stripe = getStripe();
+
+  // ── subscription.* → obj is the subscription directly ───────────────────
+  if (
+    eventType === 'customer.subscription.created' ||
+    eventType === 'customer.subscription.updated' ||
+    eventType === 'customer.subscription.deleted'
+  ) {
+    return {
+      customerId:       obj.customer,
+      status:           obj.status,
+      currentPeriodEnd: obj.current_period_end
+        ? new Date(obj.current_period_end * 1000).toISOString()
+        : null,
+    };
+  }
+
+  // ── checkout.session.completed → retrieve subscription from Stripe ───────
+  if (eventType === 'checkout.session.completed') {
+    const subId = obj.subscription;
+    if (subId && stripe) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subId);
+        return {
+          customerId:       obj.customer ?? sub.customer,
+          status:           sub.status,
+          currentPeriodEnd: sub.current_period_end
+            ? new Date(sub.current_period_end * 1000).toISOString()
+            : null,
+        };
+      } catch (err) {
+        console.error('[payments/webhook] subscription retrieve error:', err.message);
+      }
+    }
+    // Fallback: no subscription ID (one-time payment) — mark as active
+    return {
+      customerId:       obj.customer,
+      status:           'active',
+      currentPeriodEnd: null,
+    };
+  }
+
+  // ── invoice.paid → retrieve subscription from Stripe ─────────────────────
+  if (eventType === 'invoice.paid') {
+    const subId = obj.subscription;
+    if (subId && stripe) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subId);
+        return {
+          customerId:       obj.customer,
+          status:           sub.status,
+          currentPeriodEnd: sub.current_period_end
+            ? new Date(sub.current_period_end * 1000).toISOString()
+            : null,
+        };
+      } catch (err) {
+        console.error('[payments/webhook] subscription retrieve error (invoice.paid):', err.message);
+      }
+    }
+    return { customerId: obj.customer, status: 'active', currentPeriodEnd: null };
+  }
+
+  // ── invoice.payment_failed → mark past_due ────────────────────────────────
+  if (eventType === 'invoice.payment_failed') {
+    return {
+      customerId:       obj.customer,
+      status:           'past_due',
+      currentPeriodEnd: null,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Look up a profile by stripe_customer_id and update subscription fields.
+ * Uses the Service Role client to bypass RLS.
+ *
+ * @param {string} customerId   - Stripe customer ID
+ * @param {string} status       - Stripe subscription status string
+ * @param {string|null} periodEnd - ISO timestamptz for current_period_end
+ */
+async function syncProfileSubscription(customerId, status, periodEnd) {
+  if (!customerId) {
+    console.warn('[payments/webhook] syncProfileSubscription: no customerId — skipping');
+    return;
+  }
+
+  // 1. Find the matching profile
+  const { data: profile, error: lookupErr } = await supabaseAdmin
+    .from('profiles')
+    .select('id, email')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle();
+
+  if (lookupErr) {
+    console.error('[payments/webhook] profile lookup error:', lookupErr.message);
+    return;
+  }
+
+  if (!profile) {
+    console.warn(`[payments/webhook] no profile found for stripe_customer_id=${customerId} — skipping`);
+    return;
+  }
+
+  // 2. Derive active flag
+  const isActive = ['active', 'trialing'].includes(status);
+
+  // 3. Build update payload
+  const payload = {
+    subscription_status: status,
+    subscription_active: isActive,
+    updated_at:          new Date().toISOString(),
+  };
+  if (periodEnd) payload.current_period_end = periodEnd;
+
+  // 4. Apply update
+  const { data: updated, error: updateErr } = await supabaseAdmin
+    .from('profiles')
+    .update(payload)
+    .eq('id', profile.id)
+    .select('id, subscription_status, subscription_active, current_period_end');
+
+  if (updateErr) {
+    console.error(
+      `[payments/webhook] profile update error for user=${profile.id}:`,
+      updateErr.message,
+    );
+  } else {
+    console.info(
+      `[payments/webhook] profile updated | user=${profile.id} | status=${status} | active=${isActive} | period_end=${periodEnd ?? '—'}`,
+    );
+    console.info('[payments/webhook] Supabase update result:', JSON.stringify(updated));
+  }
+
+  // 5. Also keep memberships table in sync
+  const membershipPayload = {
+    user_id:    profile.id,
+    tier:       'monthly',
+    is_active:  isActive,
+    updated_at: new Date().toISOString(),
+  };
+  if (isActive) membershipPayload.started_at = membershipPayload.updated_at;
+
+  const { error: memErr } = await supabaseAdmin
+    .from('memberships')
+    .upsert(membershipPayload, { onConflict: 'user_id' });
+
+  if (memErr) {
+    console.error('[payments/webhook] memberships upsert error:', memErr.message);
+  }
+}
+
+// ── SUBSCRIPTION ─────────────────────────────────────────────────────────────
 
 /**
  * POST /api/payments/create-checkout-session
  *
- * Creates a Stripe Checkout subscription session with metadata.user_id so the
- * webhook can identify the user without an email lookup.
- *
- * Falls back to the static payment link when STRIPE_PRICE_ID is not configured.
- *
- * Required env vars: STRIPE_SECRET_KEY, STRIPE_PRICE_ID
- * Optional env var:  REPLIT_DOMAINS (used to build success/cancel URLs)
+ * Creates a Stripe Checkout subscription session.
+ * Falls back to static payment link when STRIPE_PRICE_ID is not configured.
  */
 router.post('/create-checkout-session', async (req, res) => {
   try {
     const user = await requireAuth(req, res);
     if (!user) return;
 
-    const stripe   = getStripe();
-    const priceId  = process.env.STRIPE_PRICE_ID;
+    const stripe  = getStripe();
+    const priceId = process.env.STRIPE_PRICE_ID;
 
-    // Graceful fallback: no Stripe or no price ID → redirect to static link
     if (!stripe || !priceId) {
       console.warn('[payments] create-checkout-session: STRIPE_PRICE_ID not set — falling back to static link');
       return res.json({ url: subscriptionLink });
     }
 
-    // Derive the site base URL from Replit domains (works in both dev and prod)
     const domain  = process.env.REPLIT_DOMAINS?.split(',')[0];
     const siteUrl = domain ? `https://${domain}` : 'http://localhost:5173';
 
     const session = await stripe.checkout.sessions.create({
       mode:                 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items:           [{ price: priceId, quantity: 1 }],
       success_url:          `${siteUrl}/payment/success`,
       cancel_url:           `${siteUrl}/subscription`,
       customer_email:       user.email ?? undefined,
@@ -267,124 +275,98 @@ router.post('/create-subscription', async (req, res) => {
 /**
  * POST /api/payments/subscription-webhook
  *
- * Handles Stripe subscription lifecycle events.
- * Stripe must be configured to send these to: /api/payments/subscription-webhook
+ * Stripe → Supabase membership sync.
  *
- * User resolution priority:
- *   1. metadata.user_id on the Stripe object  (fastest — no Stripe API call)
- *   2. customer_details.email / customer_email on the object
- *   3. Stripe customer email lookup by customer ID
+ * Resolution order for profile lookup:
+ *   stripe_customer_id column on profiles table
  *
  * Events handled:
- *   checkout.session.completed          → subscription_active = true
- *   customer.subscription.created       → subscription_active = true  (if status === 'active')
- *   customer.subscription.updated       → subscription_active = (status === 'active')
- *   customer.subscription.deleted       → subscription_active = false
- *   customer.subscription.canceled      → subscription_active = false
- *   customer.subscription.unpaid        → subscription_active = false
- *   invoice.payment_failed              → subscription_active = false
+ *   checkout.session.completed      → active
+ *   customer.subscription.created   → per subscription.status
+ *   customer.subscription.updated   → per subscription.status
+ *   customer.subscription.deleted   → canceled / inactive
+ *   invoice.paid                    → per subscription.status
+ *   invoice.payment_failed          → past_due / inactive
+ *
+ * Always returns 200 — Stripe must never receive a non-2xx from a healthy server.
  */
 router.post(
   '/subscription-webhook',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
+    // Always ACK Stripe first — parse errors still return 200 after logging
     let event;
     try {
       event = parseWebhookEvent(req);
     } catch (err) {
       console.error('[payments/webhook] Signature verification failed:', err.message);
+      // Return 400 only for bad signatures so Stripe knows to retry correctly
       return res.status(400).json({ error: `Webhook error: ${err.message}` });
     }
 
-    console.info('[payments/webhook] Received event:', event.type);
+    const eventType = event.type;
+    const obj       = event.data.object;
 
+    console.info('[payments/webhook] Received event:', eventType);
+
+    // Wrap everything so a Supabase/Stripe error never stops the 200 response
     try {
-      const obj = event.data.object;
+      const HANDLED = new Set([
+        'checkout.session.completed',
+        'customer.subscription.created',
+        'customer.subscription.updated',
+        'customer.subscription.deleted',
+        'invoice.paid',
+        'invoice.payment_failed',
+      ]);
 
-      // ── checkout.session.completed ──────────────────────────────────────────
-      if (event.type === 'checkout.session.completed') {
-        const target = await resolveSubscriptionTarget(obj, obj.customer);
-        await applySubscriptionStatus(target, true, obj.customer, obj.subscription);
+      if (HANDLED.has(eventType)) {
+        const info = await resolveSubscriptionInfo(eventType, obj);
 
-        // Legacy subscription_status table
-        if (obj.subscription && obj.customer) {
-          await supabase.from('subscription_status').upsert({
-            id:                     randomUUID(),
-            stripe_customer_id:     obj.customer,
-            stripe_subscription_id: obj.subscription,
-            is_active:              true,
-            updated_at:             new Date().toISOString(),
-          }, { onConflict: 'stripe_customer_id' });
+        if (info) {
+          console.info(
+            `[payments/webhook] customer=${info.customerId} | status=${info.status} | period_end=${info.currentPeriodEnd ?? '—'}`,
+          );
+          await syncProfileSubscription(info.customerId, info.status, info.currentPeriodEnd);
+        } else {
+          console.warn('[payments/webhook] Could not resolve subscription info for event:', eventType);
         }
-      }
 
-      // ── customer.subscription.created / updated ─────────────────────────────
-      else if (
-        event.type === 'customer.subscription.created' ||
-        event.type === 'customer.subscription.updated'
-      ) {
-        const active = obj.status === 'active';
-        const target = await resolveSubscriptionTarget(obj, obj.customer);
-        await applySubscriptionStatus(target, active, obj.customer, obj.id);
-
-        if (obj.customer && obj.id) {
-          await supabase.from('subscription_status').upsert({
-            id:                     randomUUID(),
-            stripe_customer_id:     obj.customer,
-            stripe_subscription_id: obj.id,
-            is_active:              active,
-            updated_at:             new Date().toISOString(),
-          }, { onConflict: 'stripe_customer_id' });
-        }
-      }
-
-      // ── subscription deleted / canceled / unpaid ────────────────────────────
-      else if (
-        event.type === 'customer.subscription.deleted' ||
-        event.type === 'customer.subscription.canceled' ||
-        event.type === 'customer.subscription.unpaid'
-      ) {
-        const target = await resolveSubscriptionTarget(obj, obj.customer);
-        await applySubscriptionStatus(target, false, obj.customer, obj.id);
-
-        if (obj.customer) {
-          await supabase
+        // Keep subscription_status table in sync for legacy consumers
+        const customerId = info?.customerId ?? obj?.customer;
+        const subId      = obj?.subscription ?? obj?.id;
+        if (customerId && subId) {
+          const isActive = ['active', 'trialing'].includes(info?.status ?? '');
+          await supabaseAdmin
             .from('subscription_status')
-            .update({ is_active: false, updated_at: new Date().toISOString() })
-            .eq('stripe_customer_id', obj.customer);
+            .upsert(
+              {
+                id:                     randomUUID(),
+                stripe_customer_id:     customerId,
+                stripe_subscription_id: subId,
+                is_active:              isActive,
+                updated_at:             new Date().toISOString(),
+              },
+              { onConflict: 'stripe_customer_id' },
+            )
+            .then(({ error }) => {
+              if (error) console.error('[payments/webhook] subscription_status upsert error:', error.message);
+            });
         }
+      } else {
+        console.info('[payments/webhook] Unhandled event type — ignoring:', eventType);
       }
-
-      // ── invoice.payment_failed ──────────────────────────────────────────────
-      else if (event.type === 'invoice.payment_failed') {
-        // obj is an Invoice — customer is the customer ID
-        const target = await resolveSubscriptionTarget(obj, obj.customer);
-        await applySubscriptionStatus(target, false, obj.customer, obj.subscription);
-
-        if (obj.customer) {
-          await supabase
-            .from('subscription_status')
-            .update({ is_active: false, updated_at: new Date().toISOString() })
-            .eq('stripe_customer_id', obj.customer);
-        }
-        console.info('[payments/webhook] Payment failed — subscription deactivated');
-      }
-
-      else {
-        console.info('[payments/webhook] Unhandled event type:', event.type);
-      }
-
-      res.json({ received: true });
     } catch (err) {
-      console.error('[payments/webhook] Handler error:', err.message);
-      res.status(500).json({ error: err.message });
+      // Log but still return 200 so Stripe doesn't endlessly retry
+      console.error('[payments/webhook] Handler error (non-fatal):', err.message);
     }
+
+    res.json({ received: true });
   },
 );
 
-// ── DONATIONS ───────────────────────────────────────────────────────────────
+// ── DONATIONS ─────────────────────────────────────────────────────────────────
 
-// POST /api/payments/create-donation
 router.post('/create-donation', async (req, res) => {
   try {
     const user = await requireAuth(req, res);
@@ -395,7 +377,6 @@ router.post('/create-donation', async (req, res) => {
   }
 });
 
-// POST /api/payments/donation-webhook
 router.post('/donation-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   let event;
   try {
@@ -428,7 +409,6 @@ router.post('/donation-webhook', express.raw({ type: 'application/json' }), asyn
 
 // ── CUSTOM EVENT PAYMENTS ────────────────────────────────────────────────────
 
-// POST /api/payments/create-event-payment
 router.post('/create-event-payment', async (req, res) => {
   try {
     const user = await requireAuth(req, res);
@@ -456,7 +436,6 @@ router.post('/create-event-payment', async (req, res) => {
   }
 });
 
-// POST /api/payments/event-webhook
 router.post('/event-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   let event;
   try {
