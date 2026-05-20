@@ -1,4 +1,33 @@
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { api } from '../lib/api.js';
+
 export default function SubscriptionPage() {
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+
+  async function handleSubscribe() {
+    setLoading(true);
+    setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('You must be logged in to subscribe.');
+        setLoading(false);
+        return;
+      }
+      const json = await api('/api/payments/create-checkout-session', {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (json.url) window.location.href = json.url;
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div style={page}>
       <div style={card}>
@@ -36,8 +65,16 @@ export default function SubscriptionPage() {
           <strong style={{ color: 'var(--accent-gold, #f5a623)' }}>💰 $10 of every membership</strong> goes directly into the monthly Reward Pool, distributed to contest winners.
         </div>
 
-        <p style={{ fontSize: '0.85rem', color: 'rgba(200,200,215,0.55)', textAlign: 'center', margin: 0 }}>
-          Use the <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Subscribe</strong> button in the top-right menu to get started.
+        {error && (
+          <div style={errorBox}>{error}</div>
+        )}
+
+        <button onClick={handleSubscribe} disabled={loading} style={btn(loading)}>
+          {loading ? 'Redirecting…' : 'Subscribe Now — $30/month'}
+        </button>
+
+        <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)', textAlign: 'center' }}>
+          Studio Flow uses a subscription, donation, and custom event payment system.
         </p>
       </div>
     </div>
@@ -95,3 +132,26 @@ const poolNote = {
   marginBottom: '1.5rem',
   textAlign: 'left',
 };
+
+const errorBox = {
+  background: 'rgba(239,68,68,0.1)',
+  border: '1px solid rgba(239,68,68,0.3)',
+  borderRadius: '8px',
+  padding: '0.6rem 0.875rem',
+  color: '#fca5a5',
+  fontSize: '0.875rem',
+  marginBottom: '1rem',
+  textAlign: 'left',
+};
+
+const btn = (disabled) => ({
+  width: '100%',
+  padding: '0.85rem',
+  borderRadius: '12px',
+  background: disabled ? 'rgba(245,166,35,0.4)' : 'var(--accent-gold, #f5a623)',
+  color: '#000',
+  fontWeight: 800,
+  fontSize: '1rem',
+  border: 'none',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+});
