@@ -3,6 +3,7 @@ import type { ChatMessage } from '../../lib/types';
 import { useReactions, addReaction, removeReaction } from '../../modules/chat';
 import { useAuth } from '../../hooks/useAuth';
 import { useThread } from '../../modules/chat/threads';
+import MembershipBadge from '../MembershipBadge';
 
 const REACTION_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '👏'];
 
@@ -65,6 +66,7 @@ export default function MessageRow({ msg, isSelf, isOnline, onReply, onOpenThrea
           <span className={`chat-msg__sender${isAnnouncement ? ' chat-msg__sender--admin' : ''}`}>
             {senderName}
           </span>
+          <MembershipBadge active={msg.is_member} />
           {isAnnouncement && (
             <span className="chat-msg__announcement-badge">📢 Announcement</span>
           )}

@@ -78,4 +78,6 @@ export interface ChatMessage {
   is_announcement:   boolean;
   /** Joined from profiles when available */
   display_name?:     string | null;
+  /** True when the message author has an active subscription (joined from profiles) */
+  is_member?:        boolean;
 }

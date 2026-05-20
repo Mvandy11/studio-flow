@@ -207,7 +207,53 @@ function parseWebhookEvent(req) {
 
 // ── SUBSCRIPTION ────────────────────────────────────────────────────────────
 
-// POST /api/payments/create-subscription
+/**
+ * POST /api/payments/create-checkout-session
+ *
+ * Creates a Stripe Checkout subscription session with metadata.user_id so the
+ * webhook can identify the user without an email lookup.
+ *
+ * Falls back to the static payment link when STRIPE_PRICE_ID is not configured.
+ *
+ * Required env vars: STRIPE_SECRET_KEY, STRIPE_PRICE_ID
+ * Optional env var:  REPLIT_DOMAINS (used to build success/cancel URLs)
+ */
+router.post('/create-checkout-session', async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+
+    const stripe   = getStripe();
+    const priceId  = process.env.STRIPE_PRICE_ID;
+
+    // Graceful fallback: no Stripe or no price ID → redirect to static link
+    if (!stripe || !priceId) {
+      console.warn('[payments] create-checkout-session: STRIPE_PRICE_ID not set — falling back to static link');
+      return res.json({ url: subscriptionLink });
+    }
+
+    // Derive the site base URL from Replit domains (works in both dev and prod)
+    const domain  = process.env.REPLIT_DOMAINS?.split(',')[0];
+    const siteUrl = domain ? `https://${domain}` : 'http://localhost:5173';
+
+    const session = await stripe.checkout.sessions.create({
+      mode:                 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url:          `${siteUrl}/payment/success`,
+      cancel_url:           `${siteUrl}/subscription`,
+      customer_email:       user.email ?? undefined,
+      metadata:             { user_id: user.id },
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('[payments] create-checkout-session error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/payments/create-subscription (legacy — static link fallback)
 router.post('/create-subscription', async (req, res) => {
   try {
     const user = await requireAuth(req, res);

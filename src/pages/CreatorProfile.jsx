@@ -5,6 +5,7 @@ import { useMembership } from '../hooks/useMembership';
 import { supabase } from '../lib/supabase';
 import { isCreatorAdmin } from '../lib/roles';
 import LivePlayer from '../components/LivePlayer';
+import MembershipBadge from '../components/MembershipBadge';
 import '../styles/portfolio.css';
 
 const SOCIAL_ICONS = {
@@ -462,6 +463,7 @@ function ProfileView({
         <div className="portfolio-identity">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
             <h1 className="portfolio-name" style={{ margin: 0 }}>{displayName}</h1>
+            <MembershipBadge active={profile.subscription_active} />
             {profile.is_live && (
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.3rem',

@@ -17,7 +17,7 @@ export default function SubscriptionPage() {
         return;
       }
 
-      const json = await api('/api/payments/create-subscription', {
+      const json = await api('/api/payments/create-checkout-session', {
         method:  'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });

@@ -1,0 +1,324 @@
+You are the Replit Code Agent for StudioFlow. Update the entire codebase to implement the new membership system, Stripe integration, and UI, and ensure everything works end-to-end.
+
+===========================
+1. ENFORCE NEW MEMBERSHIP RULES
+===========================
+Update backend and frontend logic to match these rules:
+
+A. Everyone can enter contests.
+   - Remove any checks that require subscription_active to submit contest entries.
+
+B. Only subscribers can win cash prizes.
+   - Add subscription_active checks in payout logic.
+   - If winner is not subscribed, block payout and return an appropriate error.
+
+C. Only subscribers can create events.
+   - Event creation routes and UI must check subscription_active.
+   - Non-subscribers should see a clear message that event creation is subscriber-only.
+
+Search the entire repo for old membership gating and update:
+- Any "subscription required" checks on contest entry.
+- Any outdated membership flags or fields.
+- Any logic that conflicts with the rules above.
+
+===========================
+2. SUPABASE ADMIN CLIENT
+===========================
+Create or update the Supabase Admin client so the backend (webhooks) can update profiles without RLS issues.
+
+Create file:
+  utils/supabaseAdmin.js
+
+With this content (adjust import path style if needed):
+
+import { createClient } from "@supabase/supabase-js";
+
+export const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
+
+Ensure all server-side code that needs elevated access (like Stripe webhooks) uses supabaseAdmin instead of the regular client.
+
+===========================
+3. STRIPE CHECKOUT SESSION
+===========================
+Implement a Stripe Checkout session endpoint that:
+- Creates a subscription checkout session.
+- Passes the Supabase user id in metadata.user_id.
+- Redirects back to the site on success/cancel.
+
+Create or update an API route, for example:
+  /api/checkoutSession.js
+
+Use code equivalent to:
+
+import Stripe from "stripe";
+import { supabase } from "../utils/supabaseClient"; // adjust path as needed
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export default async function handler(req, res) {
+  const { data, error } = await supabase.auth.getUser();
+  const user = data?.user;
+
+  if (!user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price: process.env.STRIPE_PRICE_ID,
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/membership/success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/membership/cancel`,
+      metadata: {
+        user_id: user.id,
+      },
+    });
+
+    return res.status(200).json({ url: session.url });
+  } catch (err) {
+    console.error("Stripe Checkout Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+Update the frontend so that clicking the “Subscribe” button:
+- Calls this endpoint (POST /api/checkoutSession).
+- Redirects the browser to session.url.
+
+===========================
+4. STRIPE WEBHOOK FOR SUBSCRIPTION STATUS
+===========================
+Create or update a Stripe webhook handler that:
+- Verifies the Stripe signature.
+- Reads metadata.user_id.
+- Updates profiles.subscription_active accordingly.
+- Updates profiles.updated_at to force cache refresh.
+
+Create file:
+  /api/stripe/webhook.js
+(or the correct server route path if using Express; adjust imports accordingly)
+
+Insert code equivalent to:
+
+import Stripe from "stripe";
+import { supabaseAdmin } from "../../utils/supabaseAdmin";
+import { buffer } from "micro";
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
+  }
+
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+  try {
+    const buf = await buffer(req);
+    event = stripe.webhooks.constructEvent(
+      buf,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  const data = event.data.object;
+  const userId = data?.metadata?.user_id;
+
+  async function setSubscriptionStatus(isActive) {
+    if (!userId) return;
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        subscription_active: isActive,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+  }
+
+  switch (event.type) {
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "checkout.session.completed":
+      await setSubscriptionStatus(true);
+      break;
+
+    case "customer.subscription.deleted":
+    case "invoice.payment_failed":
+      await setSubscriptionStatus(false);
+      break;
+
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+
+  res.json({ received: true });
+}
+
+Ensure environment variables exist:
+- STRIPE_SECRET_KEY
+- STRIPE_WEBHOOK_SECRET
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+- STRIPE_PRICE_ID
+- NEXT_PUBLIC_SITE_URL
+
+===========================
+5. MEMBERSHIP BADGE UI
+===========================
+Add a membership badge component and wire it into the UI wherever user identity is shown (chat, profile, etc.).
+
+Create component, e.g.:
+  components/MembershipBadge.jsx
+
+With content equivalent to:
+
+export function MembershipBadge({ active }) {
+  if (!active) return null;
+
+  return (
+    <span
+      style={{
+        background: "#ffd700",
+        color: "#000",
+        padding: "2px 6px",
+        borderRadius: "6px",
+        fontSize: "0.75rem",
+        marginLeft: "6px",
+        fontWeight: "600",
+      }}
+    >
+      ⭐ Member
+    </span>
+  );
+}
+
+Use it in:
+- Chat message author display
+- Profile header
+- Any place where membership should be visually indicated
+
+Example usage:
+
+<MessageAuthor>
+  {message.user_name}
+  <MembershipBadge active={message.user?.subscription_active} />
+</MessageAuthor>
+
+<h2>
+  {profile.username}
+  <MembershipBadge active={profile.subscription_active} />
+</h2>
+
+Also, in event creation UI:
+- Show a warning or CTA if !profile.subscription_active.
+- Disable or block event creation for non-subscribers.
+
+===========================
+6. SCHEMA & REALTIME CONSISTENCY
+===========================
+Ensure all Supabase queries and realtime subscriptions use the correct schema:
+
+Tables and columns:
+- chat_messages: id, user_id, content, channel_id, parent_message_id, is_announcement, created_at
+- message_reactions: id, message_id, user_id, reaction, created_at
+- chat_read_state: id, user_id, channel_id, last_read_at
+
+Replace any remaining references to:
+- "message" column in chat_messages → use "content" instead.
+
+Ensure realtime subscriptions listen to:
+- chat_messages (insert, update, delete)
+- message_reactions (insert, delete)
+- chat_read_state (update)
+- contest_entries (insert)
+- contest_votes (insert)
+
+Remove any subscriptions to old or nonexistent tables.
+
+===========================
+7. SESSION & PROFILE REFRESH
+===========================
+After Stripe redirects back to the app (success URL):
+- Refresh the Supabase auth session.
+- Re-fetch the profile from Supabase.
+- Ensure subscription_active is reflected in the UI immediately.
+
+Implement logic equivalent to:
+
+await supabase.auth.refreshSession();
+await refetchProfile();
+
+===========================
+8. CLEANUP & REBUILD
+===========================
+- Remove unused imports and dead code related to old membership logic.
+- Fix any TypeScript or runtime errors caused by these changes.
+- Rebuild the project.
+- Ensure the app starts cleanly with no schema or runtime errors.
+
+===========================
+9. TEST PLAN (VERIFY END-TO-END)
+===========================
+Use this as a checklist and ensure the codebase supports it:
+
+1) As a non-subscriber:
+   - Can enter contests.
+   - Cannot create events.
+   - Cannot receive cash prize payouts (payout logic must block).
+
+2) As a new subscriber:
+   - Start Stripe Checkout from the app.
+   - Complete payment.
+   - Webhook fires and sets profiles.subscription_active = true.
+   - UI shows membership badge.
+   - Event creation becomes available.
+   - Payout logic allows winning cash prizes.
+
+3) On subscription cancellation or payment failure:
+   - Webhook sets profiles.subscription_active = false.
+   - Badge disappears.
+   - Event creation is blocked again.
+   - Payout logic blocks cash prizes.
+
+4) Chat and realtime:
+   - Sending messages works (using content column).
+   - Reactions work.
+   - Unread badges update.
+   - Contest entries and votes update live.
+
+===========================
+10. OUTPUT SUMMARY
+===========================
+After completing all changes, output a summary including:
+- Files created
+- Files modified
+- Membership logic changes
+- Stripe integration changes
+- Supabase integration changes
+- Any remaining issues or TODOs
