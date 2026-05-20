@@ -23,6 +23,15 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ contests: 0, events: 0, submissions: 0, announcements: 0 });
   const [loading, setLoading] = useState(true);
 
+  // Live counts
+  const [eventRequests,   setEventRequests]   = useState(0);
+  const [memberCount,     setMemberCount]     = useState(0);
+  const [subscriberCount, setSubscriberCount] = useState(0);
+
+  // Editable subscriber override
+  const [editingSubCount, setEditingSubCount] = useState(false);
+  const [subCountInput,   setSubCountInput]   = useState('');
+
   // Announcement form
   const [showAnnForm, setShowAnnForm] = useState(false);
   const [editingAnn,  setEditingAnn]  = useState(null);
@@ -48,6 +57,53 @@ export default function AdminDashboard() {
   async function getToken() {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token;
+  }
+
+  // ── Realtime: increment counts live ────────────────────────────────────────
+  useEffect(() => {
+    if (authLoading || !isCreatorAdmin(role)) return;
+
+    // New contest entry → bump submission count
+    const entriesCh = supabase
+      .channel('admin-entries-watch')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'submissions' }, () => {
+        setStats((prev) => ({ ...prev, submissions: prev.submissions + 1 }));
+      })
+      .subscribe();
+
+    // New signup → bump member count
+    const profilesCh = supabase
+      .channel('admin-profiles-watch')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, () => {
+        setMemberCount((prev) => prev + 1);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(entriesCh);
+      supabase.removeChannel(profilesCh);
+    };
+  }, [authLoading, role]);
+
+  // ── Subscriber count override ───────────────────────────────────────────────
+  function startEditSubCount() {
+    setSubCountInput(String(subscriberCount));
+    setEditingSubCount(true);
+  }
+
+  function saveSubCount() {
+    const n = parseInt(subCountInput, 10);
+    if (!isNaN(n) && n >= 0) {
+      setSubscriberCount(n);
+      localStorage.setItem('admin_subscriber_count', String(n));
+    }
+    setEditingSubCount(false);
+  }
+
+  function resetSubCount() {
+    localStorage.removeItem('admin_subscriber_count');
+    loadAll();   // re-fetch live count
+    setEditingSubCount(false);
   }
 
   async function loadAll() {
@@ -97,10 +153,25 @@ export default function AdminDashboard() {
     setSubmissions(s || []);
     setGenSubmissions(genSubs);
     setAnnouncements(anns);
+    // Extra live counts
+    const [erRes, memRes, subRes] = await Promise.allSettled([
+      supabase.from('custom_event_requests').select('id', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_active', true),
+    ]);
+
+    setEventRequests(erRes.status  === 'fulfilled' ? (erRes.value.count  ?? 0) : 0);
+    setMemberCount  (memRes.status === 'fulfilled' ? (memRes.value.count ?? 0) : 0);
+
+    // Subscriber count: prefer admin-set localStorage override, else live DB count
+    const liveSubCount = subRes.status === 'fulfilled' ? (subRes.value.count ?? 0) : 0;
+    const storedSub    = localStorage.getItem('admin_subscriber_count');
+    setSubscriberCount(storedSub !== null ? Number(storedSub) : liveSubCount);
+
     setStats({
       contests:      (c || []).length,
       events:        (e || []).length,
-      submissions:   genSubs.length,
+      submissions:   (s || []).length,   // actual contest entries
       announcements: anns.length,
     });
     setLoading(false);
@@ -285,22 +356,72 @@ export default function AdminDashboard() {
 
       {/* Stats */}
       <div className="admin-stats" style={{ marginBottom: '1.5rem' }}>
+
+        {/* Contest Entries — live */}
+        <div className="admin-stat-card admin-stat-card--green">
+          <div className="admin-stat-value">{stats.submissions}</div>
+          <div className="admin-stat-label">Contest Entries</div>
+        </div>
+
+        {/* Event Requests */}
+        <div className="admin-stat-card admin-stat-card--gold">
+          <div className="admin-stat-value">{eventRequests}</div>
+          <div className="admin-stat-label">Event Requests</div>
+        </div>
+
+        {/* Members — total accounts */}
+        <div className="admin-stat-card admin-stat-card--blue">
+          <div className="admin-stat-value">{memberCount}</div>
+          <div className="admin-stat-label">Members</div>
+        </div>
+
+        {/* Subscribers — editable override */}
+        <div className="admin-stat-card" style={{ position: 'relative' }}>
+          {editingSubCount ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center' }}>
+              <input
+                type="number"
+                min="0"
+                value={subCountInput}
+                onChange={(e) => setSubCountInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') saveSubCount(); if (e.key === 'Escape') setEditingSubCount(false); }}
+                autoFocus
+                style={{ width: '80px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', padding: '0.25rem 0.4rem', color: '#fff', fontSize: '1.1rem', fontWeight: 700, textAlign: 'center' }}
+              />
+              <div style={{ display: 'flex', gap: '0.3rem' }}>
+                <button onClick={saveSubCount}  style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(134,239,172,0.15)', border: '1px solid rgba(134,239,172,0.3)', color: '#86efac', cursor: 'pointer' }}>Save</button>
+                <button onClick={resetSubCount} style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(200,200,215,0.5)', cursor: 'pointer' }}>Live</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="admin-stat-value" style={{ color: '#c084fc' }}>{subscriberCount}</div>
+              <div className="admin-stat-label">
+                Subscribers
+                <button
+                  onClick={startEditSubCount}
+                  title="Override subscriber count"
+                  style={{ marginLeft: '0.4rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', verticalAlign: 'middle', padding: 0 }}
+                >
+                  ✏️
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Contests */}
         <div className="admin-stat-card admin-stat-card--blue">
           <div className="admin-stat-value">{stats.contests}</div>
           <div className="admin-stat-label">Contests</div>
         </div>
-        <div className="admin-stat-card">
-          <div className="admin-stat-value">{stats.events}</div>
-          <div className="admin-stat-label">Events</div>
-        </div>
-        <div className="admin-stat-card admin-stat-card--green">
-          <div className="admin-stat-value">{stats.submissions}</div>
-          <div className="admin-stat-label">Submissions</div>
-        </div>
+
+        {/* Announcements */}
         <div className="admin-stat-card admin-stat-card--gold">
           <div className="admin-stat-value">{stats.announcements}</div>
           <div className="admin-stat-label">Announcements</div>
         </div>
+
       </div>
 
       {/* Tabs */}
