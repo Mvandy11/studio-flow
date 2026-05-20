@@ -2,11 +2,17 @@ import { supabase } from '../../lib/supabase';
 import type { ChatMessage } from '../../lib/types';
 
 export interface SendMessageOptions {
-  channelId:       string;
-  senderId:        string;
-  content:         string;
+  channelId:        string;
+  senderId:         string;
+  content:          string;
   parentMessageId?: string | null;
-  isAnnouncement?: boolean;
+  isAnnouncement?:  boolean;
+}
+
+export interface MessageHandlers {
+  onInsert:  (msg: ChatMessage) => void;
+  onDelete?: (id: string) => void;
+  onUpdate?: (msg: ChatMessage) => void;
 }
 
 /**
@@ -15,7 +21,7 @@ export interface SendMessageOptions {
  */
 export async function getMessages(
   channelId: string,
-  limit = 100,
+  limit = 150,
 ): Promise<ChatMessage[]> {
   const { data, error } = await supabase
     .from('chat_messages')
@@ -41,8 +47,8 @@ export async function sendMessage(opts: SendMessageOptions): Promise<ChatMessage
       message:           content,
       parent_message_id: parentMessageId ?? null,
       is_announcement:   isAnnouncement  ?? false,
-      // session_id required by existing schema — use channel as session key
-      session_id: channelId,
+      // session_id matches channel so existing RLS / queries still work
+      session_id:        channelId,
     })
     .select()
     .single();
@@ -52,30 +58,48 @@ export async function sendMessage(opts: SendMessageOptions): Promise<ChatMessage
 }
 
 /**
- * Subscribe to new top-level messages on a channel via Realtime.
- * Returns an unsubscribe function.
+ * Subscribe to all changes (INSERT / UPDATE / DELETE) for top-level messages
+ * on a channel via Supabase Realtime.
+ *
+ * Returns an unsubscribe function — call it on component unmount.
+ *
+ * Requires Realtime enabled on `chat_messages` in
+ * Supabase Dashboard → Database → Replication.
  */
 export function subscribeToMessages(
   channelId: string,
-  onMessage: (msg: ChatMessage) => void,
+  handlers:  MessageHandlers,
 ): () => void {
-  const channel = supabase
+  const ch = supabase
     .channel(`msgs:${channelId}`)
+    // New message
     .on(
       'postgres_changes',
-      {
-        event:  'INSERT',
-        schema: 'public',
-        table:  'chat_messages',
-        filter: `channel_id=eq.${channelId}`,
-      },
+      { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${channelId}` },
       (payload) => {
         const msg = payload.new as ChatMessage;
-        // Only surface to main feed if it's a top-level message
-        if (!msg.parent_message_id) onMessage(msg);
+        // Only surface top-level messages to the main feed
+        if (!msg.parent_message_id) handlers.onInsert(msg);
+      },
+    )
+    // Message deleted (admin or own)
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${channelId}` },
+      (payload) => {
+        const id = (payload.old as { id: string }).id;
+        handlers.onDelete?.(id);
+      },
+    )
+    // Message edited (future feature)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${channelId}` },
+      (payload) => {
+        handlers.onUpdate?.(payload.new as ChatMessage);
       },
     )
     .subscribe();
 
-  return () => { supabase.removeChannel(channel); };
+  return () => { supabase.removeChannel(ch); };
 }

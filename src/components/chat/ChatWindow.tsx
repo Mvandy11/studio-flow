@@ -60,12 +60,18 @@ export default function ChatWindow({ contestId, className = '' }: ChatWindowProp
       .catch(() => {})
       .finally(() => { if (active) setLoading(false); });
 
-    // Subscribe to new messages
-    const unsub = subscribeToMessages(currentChannelId, (msg) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
+    // Subscribe to INSERT / UPDATE / DELETE on this channel
+    const unsub = subscribeToMessages(currentChannelId, {
+      onInsert: (msg) =>
+        setMessages((prev) =>
+          prev.some((m) => m.id === msg.id) ? prev : [...prev, msg],
+        ),
+      onDelete: (id) =>
+        setMessages((prev) => prev.filter((m) => m.id !== id)),
+      onUpdate: (msg) =>
+        setMessages((prev) =>
+          prev.map((m) => (m.id === msg.id ? msg : m)),
+        ),
     });
 
     // Mark channel as read when opened
