@@ -36,7 +36,6 @@ const NAV_SECTIONS = [
     items: [
       { to: '/earnings',         icon: '◎',  label: 'Earnings' },
       { to: '/settings/payouts', icon: '💳', label: 'Payout Settings' },
-      { to: '/membership',       icon: '🌟', label: 'Membership' },
       { to: '/profile',          icon: '◉',  label: 'Profile' },
     ],
   },

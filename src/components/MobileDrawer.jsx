@@ -20,7 +20,6 @@ const NAV_LINKS = [
   { to: '/creator-academy',      label: 'Academy',       icon: '🎓' },
   { to: '/earnings',             label: 'Earnings',      icon: '◎' },
   { to: '/settings/payouts',     label: 'Payout Settings', icon: '💳' },
-  { to: '/membership',           label: 'Membership',    icon: '🌟' },
   { to: '/profile',              label: 'Profile',       icon: '◉' },
 ];
 
