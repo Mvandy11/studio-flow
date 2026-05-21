@@ -22,6 +22,7 @@ import freeChatRouter            from './routes/freeChat.js';
 import commentsRouter           from './routes/comments.js';
 import contestCommentsRouter    from './routes/contestComments.js';
 import liveEventsRouter         from './routes/liveEvents.js';
+import liveChatRouter           from './routes/liveChat.js';
 import recordedEventsRouter     from './routes/recordedEvents.js';
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/slots',                 slotCreationRouter);
 app.use('/api/events',                eventsRouter);
 app.use('/api/test-winner-pull',      testWinnerPullRouter);
 app.use('/api/live',                  liveEventsRouter);
+app.use('/api/live',                  liveChatRouter);
 app.use('/api/slot',                  recordedEventsRouter);
 app.use('/api/free-chat',             freeChatRouter);
 app.use('/api/comments',             commentsRouter);

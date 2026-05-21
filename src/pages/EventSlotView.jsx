@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api.js';
+import LiveChatPanel from '../components/live/LiveChatPanel';
 
 /**
  * Dual-mode slot view:
@@ -492,6 +493,13 @@ export default function EventSlotView() {
             </div>
           )}
 
+          {/* ── Live Chat (creator view) ── */}
+          {effectMode === 'live' && slotStatus !== 'ended' && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <LiveChatPanel slotId={slotId} user={user} />
+            </div>
+          )}
+
           <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Link to="/events" style={{ color: 'rgba(200,200,215,0.4)', fontSize: '0.8rem', textDecoration: 'none' }}>
               ← Back to Events
@@ -510,7 +518,7 @@ export default function EventSlotView() {
   /* ── PUBLIC PURCHASE VIEW ─────────────────────────────────── */
   return (
     <div style={page}>
-      <div style={card}>
+      <div style={{ ...card, maxWidth: '560px' }}>
         <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>
           {effectMode === 'live' ? '📡' : '🎬'}
         </div>
@@ -575,6 +583,13 @@ export default function EventSlotView() {
         <p style={{ marginTop: '0.875rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', textAlign: 'center' }}>
           Payment processed securely via Stripe.
         </p>
+
+        {/* ── Live Chat (public viewer view) ── */}
+        {effectMode === 'live' && (
+          <div style={{ marginTop: '1.5rem', textAlign: 'left' }}>
+            <LiveChatPanel slotId={slotId} user={user} />
+          </div>
+        )}
       </div>
     </div>
   );
