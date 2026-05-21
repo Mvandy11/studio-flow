@@ -1,5 +1,5 @@
 import express from 'express';
-import supabase from '../supabase.js';
+import supabase from '../supabase/supabase.js';
 import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();

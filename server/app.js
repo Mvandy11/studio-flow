@@ -1,24 +1,24 @@
 import express from 'express';
 import cors from 'cors';
 
-import aiRoutes from './routes/ai/index.js';
-import authProfileRouter from './routes/authProfile.js';
-import contestsRouter from './routes/contests.js';
-import payoutsRouter from './routes/payouts.js';
-import likesRouter from './routes/likes.js';
-import announcementsRouter from './routes/announcements.js';
-import customEventsRouter from './routes/customEvents.js';
-import paymentsRouter from './routes/payments.js';
-import submissionsRouter from './routes/submissions.js';
-import eventSlotsRouter from './routes/eventSlots.js';
+import aiRoutes                  from './routes/ai/index.js';
+import authProfileRouter         from './routes/authProfile.js';
+import contestsRouter            from './routes/contests.js';
+import payoutsRouter             from './routes/payouts.js';
+import likesRouter               from './routes/likes.js';
+import announcementsRouter       from './routes/announcements.js';
+import customEventsRouter        from './routes/customEvents.js';
+import paymentsRouter            from './routes/payments.js';
+import submissionsRouter         from './routes/submissions.js';
+import eventSlotsRouter          from './routes/eventSlots.js';
 import customEventRequestsRouter from './routes/customEventRequests.js';
-import adminApprovalRouter from './routes/adminApproval.js';
-import slotCreationRouter from './routes/slotCreation.js';
-import eventsRouter from './routes/events.js';
-import testWinnerPullRouter from './routes/testWinnerPull.js';
-import analyticsRouter from './routes/analytics.js';
-import adminWinnersRouter from './routes/adminWinners.js';
-import freeChatRouter from './routes/freeChat.js';
+import adminApprovalRouter       from './routes/adminApproval.js';
+import slotCreationRouter        from './routes/slotCreation.js';
+import eventsRouter              from './routes/events.js';
+import testWinnerPullRouter      from './routes/testWinnerPull.js';
+import analyticsRouter           from './routes/analytics.js';
+import adminWinnersRouter        from './routes/adminWinners.js';
+import freeChatRouter            from './routes/freeChat.js';
 
 const app = express();
 
@@ -28,23 +28,23 @@ const app = express();
 app.use(cors({ origin: '*' }));
 
 // ─────────────────────────────────────────────────────────────
-// 2. STRIPE WEBHOOK — MUST COME BEFORE express.json()
-//    This preserves the raw body for signature verification.
+// 2. STRIPE WEBHOOK — raw body MUST be parsed before express.json()
+//    Applying express.raw() per path keeps req.body as a Buffer
+//    only for webhook endpoints; all other routes get JSON.
 // ─────────────────────────────────────────────────────────────
-app.use(
-  '/api/payments/subscription-webhook',
-  express.raw({ type: 'application/json' }),
-  paymentsRouter
-);
+const RAW_JSON = express.raw({ type: 'application/json' });
+app.use('/api/payments/subscription-webhook', RAW_JSON);
+app.use('/api/payments/donation-webhook',     RAW_JSON);
+app.use('/api/payments/event-webhook',        RAW_JSON);
 
 // ─────────────────────────────────────────────────────────────
-// 3. Normal body parsers (AFTER webhook)
+// 3. Normal body parsers (AFTER webhook raw)
 // ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '6mb' }));
 app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 
 // ─────────────────────────────────────────────────────────────
-// 4. All other routes
+// 4. All routes (each router mounted exactly once)
 // ─────────────────────────────────────────────────────────────
 app.use('/api/ai',                    aiRoutes);
 app.use('/api/auth',                  authProfileRouter);

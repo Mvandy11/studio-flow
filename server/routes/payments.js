@@ -12,8 +12,8 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
-import supabase from '../supabase.js';
-import supabaseAdmin from '../supabaseAdmin.js';
+import supabase from '../supabase/supabase.js';
+import supabaseAdmin from '../supabase/supabaseAdmin.js';
 import { subscriptionLink, donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
 const router = express.Router();
@@ -232,10 +232,7 @@ router.post('/create-subscription', async (req, res) => {
  *   - Bulletproof logging
  *   - Guaranteed 200 OK
  */
-router.post(
-  '/subscription-webhook',
-  express.raw({ type: 'application/json' }),
-  async (req, res) => {
+router.post('/subscription-webhook', async (req, res) => {
     const timestamp = new Date().toISOString();
 
     let event;
@@ -303,7 +300,7 @@ router.post('/create-donation', async (req, res) => {
   }
 });
 
-router.post('/donation-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/donation-webhook', async (req, res) => {
   let event;
   try {
     event = parseWebhookEvent(req);
@@ -362,7 +359,7 @@ router.post('/create-event-payment', async (req, res) => {
   }
 });
 
-router.post('/event-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/event-webhook', async (req, res) => {
   let event;
   try {
     event = parseWebhookEvent(req);

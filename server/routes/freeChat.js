@@ -5,7 +5,7 @@
  * but this API remains available for SSR-style fetching and health checks.
  */
 import { Router } from 'express';
-import supabase from '../supabase.js';
+import supabase from '../supabase/supabase.js';
 
 const router = Router();
 const CHANNEL = 'general';

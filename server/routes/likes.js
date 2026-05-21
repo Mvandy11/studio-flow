@@ -1,6 +1,6 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
-import supabase from '../supabase.js';
+import supabase from '../supabase/supabase.js';
 
 const router = express.Router();
 

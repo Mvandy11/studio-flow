@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import nodemailer from 'nodemailer';
 import { randomUUID } from 'crypto';
-import supabase from '../supabase.js';
+import supabase from '../supabase/supabase.js';
 
 const router = express.Router();
 

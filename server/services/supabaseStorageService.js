@@ -1,4 +1,4 @@
-import supabase from '../supabase.js';
+import supabase from '../supabase/supabase.js';
 
 const BUCKET_NAME = process.env.SUPABASE_STORAGE_BUCKET || 'studio-flow-library';
 
