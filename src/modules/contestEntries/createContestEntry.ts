@@ -8,26 +8,30 @@ export interface CreateContestEntryInput {
   description?: string | null;
   videoUrl?: string | null;
   submitterEmail?: string | null;
+  submitterName?: string | null;
 }
 
 /**
- * Insert a new row into contest_entries.
+ * Insert a new row into submissions for a contest entry.
  * Requires the user to be authenticated (enforced by RLS).
  */
 export async function createContestEntry(
   input: CreateContestEntryInput,
 ): Promise<ContestEntry> {
-  const { contestId, userId, title, description, videoUrl, submitterEmail } = input;
+  const { contestId, userId, title, description, videoUrl, submitterEmail, submitterName } = input;
 
   const { data, error } = await supabase
-    .from('contest_entries')
+    .from('submissions')
     .insert({
-      contest_id:      contestId,
-      user_id:         userId,
+      contest_id:  contestId,
+      user_id:     userId,
+      user_name:   submitterName ?? null,
+      user_email:  submitterEmail ?? null,
       title,
-      description:     description ?? null,
-      file_url:        videoUrl ?? null,
-      submitter_email: submitterEmail ?? null,
+      description: description ?? null,
+      media_url:   videoUrl ?? null,
+      video_url:   videoUrl ?? null,
+      status:      'active',
     })
     .select()
     .single();

@@ -1,25 +1,25 @@
 import express from 'express';
 import supabase from '../supabase/supabase.js';
+import supabaseAdmin from '../supabase/supabaseAdmin.js';
 
 const router = express.Router();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function requireAdmin(req, res) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
+  const token = req.headers.authorization?.replace('Bearer ', '').trim();
   if (!token) {
     res.status(401).json({ error: 'Authentication required.' });
     return null;
   }
 
-  const authResp = await supabase.auth.getUser(token);
-  const user = authResp.data?.user;
-  if (authResp.error || !user) {
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) {
     res.status(401).json({ error: 'Authentication required.' });
     return null;
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -61,19 +61,19 @@ router.get('/', async (req, res) => {
 
     const [winnersRes, contestsRes, eventsRes] = await Promise.all([
       safe(
-        supabase
+        supabaseAdmin
           .from('winner_history')
           .select('id, user_id, event_id, contest_id, place_number, payout_amount, created_at')
           .order('created_at', { ascending: false })
       ),
       safe(
-        supabase
+        supabaseAdmin
           .from('contests')
           .select('id, title')
           .order('title', { ascending: true })
       ),
       safe(
-        supabase
+        supabaseAdmin
           .from('events')
           .select('id, title')
           .order('title', { ascending: true })
@@ -82,7 +82,6 @@ router.get('/', async (req, res) => {
 
     const winners = winnersRes.data;
 
-    // Compute summary totals — safe against empty / null data
     const totalWinners  = winners.length;
     const totalPayout   = winners.reduce((sum, w) => sum + Number(w.payout_amount || 0), 0);
     const uniqueWinners = new Set(winners.map(w => w.user_id).filter(Boolean)).size;
@@ -97,7 +96,6 @@ router.get('/', async (req, res) => {
     });
   } catch (err) {
     console.error('[adminWinners] unhandled error:', err.message);
-    // Always return valid JSON — never HTML
     res.status(500).json({
       error:        'Failed to load winner data.',
       winners:      [],

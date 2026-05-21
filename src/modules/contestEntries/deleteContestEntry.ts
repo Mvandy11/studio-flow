@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { isAdmin } from '../../lib/isAdmin';
 
 /**
- * Delete a contest entry. Admin-only — throws if the caller is not an admin.
+ * Delete a contest entry (submission row). Admin-only — throws if the caller is not an admin.
  */
 export async function deleteContestEntry(
   entryId: string,
@@ -12,7 +12,7 @@ export async function deleteContestEntry(
   if (!adminCheck) throw new Error('Admin access required to delete entries.');
 
   const { error } = await supabase
-    .from('contest_entries')
+    .from('submissions')
     .delete()
     .eq('id', entryId);
 

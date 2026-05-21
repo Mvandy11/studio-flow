@@ -1,8 +1,9 @@
 import express from 'express';
 import multer from 'multer';
-import nodemailer from 'nodemailer';
 import { randomUUID } from 'crypto';
 import supabase from '../supabase/supabase.js';
+import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
 
@@ -15,49 +16,6 @@ const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB max
 });
 
-// ── Email setup (graceful degradation if SMTP not configured) ─
-function createMailer() {
-  if (!process.env.SMTP_HOST) return null;
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST,
-    port:   parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-}
-
-async function sendSubmissionEmail(contest, entry, submitterEmail) {
-  const mailer = createMailer();
-  if (!mailer) return; // SMTP not configured — skip silently
-
-  const subject = `[Studio Flow] New Contest Submission: ${contest.title}`;
-  const html = `
-    <h2>New Contest Entry</h2>
-    <p><strong>Contest:</strong> ${contest.title}</p>
-    <p><strong>Submission Title:</strong> ${entry.title}</p>
-    <p><strong>Description:</strong> ${entry.description || '—'}</p>
-    <p><strong>Submitter Email:</strong> ${submitterEmail || '—'}</p>
-    ${entry.file_url ? `<p><strong>File:</strong> <a href="${entry.file_url}">${entry.file_url}</a></p>` : ''}
-    <p><strong>Submitted at:</strong> ${new Date().toLocaleString()}</p>
-    <hr/>
-    <p style="color:#888;font-size:12px">Studio Flow Contest System</p>
-  `;
-
-  try {
-    await mailer.sendMail({
-      from:    process.env.SMTP_FROM || process.env.SMTP_USER,
-      to:      ADMIN_EMAIL,
-      subject,
-      html,
-    });
-  } catch (err) {
-    console.error('[contests] Email send error:', err.message);
-  }
-}
-
 // ── Auth helper ───────────────────────────────────────────────
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
@@ -68,21 +26,38 @@ async function getUserFromHeader(req) {
   return user;
 }
 
+// ── Admin guard — returns user or sends 401/403 ───────────────
+async function requireAdmin(req, res) {
+  const user = await getUserFromHeader(req);
+  if (!user) { res.status(401).json({ error: 'Authentication required.' }); return null; }
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profile?.role !== 'creator_admin') {
+    res.status(403).json({ error: 'Admin access required.' });
+    return null;
+  }
+  return user;
+}
+
 // ── GET /api/contests ─────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
     const { status, category, limit = 50, offset = 0 } = req.query;
-    let query = supabase
+    let query = supabaseAdmin
       .from('contests')
-      .select('*', { count: 'exact' })
+      .select('id, title, description, category, entry_fee, start_date, end_date, status, created_at, thumbnail_url, prize_pool, winner_count', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
     if (status) {
-      // Explicit status filter (e.g. admin dashboard requesting 'draft')
       query = query.eq('status', status);
     } else {
-      // Default: show all publicly visible contests — exclude drafts and archived
+      // Default: exclude drafts and archived from public view
       query = query.in('status', ['active', 'voting', 'completed']);
     }
 
@@ -102,15 +77,26 @@ router.get('/:id', async (req, res) => {
   try {
     const cid = req.params.id;
 
-    // Fetch contest + active submissions + winners in parallel
     const [
       { data: contest, error: cErr },
       { data: submissions, error: sErr },
       { data: winners },
     ] = await Promise.all([
-      supabase.from('contests').select('*').eq('id', cid).single(),
-      supabase.from('submissions').select('*').eq('contest_id', cid).eq('status', 'active').order('created_at', { ascending: false }),
-      supabase.from('winners').select('submission_id, rank').eq('contest_id', cid),
+      supabaseAdmin
+        .from('contests')
+        .select('id, title, description, category, entry_fee, start_date, end_date, status, created_at, thumbnail_url, prize_pool, winner_count')
+        .eq('id', cid)
+        .single(),
+      supabaseAdmin
+        .from('submissions')
+        .select('*')
+        .eq('contest_id', cid)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false }),
+      supabaseAdmin
+        .from('winners')
+        .select('submission_id, rank')
+        .eq('contest_id', cid),
     ]);
 
     if (cErr || !contest) return res.status(404).json({ error: 'Contest not found.' });
@@ -122,7 +108,7 @@ router.get('/:id', async (req, res) => {
     let entries = subs;
     if (subs.length > 0) {
       const ids = subs.map((s) => s.id);
-      const { data: likes } = await supabase
+      const { data: likes } = await supabaseAdmin
         .from('likes')
         .select('entry_id')
         .in('entry_id', ids);
@@ -145,18 +131,8 @@ router.get('/:id', async (req, res) => {
 // ── POST /api/contests (create — admin only) ──────────────────
 router.post('/', async (req, res) => {
   try {
-    const user = await getUserFromHeader(req);
-    if (!user) return res.status(401).json({ error: 'Authentication required.' });
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile?.role !== 'creator_admin') {
-      return res.status(403).json({ error: 'Admin access required.' });
-    }
+    const user = await requireAdmin(req, res);
+    if (!user) return;
 
     const {
       title, description, thumbnail_url, entry_fee, prize_pool,
@@ -166,19 +142,24 @@ router.post('/', async (req, res) => {
 
     if (!title) return res.status(400).json({ error: 'Title is required.' });
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('contests')
       .insert({
         id: randomUUID(),
-        title, description, thumbnail_url,
-        entry_fee:    Number(entry_fee)   || 0,
-        prize_pool:   Number(prize_pool)  || 0,
-        winner_count: Number(winner_count)|| 1,
-        start_date, end_date,
-        submission_start, submission_end,
-        voting_start, voting_end,
-        status: status || 'draft',
-        category: category || 'general',
+        title,
+        description,
+        thumbnail_url,
+        entry_fee:    Number(entry_fee)    || 0,
+        prize_pool:   Number(prize_pool)   || 0,
+        winner_count: Number(winner_count) || 1,
+        start_date,
+        end_date,
+        submission_start,
+        submission_end,
+        voting_start,
+        voting_end,
+        status:    status   || 'draft',
+        category:  category || 'general',
         created_by: user.id,
       })
       .select()
@@ -192,24 +173,29 @@ router.post('/', async (req, res) => {
 });
 
 // ── PATCH /api/contests/:id (update — admin only) ─────────────
+const CONTEST_UPDATABLE = new Set([
+  'title', 'description', 'thumbnail_url', 'status', 'category',
+  'entry_fee', 'prize_pool', 'winner_count',
+  'start_date', 'end_date', 'submission_start', 'submission_end',
+  'voting_start', 'voting_end',
+]);
+
 router.patch('/:id', async (req, res) => {
   try {
-    const user = await getUserFromHeader(req);
-    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+    const user = await requireAdmin(req, res);
+    if (!user) return;
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([k]) => CONTEST_UPDATABLE.has(k)),
+    );
 
-    if (profile?.role !== 'creator_admin') {
-      return res.status(403).json({ error: 'Admin access required.' });
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided.' });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('contests')
-      .update(req.body)
+      .update(updates)
       .eq('id', req.params.id)
       .select()
       .single();
@@ -227,9 +213,9 @@ router.post('/:id/entries', upload.single('file'), async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    const { data: contest } = await supabase
+    const { data: contest } = await supabaseAdmin
       .from('contests')
-      .select('*')
+      .select('id, title, status')
       .eq('id', req.params.id)
       .single();
 
@@ -239,24 +225,23 @@ router.post('/:id/entries', upload.single('file'), async (req, res) => {
     if (!title) return res.status(400).json({ error: 'Entry title is required.' });
 
     let file_url = null;
-    let storage_path = null;
 
-    // Upload file if provided
     if (req.file) {
       const ext = req.file.originalname.split('.').pop();
       const filename = `${randomUUID()}.${ext}`;
-      storage_path = `${CONTEST_PREFIX}/${req.params.id}/${filename}`;
+      const storage_path = `${CONTEST_PREFIX}/${req.params.id}/${filename}`;
 
-      const { error: uploadErr } = await supabase.storage
+      const { error: uploadErr } = await supabaseAdmin.storage
         .from(BUCKET)
         .upload(storage_path, req.file.buffer, {
           contentType: req.file.mimetype,
           upsert: false,
         });
 
-      if (uploadErr) console.error('[contests] Upload error:', uploadErr.message);
-      else {
-        const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(storage_path);
+      if (uploadErr) {
+        console.error('[contests] Upload error:', uploadErr.message);
+      } else {
+        const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(storage_path);
         file_url = urlData?.publicUrl || null;
       }
     }
@@ -273,22 +258,36 @@ router.post('/:id/entries', upload.single('file'), async (req, res) => {
       status:      'active',
     };
 
-    const { data: inserted, error: dbErr } = await supabase
+    const { data: inserted, error: dbErr } = await supabaseAdmin
       .from('submissions')
       .insert(entry)
       .select()
       .single();
 
-    if (dbErr) throw new Error(dbErr.message);
+    if (dbErr) {
+      if (dbErr.message?.includes('unique') || dbErr.code === '23505') {
+        return res.status(409).json({ error: 'You have already submitted an entry to this contest.' });
+      }
+      throw new Error(dbErr.message);
+    }
 
     // Send email notification (non-blocking)
-    sendSubmissionEmail(contest, inserted, user.email).catch(() => {});
+    sendEmail({
+      to:      ADMIN_EMAIL,
+      subject: `[Studio Flow] New Contest Submission: ${contest.title}`,
+      html: `
+        <h2>New Contest Entry</h2>
+        <p><strong>Contest:</strong> ${contest.title}</p>
+        <p><strong>Submission Title:</strong> ${inserted.title}</p>
+        <p><strong>Description:</strong> ${inserted.description || '—'}</p>
+        <p><strong>Submitter Email:</strong> ${user.email || '—'}</p>
+        ${inserted.media_url ? `<p><strong>File:</strong> <a href="${inserted.media_url}">${inserted.media_url}</a></p>` : ''}
+        <p><strong>Submitted at:</strong> ${new Date().toLocaleString()}</p>
+      `,
+    }).catch(() => {});
 
     res.status(201).json({ entry: inserted });
   } catch (err) {
-    if (err.message?.includes('unique')) {
-      return res.status(409).json({ error: 'You have already submitted an entry to this contest.' });
-    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -299,7 +298,7 @@ router.post('/:id/entries/:entryId/vote', async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    const { data: contest } = await supabase
+    const { data: contest } = await supabaseAdmin
       .from('contests')
       .select('id')
       .eq('id', req.params.id)
@@ -308,7 +307,7 @@ router.post('/:id/entries/:entryId/vote', async (req, res) => {
     if (!contest) return res.status(404).json({ error: 'Contest not found.' });
 
     // Insert like/vote (unique constraint handles anti-spam)
-    const { error: voteErr } = await supabase
+    const { error: voteErr } = await supabaseAdmin
       .from('likes')
       .insert({
         user_id:  user.id,
@@ -331,34 +330,22 @@ router.post('/:id/entries/:entryId/vote', async (req, res) => {
 // ── PATCH /api/contests/:id/entries/:entryId (admin — mark winner/featured) ──
 router.patch('/:id/entries/:entryId', async (req, res) => {
   try {
-    const user = await getUserFromHeader(req);
-    if (!user) return res.status(401).json({ error: 'Authentication required.' });
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile?.role !== 'creator_admin') {
-      return res.status(403).json({ error: 'Admin access required.' });
-    }
+    const user = await requireAdmin(req, res);
+    if (!user) return;
 
     const { is_winner, winner_rank, featured } = req.body;
 
-    // Update featured flag on the submission
     if (featured !== undefined) {
-      await supabase
+      await supabaseAdmin
         .from('submissions')
         .update({ featured: Boolean(featured) })
         .eq('id', req.params.entryId)
         .eq('contest_id', req.params.id);
     }
 
-    // Track winners in the winners table
     if (is_winner !== undefined) {
       if (is_winner) {
-        await supabase
+        await supabaseAdmin
           .from('winners')
           .upsert({
             contest_id:    req.params.id,
@@ -366,7 +353,7 @@ router.patch('/:id/entries/:entryId', async (req, res) => {
             rank:          winner_rank || 1,
           }, { onConflict: 'contest_id,submission_id' });
       } else {
-        await supabase
+        await supabaseAdmin
           .from('winners')
           .delete()
           .eq('contest_id', req.params.id)
@@ -374,7 +361,7 @@ router.patch('/:id/entries/:entryId', async (req, res) => {
       }
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('submissions')
       .select('*')
       .eq('id', req.params.entryId)
@@ -390,28 +377,18 @@ router.patch('/:id/entries/:entryId', async (req, res) => {
 // ── POST /api/contests/:id/payout (admin — record prize earnings) ──
 router.post('/:id/payout', async (req, res) => {
   try {
-    const user = await getUserFromHeader(req);
-    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+    const user = await requireAdmin(req, res);
+    if (!user) return;
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile?.role !== 'creator_admin') {
-      return res.status(403).json({ error: 'Admin access required.' });
-    }
-
-    const { data: contest, error: cErr } = await supabase
+    const { data: contest, error: cErr } = await supabaseAdmin
       .from('contests')
-      .select('*')
+      .select('id, title, prize_pool')
       .eq('id', req.params.id)
       .single();
 
     if (cErr || !contest) return res.status(404).json({ error: 'Contest not found.' });
 
-    const { data: winners, error: wErr } = await supabase
+    const { data: winners, error: wErr } = await supabaseAdmin
       .from('winners')
       .select('*, submissions(user_id)')
       .eq('contest_id', req.params.id)
@@ -429,10 +406,9 @@ router.post('/:id/payout', async (req, res) => {
 
     const prizeShare = Math.round((prizePool / winners.length) * 100) / 100;
 
-    // ── Check subscription status for each winner before paying out ───────────
     const winnerUserIds = winners.map((w) => w.submissions?.user_id || w.user_id).filter(Boolean);
 
-    const { data: winnerProfiles } = await supabase
+    const { data: winnerProfiles } = await supabaseAdmin
       .from('profiles')
       .select('id, subscription_active')
       .in('id', winnerUserIds);
@@ -463,7 +439,7 @@ router.post('/:id/payout', async (req, res) => {
 
     const results = await Promise.allSettled(
       payoutTargets.map((w) =>
-        supabase.from('earnings').insert({
+        supabaseAdmin.from('earnings').insert({
           creator_id: w._uid,
           contest_id: req.params.id,
           amount:     prizeShare,
@@ -496,21 +472,9 @@ router.post('/:id/payout', async (req, res) => {
 router.post('/:id/pull-winners', async (req, res) => {
   const contestId = req.params.id;
   try {
-    // ── 1. Admin auth ──────────────────────────────────────────
-    const user = await getUserFromHeader(req);
-    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+    const user = await requireAdmin(req, res);
+    if (!user) return;
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile?.role !== 'creator_admin') {
-      return res.status(403).json({ error: 'Admin access required.' });
-    }
-
-    // ── 2. Parse + validate body ───────────────────────────────
     const { eventId, numberOfWinners = 1, payouts = [] } = req.body;
 
     if (!eventId) {
@@ -518,10 +482,7 @@ router.post('/:id/pull-winners', async (req, res) => {
     }
     const count = Math.max(1, Math.min(Number(numberOfWinners) || 1, 100));
 
-    console.log('[pull-winners] Starting draw', { contestId, eventId, numberOfWinners: count });
-
-    // ── 3. Verify contest exists ───────────────────────────────
-    const { data: contest, error: cErr } = await supabase
+    const { data: contest, error: cErr } = await supabaseAdmin
       .from('contests')
       .select('id, title')
       .eq('id', contestId)
@@ -531,21 +492,18 @@ router.post('/:id/pull-winners', async (req, res) => {
       return res.status(404).json({ error: 'Contest not found.' });
     }
 
-    // ── 4. Get users already in winner_history for this contest ─
-    const { data: prevWinners, error: phErr } = await supabase
+    const { data: prevWinners, error: phErr } = await supabaseAdmin
       .from('winner_history')
       .select('user_id')
       .eq('contest_id', contestId);
 
     if (phErr) {
-      // winner_history table may not exist yet — treat as empty
       console.warn('[pull-winners] winner_history query failed:', phErr.message);
     }
 
     const alreadyWon = new Set((prevWinners || []).map((r) => r.user_id));
 
-    // ── 5. Fetch all ticket purchasers for this event ──────────
-    const { data: purchases, error: tErr } = await supabase
+    const { data: purchases, error: tErr } = await supabaseAdmin
       .from('ticket_purchases')
       .select('user_id')
       .eq('event_id', eventId);
@@ -559,7 +517,6 @@ router.post('/:id/pull-winners', async (req, res) => {
       return res.status(422).json({ error: 'No ticket purchases found for this event.' });
     }
 
-    // ── 6. Build eligible pool (unique users, not already won) ──
     const seen = new Set();
     const pool = [];
     for (const row of purchases) {
@@ -570,30 +527,25 @@ router.post('/:id/pull-winners', async (req, res) => {
       pool.push(row.user_id);
     }
 
-    console.log('[pull-winners] Eligible pool size:', pool.length);
-
     if (pool.length === 0) {
       return res.status(422).json({ error: 'No eligible participants remaining. All ticket holders have already won.' });
     }
 
-    // ── 7. Draw winners one at a time ──────────────────────────
     const drawn = [];
     const remaining = [...pool];
 
     for (let i = 0; i < count; i++) {
       if (remaining.length === 0) break;
 
-      // Fisher-Yates single pick
       const idx = Math.floor(Math.random() * remaining.length);
       const userId = remaining[idx];
-      remaining.splice(idx, 1); // remove so can't be picked again this round
+      remaining.splice(idx, 1);
 
-      const payout  = payouts[i] ?? {};
-      const placeNum   = payout.placeNumber  ?? i + 1;
-      const payoutAmt  = Number(payout.payoutAmount ?? 0);
+      const payout    = payouts[i] ?? {};
+      const placeNum  = payout.placeNumber  ?? i + 1;
+      const payoutAmt = Number(payout.payoutAmount ?? 0);
 
-      // Insert into winner_history
-      const { error: insertErr } = await supabase
+      const { error: insertErr } = await supabaseAdmin
         .from('winner_history')
         .insert({
           user_id:       userId,
@@ -604,7 +556,6 @@ router.post('/:id/pull-winners', async (req, res) => {
         });
 
       if (insertErr) {
-        // Unique constraint on (contest_id, place_number) — skip silently
         console.warn(`[pull-winners] Insert failed for place ${placeNum}:`, insertErr.message);
         continue;
       }
@@ -612,17 +563,16 @@ router.post('/:id/pull-winners', async (req, res) => {
       drawn.push({ userId, placeNumber: placeNum, payoutAmount: payoutAmt });
     }
 
-    // ── 8. Enrich winners with profile info ────────────────────
     const enriched = await Promise.all(
       drawn.map(async (w) => {
-        const { data: p } = await supabase
+        const { data: p } = await supabaseAdmin
           .from('profiles')
           .select('username, display_name, avatar_url')
           .eq('id', w.userId)
           .maybeSingle();
 
         let email = null;
-        const { data: authData, error: authErr } = await supabase.auth.admin.getUserById(w.userId);
+        const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.getUserById(w.userId);
         if (authErr) {
           console.warn(`[pull-winners] getUserById failed for ${w.userId}:`, authErr.message);
         } else {
@@ -637,8 +587,6 @@ router.post('/:id/pull-winners', async (req, res) => {
         };
       }),
     );
-
-    console.log('[pull-winners] Drew winners:', enriched.map((w) => ({ place: w.placeNumber, userId: w.userId })));
 
     res.json({
       success:  true,
@@ -655,7 +603,7 @@ router.post('/:id/pull-winners', async (req, res) => {
 // ── GET /api/contests/:id/entries ─────────────────────────────
 router.get('/:id/entries', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('submissions')
       .select('*')
       .eq('contest_id', req.params.id)

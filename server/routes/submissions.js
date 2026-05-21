@@ -1,5 +1,6 @@
 import express from 'express';
 import supabase from '../supabase/supabase.js';
+import supabaseAdmin from '../supabase/supabaseAdmin.js';
 import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
@@ -13,17 +14,47 @@ async function getUserFromHeader(req) {
 }
 
 // POST /api/submissions/create
+// Generic contest submission: requires auth and an optional contest_id.
 router.post('/create', async (req, res) => {
   try {
-    const { user_name, user_email, media_url, description } = req.body;
+    const user = await getUserFromHeader(req);
+    if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    if (!user_name || !user_email || !media_url) {
-      return res.status(400).json({ error: 'user_name, user_email, and media_url are required.' });
+    const { contest_id, user_name, media_url, description } = req.body;
+
+    if (!media_url) {
+      return res.status(400).json({ error: 'media_url is required.' });
     }
 
-    const { data, error } = await supabase
+    // Validate the contest exists if one is provided
+    if (contest_id) {
+      const { data: contest } = await supabaseAdmin
+        .from('contests')
+        .select('id, title')
+        .eq('id', contest_id)
+        .maybeSingle();
+
+      if (!contest) {
+        return res.status(404).json({ error: 'Contest not found.' });
+      }
+    }
+
+    const displayName = user_name?.trim() ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      'Creator';
+
+    const { data, error } = await supabaseAdmin
       .from('submissions')
-      .insert([{ user_name, user_email, media_url, description }])
+      .insert({
+        contest_id:  contest_id || null,
+        user_id:     user.id,
+        user_name:   displayName,
+        user_email:  user.email,
+        media_url,
+        description,
+        status:      'active',
+      })
       .select()
       .single();
 
@@ -32,7 +63,7 @@ router.post('/create', async (req, res) => {
     await sendEmail({
       to:      'obviouslyinspiredstudio@outlook.com',
       subject: 'New Submission Received',
-      text: `A new submission has been received:\n\nName: ${user_name}\nEmail: ${user_email}\nMedia URL: ${media_url}\nDescription: ${description || 'None'}\n\nSubmission ID: ${data.id}`,
+      text:    `New submission from ${displayName} (${user.email})\nMedia: ${media_url}\nDescription: ${description || 'None'}\nSubmission ID: ${data.id}`,
     });
 
     return res.json({ success: true, message: 'Submission received.' });
@@ -47,13 +78,13 @@ router.get('/', async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .maybeSingle();
 
-    let q = supabase
+    let q = supabaseAdmin
       .from('submissions')
       .select('id, user_id, user_name, user_email, media_url, description, status, created_at')
       .order('created_at', { ascending: false });
@@ -76,7 +107,7 @@ router.get('/:id', async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('submissions')
       .select('id, user_id, user_name, user_email, media_url, description, status, created_at')
       .eq('id', req.params.id)
@@ -85,7 +116,7 @@ router.get('/:id', async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Submission not found.' });
 
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -107,7 +138,7 @@ router.patch('/:id', async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -126,7 +157,7 @@ router.patch('/:id', async (req, res) => {
       return res.status(400).json({ error: 'No valid fields provided.' });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('submissions')
       .update(updates)
       .eq('id', req.params.id)
@@ -146,7 +177,7 @@ router.delete('/:id', async (req, res) => {
     const user = await getUserFromHeader(req);
     if (!user) return res.status(401).json({ error: 'Authentication required.' });
 
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('submissions')
       .select('user_email')
       .eq('id', req.params.id)
@@ -154,7 +185,7 @@ router.delete('/:id', async (req, res) => {
 
     if (!existing) return res.status(404).json({ error: 'Submission not found.' });
 
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -164,7 +195,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(403).json({ error: 'Forbidden.' });
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('submissions')
       .delete()
       .eq('id', req.params.id);
