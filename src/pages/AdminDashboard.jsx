@@ -9,7 +9,7 @@ import { api } from '../lib/api.js';
 
 const TABS = ['Overview', 'Contests', 'Events', 'Submissions', 'Announcements', 'Requests', 'Moderation'];
 
-// Build last-6-months subscription activity from memberships rows
+// Build last-6-months subscription activity from profiles rows
 function buildMonthlyHistory(rows) {
   const now    = new Date();
   const months = [];

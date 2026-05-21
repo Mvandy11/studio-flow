@@ -14,17 +14,11 @@ export interface Profile {
   updated_at: string | null;
 }
 
-export interface Membership {
-  id: string;
-  user_id: string;
-  tier: 'free' | 'monthly' | 'enterprise';
-  is_active: boolean;
-  started_at: string | null;
-  expires_at: string | null;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
-  created_at: string;
-  updated_at: string;
+/** Subscription state read from the `profiles` table (set by Stripe webhook). */
+export interface ProfileSubscription {
+  subscription_active: boolean;
+  subscription_status: string | null;
+  current_period_end: string | null;
 }
 
 export interface Contest {

@@ -53,11 +53,13 @@ export default function MembershipPage() {
     );
   }
 
-  const tierLabel = membership?.tier === 'enterprise'
-    ? 'Enterprise'
-    : membership?.tier === 'monthly'
-      ? 'Monthly Creator'
-      : null;
+  // Derive display label from subscription_active
+  const tierLabel = hasAccess ? 'Monthly Creator' : null;
+
+  // Renewal / expiry date from profiles.current_period_end
+  const periodEnd = membership?.current_period_end
+    ? new Date(membership.current_period_end).toLocaleDateString()
+    : null;
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -89,14 +91,9 @@ export default function MembershipPage() {
           <StatusBadge active={hasAccess} />
         </div>
 
-        {membership?.started_at && (
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #888)', marginBottom: '0.5rem' }}>
-            Member since {new Date(membership.started_at).toLocaleDateString()}
-          </div>
-        )}
-        {membership?.expires_at && (
+        {periodEnd && (
           <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #888)' }}>
-            {hasAccess ? 'Renews' : 'Expired'} {new Date(membership.expires_at).toLocaleDateString()}
+            {hasAccess ? 'Renews' : 'Expired'} {periodEnd}
           </div>
         )}
       </div>
@@ -162,11 +159,11 @@ export default function MembershipPage() {
           <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {PERKS.map((perk) => (
               <li key={perk} style={{
-                fontSize:  '0.875rem',
-                color:     'rgba(255,255,255,0.6)',
-                display:   'flex',
+                fontSize:   '0.875rem',
+                color:      'rgba(255,255,255,0.6)',
+                display:    'flex',
                 alignItems: 'center',
-                gap:       '0.5rem',
+                gap:        '0.5rem',
               }}>
                 {perk}
               </li>
