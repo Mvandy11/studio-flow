@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api.js';
 import LiveChatPanel from '../components/live/LiveChatPanel';
+import LiveEventViewer from '../components/live/LiveEventViewer';
 
 /**
  * Dual-mode slot view:
@@ -337,6 +338,14 @@ export default function EventSlotView() {
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', boxShadow: '0 0 6px #ef4444' }} />
                     <span style={{ fontWeight: 700, color: '#ef4444', fontSize: '0.88rem' }}>LIVE NOW</span>
                   </div>
+
+                  {/* Creator stream preview */}
+                  {slot?.hls_url && (
+                    <div style={{ marginBottom: '0.875rem' }}>
+                      <LiveEventViewer hlsUrl={slot.hls_url} title={slot.title} />
+                    </div>
+                  )}
+
                   <button
                     onClick={handleEndLive}
                     disabled={liveAction}
@@ -583,6 +592,13 @@ export default function EventSlotView() {
         <p style={{ marginTop: '0.875rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', textAlign: 'center' }}>
           Payment processed securely via Stripe.
         </p>
+
+        {/* ── Live stream player (public viewer) ── */}
+        {effectMode === 'live' && slotStatus === 'live' && slot?.hls_url && isOpen && (
+          <div style={{ marginTop: '1.5rem', textAlign: 'left' }}>
+            <LiveEventViewer hlsUrl={slot.hls_url} title={slot.title} />
+          </div>
+        )}
 
         {/* ── Live Chat (public viewer view) ── */}
         {effectMode === 'live' && (

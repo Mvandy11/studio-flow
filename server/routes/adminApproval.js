@@ -287,6 +287,7 @@ router.post('/event-requests/:id/approve', async (req, res) => {
     const eventId   = randomUUID();
     const streamKey = `sf-${randomUUID()}`;
     const streamUrl = `rtmp://live.studioflow.tv/live/${streamKey}`;
+    const hlsUrl    = `https://live.studioflow.tv/hls/${streamKey}.m3u8`;
     const safeTitle = title.trim();
 
     // 2. Create the event_slot
@@ -300,6 +301,7 @@ router.post('/event-requests/:id/approve', async (req, res) => {
         password:   password.trim(),
         stream_key: streamKey,
         stream_url: streamUrl,
+        hls_url:    hlsUrl,
         status:     'pending',
       })
       .select()
