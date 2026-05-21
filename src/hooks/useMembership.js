@@ -1,10 +1,10 @@
 /**
- * useMembership — reads subscription state directly from `profiles`.
+ * useMembership — reads subscription state from `profiles`.
  * Source of truth: profiles.subscription_active, subscription_status, current_period_end
  * (kept in sync by the Stripe webhook pipeline).
  *
- * Returns the same public API shape as before so Navbar, CreatorProfile,
- * and Subscription page need no changes:
+ * Returns the same public API shape so Navbar, CreatorProfile, and Subscription
+ * page need no changes:
  *   { membership, tier, meta, isActive, expiresAt, subscriptionStatus, currentPeriodEnd, loading }
  */
 import { useState, useEffect } from 'react';
@@ -21,9 +21,11 @@ export function useMembership(user) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ── Initial fetch from profiles ─────────────────────────────────────────────
   useEffect(() => {
     if (!user) { setProfile(null); setLoading(false); return; }
+
+    let cancelled = false;
+    setLoading(true);
 
     supabase
       .from('profiles')
@@ -31,45 +33,22 @@ export function useMembership(user) {
       .eq('id', user.id)
       .single()
       .then(({ data, error }) => {
-        setProfile(error || !data ? EMPTY : data);
-        setLoading(false);
+        if (!cancelled) {
+          setProfile(error || !data ? EMPTY : data);
+          setLoading(false);
+        }
       });
-  }, [user]);
 
-  // ── Realtime: update instantly when Stripe webhook fires ────────────────────
-  useEffect(() => {
-    if (!user) return;
-
-    const ch = supabase
-      .channel(`membership-profile-${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
-        ({ new: row }) => {
-          if (!row) return;
-          setProfile((prev) => ({
-            ...(prev ?? EMPTY),
-            subscription_active: row.subscription_active ?? prev?.subscription_active ?? false,
-            subscription_status: row.subscription_status ?? prev?.subscription_status ?? null,
-            current_period_end:  row.current_period_end  ?? prev?.current_period_end  ?? null,
-          }));
-        },
-      )
-      .subscribe();
-
-    return () => supabase.removeChannel(ch);
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   // ── Derived values (backward-compatible) ────────────────────────────────────
-  const isActive          = !!profile?.subscription_active;
+  const isActive           = !!profile?.subscription_active;
   const subscriptionStatus = profile?.subscription_status ?? null;
-  const currentPeriodEnd  = profile?.current_period_end  ?? null;
-
-  // Derive tier from active state (all paid plans are 'monthly' in this system)
-  const tier = isActive ? 'monthly' : 'free';
-  const meta = TIER_META[tier];
-
-  const expiresAt = currentPeriodEnd
+  const currentPeriodEnd   = profile?.current_period_end  ?? null;
+  const tier               = isActive ? 'monthly' : 'free';
+  const meta               = TIER_META[tier];
+  const expiresAt          = currentPeriodEnd
     ? new Date(currentPeriodEnd).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric',
       })

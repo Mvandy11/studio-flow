@@ -24,7 +24,6 @@ export function useMembership(): UseMembershipResult {
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
 
-  // ── Initial fetch from profiles ────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id) {
       setMembership(null);
@@ -42,11 +41,7 @@ export function useMembership(): UseMembershipResult {
       .single()
       .then(({ data, error: err }) => {
         if (cancelled) return;
-        if (err || !data) {
-          setMembership(EMPTY);
-        } else {
-          setMembership(data as ProfileSubscription);
-        }
+        setMembership(err || !data ? EMPTY : (data as ProfileSubscription));
         setLoading(false);
       })
       .catch((err: Error) => {
@@ -57,30 +52,6 @@ export function useMembership(): UseMembershipResult {
       });
 
     return () => { cancelled = true; };
-  }, [user?.id]);
-
-  // ── Realtime: update instantly when Stripe webhook fires ──────────────────
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const ch = supabase
-      .channel(`mod-membership-profile-${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
-        ({ new: row }: { new: Record<string, unknown> }) => {
-          if (!row) return;
-          setMembership((prev) => ({
-            ...(prev ?? EMPTY),
-            subscription_active: (row.subscription_active as boolean)  ?? prev?.subscription_active ?? false,
-            subscription_status: (row.subscription_status as string | null) ?? prev?.subscription_status ?? null,
-            current_period_end:  (row.current_period_end  as string | null) ?? prev?.current_period_end  ?? null,
-          }));
-        },
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
   const hasAccess = requireMembership({
