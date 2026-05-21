@@ -1,0 +1,70 @@
+You are modifying a Vite + React frontend. Fix all Supabase Realtime usage so that the app no longer throws:
+
+"cannot add `postgres_changes` callbacks after `subscribe()`"
+
+This error happens when `.on()` listeners are attached AFTER `.subscribe()`, or when React re-renders and creates duplicate channels. Fix ALL realtime code across the project.
+
+────────────────────────────
+TASKS — DO ALL OF THE FOLLOWING
+────────────────────────────
+
+1. SEARCH the entire project for any Supabase realtime channel creation:
+   - supabase.channel(...)
+   - .subscribe()
+   - .on('postgres_changes', ...)
+   - free_chat
+   - free_chat_replies
+   - thread:<id>
+   - chat_messages
+   - any realtime listener
+
+2. ENSURE the correct Supabase client is used:
+   import supabase from "../lib/supabaseClient";
+
+3. FIX THE REALTIME PATTERN:
+   Replace ANY pattern like:
+
+     const channel = supabase.channel(name).subscribe();
+     channel.on('postgres_changes', {...}, callback);
+
+   WITH the correct pattern:
+
+     const channel = supabase
+       .channel(name)
+       .on('postgres_changes', { ... }, callback)
+       .subscribe();
+
+   All `.on()` listeners MUST be attached BEFORE `.subscribe()`.
+
+4. FIX REACT LIFECYCLE ISSUES:
+   - Wrap channel creation inside a single useEffect.
+   - useEffect MUST depend only on the threadId or chatId.
+   - DO NOT create a new channel on every render.
+   - DO NOT attach listeners dynamically after subscribe.
+
+5. ADD CLEANUP:
+   Every realtime channel must be removed on unmount:
+
+     return () => {
+       supabase.removeChannel(channel);
+     };
+
+6. ENSURE ONLY ONE CHANNEL PER THREAD:
+   - If the component is a reply thread, create ONE channel for that threadId.
+   - Do NOT create multiple channels for the same thread.
+   - Do NOT attach multiple listeners for the same event.
+
+7. REMOVE ANY OLD OR DUPLICATE REALTIME CODE:
+   - Delete unused channels.
+   - Delete any createClient() calls inside components.
+   - Delete any leftover .on() calls after subscribe.
+
+8. VERIFY:
+   - Opening a thread loads replies.
+   - New replies appear in realtime.
+   - No console errors.
+   - No “cannot add callbacks after subscribe()”.
+   - No duplicate realtime events.
+   - No memory leaks.
+
+Make all changes now.
