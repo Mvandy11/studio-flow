@@ -1,6 +1,8 @@
-/**
- * Typed Supabase client for Studio Flow.
- * Re-exports the shared singleton from supabase.js so there is exactly
- * one client instance throughout the app (avoids duplicate auth state).
- */
-export { supabase as supabaseClient } from './supabase';
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export default supabase;
