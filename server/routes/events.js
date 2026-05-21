@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import supabase from '../supabase/supabase.js';
+import supabaseAdmin from '../supabase/supabaseAdmin.js';
 
 const router = Router();
 
@@ -34,16 +35,17 @@ async function requireAdmin(req, res) {
     res.status(401).json({ error: 'Authentication required.' });
     return null;
   }
-  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(authHeader.slice(7));
   if (error || !user) { res.status(401).json({ error: 'Authentication required.' }); return null; }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profile?.role !== 'creator_admin') {
+  const r = profile?.role;
+  if (r !== 'admin' && r !== 'creator_admin') {
     res.status(403).json({ error: 'Admin access required.' });
     return null;
   }

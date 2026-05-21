@@ -34,23 +34,12 @@ export default function EventSlotView() {
     setLoading(true);
     setError('');
     try {
-      const { data, error: err } = await supabase
-        .from('event_slots')
-        .select('id, title, description, price, event_type, event_mode, user_id, video_url, stream_key')
-        .eq('id', slotId)
-        .maybeSingle();
-
-      if (err || !data) { setError('Event not found.'); setLoading(false); return; }
-      setSlot(data);
-
-      // Load linked events row (created at slot approval time)
-      const { data: linked } = await supabase
-        .from('events')
-        .select('id, event_mode, stream_key, stream_url, video_url, status')
-        .eq('live_room_id', slotId)
-        .maybeSingle();
-
-      setEvent(linked || null);
+      const json = await api(`/api/event-slots/${slotId}`);
+      if (!json?.slot) { setError('Event not found.'); return; }
+      setSlot(json.slot);
+      setEvent(json.event || null);
+    } catch (err) {
+      setError(err.message || 'Event not found.');
     } finally {
       setLoading(false);
     }
