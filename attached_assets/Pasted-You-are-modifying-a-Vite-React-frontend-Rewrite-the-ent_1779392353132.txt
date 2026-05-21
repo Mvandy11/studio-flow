@@ -1,0 +1,103 @@
+You are modifying a Vite + React frontend. Rewrite the entire free‑chat system so that it is stable, realtime, and does not throw any Supabase Realtime errors. DO NOT modify any Supabase tables, RLS policies, or backend routes. This is a frontend-only rewrite.
+
+────────────────────────────
+GOALS
+────────────────────────────
+
+1. Free chat must:
+   - Load messages reliably
+   - Post messages instantly
+   - Receive realtime updates
+   - Support threaded replies
+   - Never duplicate channels
+   - Never attach listeners after subscribe()
+   - Never leak channels on unmount
+   - Never flicker or reload unnecessarily
+
+2. Realtime must:
+   - Use ONE channel per chat or thread
+   - Attach ALL listeners BEFORE subscribe()
+   - Clean up channels on unmount
+   - Never re-subscribe on every render
+
+3. The system must use ONLY:
+   import supabase from "../lib/supabaseClient";
+
+4. DO NOT create any new Supabase clients.
+
+────────────────────────────
+REWRITE REQUIREMENTS
+────────────────────────────
+
+1. SEARCH the entire project for free‑chat code:
+   - free_chat
+   - free_chat_posts
+   - free_chat_replies
+   - chat_messages
+   - thread:<id>
+   - any realtime listener
+
+2. REWRITE the main free chat component:
+   - On mount: load initial messages via backend API
+   - Create ONE realtime channel:
+       supabase
+         .channel("free_chat")
+         .on('postgres_changes', { event: 'INSERT', table: 'free_chat_posts' }, callback)
+         .subscribe();
+   - On unmount: supabase.removeChannel(channel)
+
+3. REWRITE the reply thread component:
+   - On mount: load replies for that thread
+   - Create ONE realtime channel for that thread:
+       supabase
+         .channel(`thread:${threadId}`)
+         .on('postgres_changes', { event: 'INSERT', table: 'free_chat_replies', filter: `thread_id=eq.${threadId}` }, callback)
+         .subscribe();
+   - On unmount: supabase.removeChannel(channel)
+
+4. FIX ALL BAD PATTERNS:
+   Replace ANY of these:
+     const channel = supabase.channel(name).subscribe();
+     channel.on('postgres_changes', ...)
+
+   WITH:
+     const channel = supabase
+       .channel(name)
+       .on('postgres_changes', {...}, callback)
+       .subscribe();
+
+5. ENSURE React does NOT:
+   - Create channels on every render
+   - Attach listeners after subscribe
+   - Create multiple channels for the same thread
+   - Re-subscribe when state changes
+
+6. USE THIS REACT PATTERN FOR ALL REALTIME:
+   useEffect(() => {
+     const channel = supabase
+       .channel(name)
+       .on('postgres_changes', {...}, callback)
+       .subscribe();
+
+     return () => {
+       supabase.removeChannel(channel);
+     };
+   }, [name]);
+
+7. CLEAN UP:
+   - Remove unused realtime code
+   - Remove duplicate listeners
+   - Remove any createClient() calls
+   - Remove any dynamic .on() calls after subscribe
+
+8. VERIFY:
+   - Free chat loads messages
+   - Replies load correctly
+   - New messages appear in realtime
+   - New replies appear in realtime
+   - No console errors
+   - No “cannot add postgres_changes after subscribe()”
+   - No duplicate events
+   - No memory leaks
+
+Make all changes now.

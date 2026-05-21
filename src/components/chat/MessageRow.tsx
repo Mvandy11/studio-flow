@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { ChatMessage } from '../../lib/types';
 import { useReactions, addReaction, removeReaction } from '../../modules/chat';
+import { useReplyCount } from '../../modules/chat/threads';
 import { useAuth } from '../../hooks/useAuth';
-import { useThread } from '../../modules/chat/threads';
 import MembershipBadge from '../MembershipBadge';
 
 const REACTION_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '👏'];
@@ -33,17 +33,29 @@ interface MessageRowProps {
 
 export default function MessageRow({ msg, isSelf, isOnline, onReply, onOpenThread }: MessageRowProps) {
   const { user } = useAuth();
-  const { grouped } = useReactions(msg.id);
-  const { replyCount } = useThread(msg.id);
+
+  // useReplyCount: one-time fetch, NO realtime channel per message.
+  // useReactions:  one-time fetch, NO realtime channel per message.
+  // This prevents creating hundreds of channels when a channel has many messages.
+  // The open ThreadView (via useThread) handles realtime for the one active thread.
+  const { replyCount, refresh: refreshReplyCount } = useReplyCount(msg.id);
+  const { grouped, refetch: refetchReactions }     = useReactions(msg.id);
+
   const [showPicker, setShowPicker] = useState(false);
 
   async function handleReaction(reactionStr: string) {
     if (!user?.id) return;
     const alreadyReacted = grouped.find((g) => g.reaction === reactionStr)?.userIds.includes(user.id);
-    if (alreadyReacted) {
-      await removeReaction(msg.id, user.id, reactionStr);
-    } else {
-      await addReaction(msg.id, user.id, reactionStr);
+    try {
+      if (alreadyReacted) {
+        await removeReaction(msg.id, user.id, reactionStr);
+      } else {
+        await addReaction(msg.id, user.id, reactionStr);
+      }
+      // Refresh the local reactions so the UI reflects the change immediately
+      await refetchReactions();
+    } catch {
+      // silently ignore duplicate / not-found errors
     }
     setShowPicker(false);
   }

@@ -11,7 +11,7 @@ export type { OnlineUser }       from './presence';
 export { addReaction, removeReaction, useReactions } from './reactions';
 export type { Reaction, ReactionGroup }              from './reactions';
 
-export { getThread, replyToMessage, useThread } from './threads';
+export { getThread, replyToMessage, useThread, useReplyCount } from './threads';
 
 export { sendAnnouncement } from './announcements';
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 export interface Reaction {
@@ -45,36 +45,40 @@ export async function removeReaction(
     .eq('reaction', reaction);
 }
 
-/** Subscribe to live reactions for a single message. */
+/**
+ * Load reactions for a single message.
+ *
+ * Does NOT create a realtime channel — mounting one channel per message in
+ * a list of 150 messages would exhaust Supabase's concurrent channel limit
+ * and trigger "cannot add postgres_changes callbacks after subscribe()".
+ *
+ * Instead, reactions are loaded on mount and can be refreshed by calling
+ * the returned `refetch` function (e.g. after the current user reacts).
+ * Other users' reactions will appear on the next navigation / component mount.
+ */
 export function useReactions(messageId: string | null) {
   const [reactions, setReactions] = useState<Reaction[]>([]);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!messageId) return;
+    const { data } = await supabase
+      .from('message_reactions')
+      .select('*')
+      .eq('message_id', messageId);
+    setReactions((data ?? []) as Reaction[]);
+  }, [messageId]);
 
-    // Initial load
+  useEffect(() => {
+    let mounted = true;
+    if (!messageId) return;
     supabase
       .from('message_reactions')
       .select('*')
       .eq('message_id', messageId)
-      .then(({ data }) => setReactions((data ?? []) as Reaction[]));
-
-    // Realtime: subscribe to INSERT and DELETE
-    const ch = supabase
-      .channel(`reactions:${messageId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'message_reactions', filter: `message_id=eq.${messageId}` },
-        (p) => setReactions((prev) => [...prev, p.new as Reaction]),
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'message_reactions', filter: `message_id=eq.${messageId}` },
-        (p) => setReactions((prev) => prev.filter((r) => r.id !== p.old.id)),
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(ch); };
+      .then(({ data }) => {
+        if (mounted) setReactions((data ?? []) as Reaction[]);
+      });
+    return () => { mounted = false; };
   }, [messageId]);
 
   /** Aggregate reactions into groups by reaction string. */
@@ -87,5 +91,5 @@ export function useReactions(messageId: string | null) {
     }, {}),
   );
 
-  return { reactions, grouped };
+  return { reactions, grouped, refetch: load };
 }
