@@ -1,5 +1,5 @@
 import express from 'express';
-import supabase from '../supabase/supabase.js';
+import supabaseAdmin from '../supabase/supabaseAdmin.js';
 import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
@@ -8,7 +8,7 @@ const router = express.Router();
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return null;
-  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(authHeader.slice(7));
   if (error || !user) return null;
   return user;
 }
@@ -17,7 +17,7 @@ async function requireAdmin(req, res) {
   const user = await getUserFromHeader(req);
   if (!user) { res.status(401).json({ error: 'Authentication required.' }); return null; }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -33,13 +33,39 @@ async function requireAdmin(req, res) {
 
 // ── Admin data GET routes ────────────────────────────────────────
 
+// GET /api/admin/counts — aggregate counts for the dashboard overview
+router.get('/counts', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const [
+      { count: totalMembers },
+      { count: subscribers },
+      { count: eventRequests },
+    ] = await Promise.all([
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).eq('subscription_active', true),
+      supabaseAdmin.from('custom_event_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    ]);
+
+    res.json({
+      total_members:   totalMembers   ?? 0,
+      subscribers:     subscribers    ?? 0,
+      event_requests:  eventRequests  ?? 0,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/admin/contests
 router.get('/contests', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('contests')
       .select('*')
       .order('created_at', { ascending: false });
@@ -57,7 +83,7 @@ router.get('/events', async (req, res) => {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('events')
       .select('*')
       .order('created_at', { ascending: false });
@@ -75,7 +101,7 @@ router.get('/announcements', async (req, res) => {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('announcements')
       .select('*')
       .order('pinned', { ascending: false })
@@ -94,7 +120,7 @@ router.get('/submissions', async (req, res) => {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const { data: allSubs } = await supabase
+    const { data: allSubs } = await supabaseAdmin
       .from('submissions')
       .select('*, contests(title)')
       .order('created_at', { ascending: false })
@@ -138,13 +164,12 @@ router.get('/academy', async (req, res) => {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    // Try the academy_content table first, fall back gracefully
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('academy_content')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error && error.code !== '42P01') throw error; // 42P01 = table not found
+    if (error && error.code !== '42P01') throw error;
     res.json({ data: data || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -157,10 +182,9 @@ router.get('/subscription', async (req, res) => {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    // Return subscription tier info and member counts
     const [{ count: total }, { count: premierCount }] = await Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).not('stripe_customer_id', 'is', null),
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).not('stripe_customer_id', 'is', null),
     ]);
 
     res.json({
@@ -173,6 +197,77 @@ router.get('/subscription', async (req, res) => {
         ],
       },
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Event requests admin routes ──────────────────────────────────
+
+// GET /api/admin/event-requests
+router.get('/event-requests', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { data, error } = await supabaseAdmin
+      .from('custom_event_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/admin/event-requests/:id
+router.patch('/event-requests/:id', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { id } = req.params;
+    const allowed = ['status', 'processed_at'];
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([k]) => allowed.includes(k))
+    );
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('custom_event_requests')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Subscription history (last 6 months) ────────────────────────
+
+// GET /api/admin/subscription-history
+router.get('/subscription-history', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { data: profileRows } = await supabaseAdmin
+      .from('profiles')
+      .select('subscription_active, subscription_status, updated_at')
+      .not('subscription_status', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(500);
+
+    res.json({ data: profileRows || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -192,8 +287,7 @@ router.post('/approve', async (req, res) => {
       return res.status(400).json({ error: 'submission_id, title, and password are required.' });
     }
 
-    // 1. Fetch the submission
-    const { data: submission, error: fetchErr } = await supabase
+    const { data: submission, error: fetchErr } = await supabaseAdmin
       .from('submissions')
       .select('*')
       .eq('id', submission_id)
@@ -202,8 +296,7 @@ router.post('/approve', async (req, res) => {
     if (fetchErr) throw fetchErr;
     if (!submission) return res.status(404).json({ error: 'Submission not found.' });
 
-    // 2. Insert into event_slots
-    const { data: slot, error: slotErr } = await supabase
+    const { data: slot, error: slotErr } = await supabaseAdmin
       .from('event_slots')
       .insert([{
         user_id:       user_id || submission.user_id || null,
@@ -217,15 +310,13 @@ router.post('/approve', async (req, res) => {
 
     if (slotErr) throw slotErr;
 
-    // 3. Update submission status to approved
-    const { error: updateErr } = await supabase
+    const { error: updateErr } = await supabaseAdmin
       .from('submissions')
       .update({ status: 'approved' })
       .eq('id', submission_id);
 
     if (updateErr) throw updateErr;
 
-    // 4. Email the creator
     const creatorEmail = submission.user_email || null;
     if (creatorEmail) {
       await sendEmail({
@@ -261,8 +352,7 @@ router.post('/reject', async (req, res) => {
       return res.status(400).json({ error: 'submission_id is required.' });
     }
 
-    // Fetch submission for email
-    const { data: submission, error: fetchErr } = await supabase
+    const { data: submission, error: fetchErr } = await supabaseAdmin
       .from('submissions')
       .select('*')
       .eq('id', submission_id)
@@ -271,15 +361,13 @@ router.post('/reject', async (req, res) => {
     if (fetchErr) throw fetchErr;
     if (!submission) return res.status(404).json({ error: 'Submission not found.' });
 
-    // Update status to rejected
-    const { error: updateErr } = await supabase
+    const { error: updateErr } = await supabaseAdmin
       .from('submissions')
       .update({ status: 'rejected' })
       .eq('id', submission_id);
 
     if (updateErr) throw updateErr;
 
-    // Email the creator
     const creatorEmail = submission.user_email || null;
     if (creatorEmail) {
       await sendEmail({

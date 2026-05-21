@@ -27,20 +27,24 @@ export default function AdminEventRequests() {
     load();
   }, [authLoading, role, navigate]);
 
-  async function load() {
-    setLoading(true);
-    const { data, error: err } = await supabase
-      .from('custom_event_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (err) setError(err.message);
-    setRequests(data || []);
-    setLoading(false);
-  }
-
   async function getToken() {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token;
+  }
+
+  async function load() {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      const json = await api('/api/admin/event-requests', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRequests(json.data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleApprove() {
@@ -52,9 +56,11 @@ export default function AdminEventRequests() {
     setSaveError('');
     try {
       const token = await getToken();
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
       await api('/api/custom-events/create-slot', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers,
         body:    JSON.stringify({
           request_id: approving.id,
           user_id:    approving.user_id,
@@ -63,11 +69,11 @@ export default function AdminEventRequests() {
         }),
       });
 
-      // Mark request as approved
-      await supabase
-        .from('custom_event_requests')
-        .update({ status: 'approved', processed_at: new Date().toISOString() })
-        .eq('id', approving.id);
+      await api(`/api/admin/event-requests/${approving.id}`, {
+        method:  'PATCH',
+        headers,
+        body:    JSON.stringify({ status: 'approved', processed_at: new Date().toISOString() }),
+      });
 
       setApproving(null);
       setSlotTitle('');
@@ -82,10 +88,16 @@ export default function AdminEventRequests() {
 
   async function handleReject(id) {
     if (!confirm('Reject this request?')) return;
-    await supabase
-      .from('custom_event_requests')
-      .update({ status: 'rejected', processed_at: new Date().toISOString() })
-      .eq('id', id);
+    try {
+      const token = await getToken();
+      await api(`/api/admin/event-requests/${id}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ status: 'rejected', processed_at: new Date().toISOString() }),
+      });
+    } catch (err) {
+      setError(err.message);
+    }
     load();
   }
 

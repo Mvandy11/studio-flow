@@ -1,5 +1,5 @@
 import express from 'express';
-import supabase from '../supabase/supabase.js';
+import supabaseAdmin from '../supabase/supabaseAdmin.js';
 
 const router = express.Router();
 
@@ -17,7 +17,6 @@ function afterCutoff(arr, cutoff) {
 }
 
 // Wraps any Supabase query — always resolves to { data: [] }, never throws.
-// Protects against: empty tables, missing tables, RLS errors, network errors.
 function safe(query) {
   return query
     .then(({ data, error }) => {
@@ -34,24 +33,19 @@ function safe(query) {
 }
 
 // ── GET /api/admin/analytics?range=7d|30d|90d|all ────────────────────────────
-// All logic is inside a single try/catch so an async throw can never crash Node.
-// Every individual Supabase query is wrapped with safe() so a missing or empty
-// table always produces [] instead of null, an error object, or an exception.
-// The route always returns valid JSON — never HTML.
 router.get('/', async (req, res) => {
   try {
     // ── Auth ──────────────────────────────────────────────────────────────────
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-    // Safe destructuring — authResp.data may be null for invalid tokens
-    const authResp = await supabase.auth.getUser(token);
+    const authResp = await supabaseAdmin.auth.getUser(token);
     const user = authResp.data?.user;
     if (authResp.error || !user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -66,7 +60,7 @@ router.get('/', async (req, res) => {
     const range  = req.query.range || 'all';
     const cutoff = cutoffDate(range);
 
-    // ── Parallel queries — every one is individually fault-tolerant ───────────
+    // ── Parallel queries ──────────────────────────────────────────────────────
     const [
       contestsRes,
       eventsRes,
@@ -76,16 +70,15 @@ router.get('/', async (req, res) => {
       entriesRes,
       votesRes,
     ] = await Promise.all([
-      safe(supabase.from('contests').select('id, title, status, created_at')),
-      safe(supabase.from('events').select('id, title, created_at')),
-      safe(supabase.from('profiles').select('id, created_at')),
-      safe(supabase.from('ticket_purchases').select('id, event_id, ticket_price, created_at')),
-      safe(supabase.from('winner_history').select('id, user_id, place_number, contest_id, event_id, created_at')),
-      safe(supabase.from('contest_entries').select('id, contest_id, submitter_email, created_at').limit(2000)),
-      safe(supabase.from('contest_votes').select('id, created_at').limit(5000)),
+      safe(supabaseAdmin.from('contests').select('id, title, status, created_at')),
+      safe(supabaseAdmin.from('events').select('id, title, created_at')),
+      safe(supabaseAdmin.from('profiles').select('id, created_at')),
+      safe(supabaseAdmin.from('ticket_purchases').select('id, event_id, ticket_price, created_at')),
+      safe(supabaseAdmin.from('winner_history').select('id, user_id, place_number, contest_id, event_id, created_at')),
+      safe(supabaseAdmin.from('submissions').select('id, contest_id, user_email, created_at').not('contest_id', 'is', null).limit(2000)),
+      safe(supabaseAdmin.from('likes').select('id, created_at').limit(5000)),
     ]);
 
-    // Always arrays — safe() guarantees this
     const allContests = contestsRes.data;
     const allEvents   = eventsRes.data;
     const allProfiles = profilesRes.data;
@@ -107,7 +100,7 @@ router.get('/', async (req, res) => {
     const totalRevenue  = tickets.reduce((s, t) => s + Number(t.ticket_price || 0), 0);
     const uniqueWinners = new Set(winners.map(w => w.user_id)).size;
 
-    // ── Tickets by day (line chart) ───────────────────────────────────────────
+    // ── Tickets by day ────────────────────────────────────────────────────────
     const ticketsByDay = Object.values(
       tickets.reduce((acc, t) => {
         const day = t.created_at?.slice(0, 10);
@@ -119,7 +112,7 @@ router.get('/', async (req, res) => {
       }, {})
     ).sort((a, b) => a.date.localeCompare(b.date));
 
-    // ── Revenue by event (bar chart) ──────────────────────────────────────────
+    // ── Revenue by event ──────────────────────────────────────────────────────
     const revenueByEvent = Object.values(
       allTickets.reduce((acc, t) => {
         if (!t.event_id) return acc;
@@ -136,7 +129,7 @@ router.get('/', async (req, res) => {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 8);
 
-    // ── Winners by place (pie chart) ──────────────────────────────────────────
+    // ── Winners by place ──────────────────────────────────────────────────────
     const winnersByPlace = Object.entries(
       allWinners.reduce((acc, w) => {
         const p = w.place_number || 1;
@@ -147,7 +140,7 @@ router.get('/', async (req, res) => {
       .map(([place, count]) => ({ place: Number(place), count, name: `Place ${place}` }))
       .sort((a, b) => a.place - b.place);
 
-    // ── New users by week (bar chart) ─────────────────────────────────────────
+    // ── New users by week ─────────────────────────────────────────────────────
     const usersByWeek = Object.values(
       allProfiles.reduce((acc, p) => {
         if (!p.created_at) return acc;
@@ -174,7 +167,7 @@ router.get('/', async (req, res) => {
     const entryMap = allEntries.reduce((acc, e) => {
       if (!acc[e.contest_id]) acc[e.contest_id] = { count: 0, emails: new Set() };
       acc[e.contest_id].count++;
-      if (e.submitter_email) acc[e.contest_id].emails.add(e.submitter_email);
+      if (e.user_email) acc[e.contest_id].emails.add(e.user_email);
       return acc;
     }, {});
     const winnerContestMap = allWinners.reduce((acc, w) => {
@@ -195,26 +188,23 @@ router.get('/', async (req, res) => {
 
     // ── Recent activity feed ──────────────────────────────────────────────────
     const activity = [
-      ...contests.map(c => ({ type: 'contest', icon: '🎵', text: `Contest created: "${c.title}"`,                         ts: c.created_at })),
-      ...events.map(e   => ({ type: 'event',   icon: '🎤', text: `Event created: "${e.title}"`,                           ts: e.created_at })),
-      ...profiles.map(p => ({ type: 'user',    icon: '👤', text: 'New user registered',                                   ts: p.created_at })),
+      ...contests.map(c => ({ type: 'contest', icon: '🎵', text: `Contest created: "${c.title}"`,                            ts: c.created_at })),
+      ...events.map(e   => ({ type: 'event',   icon: '🎤', text: `Event created: "${e.title}"`,                              ts: e.created_at })),
+      ...profiles.map(p => ({ type: 'user',    icon: '👤', text: 'New user registered',                                      ts: p.created_at })),
       ...tickets.map(t  => ({ type: 'ticket',  icon: '🎟', text: `Ticket purchased — $${Number(t.ticket_price).toFixed(2)}`, ts: t.created_at })),
-      ...winners.map(w  => ({ type: 'winner',  icon: '🏆', text: `Winner selected — place #${w.place_number}`,            ts: w.created_at })),
+      ...winners.map(w  => ({ type: 'winner',  icon: '🏆', text: `Winner selected — place #${w.place_number}`,               ts: w.created_at })),
     ]
       .filter(a => a.ts)
       .sort((a, b) => b.ts.localeCompare(a.ts))
       .slice(0, 20);
 
-    // ── Response — always valid JSON ──────────────────────────────────────────
     res.json({
-      // Flat summary (empty-state safe — zeros when all tables are empty)
       contests:    contests.length,
       submissions: entries.length,
       votes:       votes.length,
       events:      events.length,
       revenue:     totalRevenue,
 
-      // Detailed totals block (used by AdminAnalyticsDashboard stat cards)
       totals: {
         contests:        contests.length,
         events:          events.length,
@@ -227,7 +217,6 @@ router.get('/', async (req, res) => {
         uniqueWinners,
       },
 
-      // Chart data (empty arrays when no data — never null)
       ticketsByDay,
       revenueByEvent,
       winnersByPlace,
@@ -238,7 +227,6 @@ router.get('/', async (req, res) => {
     });
   } catch (err) {
     console.error('[analytics] unhandled error:', err.message);
-    // Always return valid JSON — never HTML
     res.status(500).json({
       error:       'Failed to load analytics data.',
       contests:    0,

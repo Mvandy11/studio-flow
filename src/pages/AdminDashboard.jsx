@@ -161,90 +161,61 @@ export default function AdminDashboard() {
 
   async function loadAll() {
     setLoading(true);
-    let c = [], e = [], s = [], dash = [];
+    let c = [], e = [], s = [], anns = [], genSubs = [];
     try {
-      const results = await Promise.all([
-        supabase.from('contests').select('*').order('created_at', { ascending: false }).limit(50),
-        supabase.from('events').select('*').order('created_at', { ascending: false }).limit(50),
-        supabase.from('submissions').select('*, contests(title)').not('contest_id', 'is', null).order('created_at', { ascending: false }).limit(100),
-        supabase.from('admin_contest_dashboard').select('*').limit(100)
-          .then(({ data, error }) => {
-            if (error) {
-              console.warn('[AdminDashboard] admin_contest_dashboard:', error.message);
-              return { data: [] };
-            }
-            return { data: data ?? [] };
-          })
-          .catch((err) => {
-            console.warn('[AdminDashboard] admin_contest_dashboard unexpected:', err?.message);
-            return { data: [] };
-          }),
+      const token = await getToken();
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [contestsJson, eventsJson, adminSubsJson, annJson, genSubJson, countsJson, histJson] = await Promise.allSettled([
+        api('/api/admin/contests',              { headers }),
+        api('/api/admin/events',                { headers }),
+        api('/api/admin/submissions',           { headers }),
+        api('/api/announcements',               { headers }),
+        api('/api/submissions',                 { headers }),
+        api('/api/admin/counts',                { headers }),
+        api('/api/admin/subscription-history',  { headers }),
       ]);
-      c    = results[0].data || [];
-      e    = results[1].data || [];
-      s    = results[2].data || [];
-      dash = results[3].data || [];
+
+      c       = contestsJson.status   === 'fulfilled' ? (contestsJson.value.data  || [])            : [];
+      e       = eventsJson.status     === 'fulfilled' ? (eventsJson.value.data    || [])             : [];
+      s       = adminSubsJson.status  === 'fulfilled' ? (adminSubsJson.value.data?.submissions || []) : [];
+      anns    = annJson.status        === 'fulfilled' ? (annJson.value.data       || [])             : [];
+      genSubs = genSubJson.status     === 'fulfilled' ? (Array.isArray(genSubJson.value) ? genSubJson.value : []) : [];
+
+      if (countsJson.status === 'fulfilled') {
+        const counts = countsJson.value;
+        setEventRequests(counts.event_requests ?? 0);
+        setMemberCount(counts.total_members    ?? 0);
+        const liveSubCount = counts.subscribers ?? 0;
+        const storedSub = localStorage.getItem('admin_subscriber_count');
+        setSubscriberCount(storedSub !== null ? Number(storedSub) : liveSubCount);
+      }
+
+      if (histJson.status === 'fulfilled') {
+        const profileRows = histJson.value.data || [];
+        const mappedRows = profileRows.map((p) => ({
+          started_at: p.subscription_active ? p.updated_at : null,
+          is_active:  p.subscription_active,
+          updated_at: p.updated_at,
+        }));
+        setSubHistory(buildMonthlyHistory(mappedRows));
+      } else {
+        setSubHistory(buildMonthlyHistory([]));
+      }
     } catch (err) {
       console.warn('[AdminDashboard] loadAll error:', err?.message);
     }
 
-    let anns = [];
-    let genSubs = [];
-    try {
-      const token = await getToken();
-      const [annJson, subJson] = await Promise.all([
-        api('/api/announcements', { headers: { Authorization: `Bearer ${token}` } }),
-        api('/api/submissions',   { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      anns    = annJson.data  || [];
-      genSubs = Array.isArray(subJson) ? subJson : [];
-    } catch (_) {}
-
-    setContests(c || []);
-    setContestDash(dash || []);
-    setEvents(e || []);
-    setSubmissions(s || []);
+    setContests(c);
+    setContestDash([]);
+    setEvents(e);
+    setSubmissions(s);
     setGenSubmissions(genSubs);
     setAnnouncements(anns);
-    // Extra live counts
-    const [erRes, memRes, subRes] = await Promise.allSettled([
-      supabase.from('custom_event_requests').select('id', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_active', true),
-    ]);
-
-    setEventRequests(erRes.status  === 'fulfilled' ? (erRes.value.count  ?? 0) : 0);
-    setMemberCount  (memRes.status === 'fulfilled' ? (memRes.value.count ?? 0) : 0);
-
-    // Subscriber count: prefer admin-set localStorage override, else live DB count
-    const liveSubCount = subRes.status === 'fulfilled' ? (subRes.value.count ?? 0) : 0;
-    const storedSub    = localStorage.getItem('admin_subscriber_count');
-    setSubscriberCount(storedSub !== null ? Number(storedSub) : liveSubCount);
-
-    // Monthly membership history (last 6 months) — sourced from profiles
-    try {
-      const { data: profileRows } = await supabase
-        .from('profiles')
-        .select('subscription_active, subscription_status, updated_at')
-        .not('subscription_status', 'is', null)
-        .order('updated_at', { ascending: false })
-        .limit(500);
-
-      // Map profiles fields to the shape buildMonthlyHistory expects
-      const mappedRows = (profileRows || []).map((p) => ({
-        started_at: p.subscription_active ? p.updated_at : null,
-        is_active:  p.subscription_active,
-        updated_at: p.updated_at,
-      }));
-      setSubHistory(buildMonthlyHistory(mappedRows));
-    } catch (_) {
-      setSubHistory(buildMonthlyHistory([]));
-    }
-
     setStats({
-      contests:      (c || []).length,
-      events:        (e || []).length,
-      submissions:   (s || []).length,   // actual contest entries
+      contests:      c.length,
+      events:        e.length,
+      submissions:   s.length,
       announcements: anns.length,
     });
     setLoading(false);
@@ -588,8 +559,8 @@ export default function AdminDashboard() {
                       {s.created_at ? formatDistanceToNow(new Date(s.created_at), { addSuffix: true }) : ''}
                     </p>
                   </div>
-                  {s.file_url && (
-                    <a href={s.file_url} target="_blank" rel="noopener noreferrer" className="admin-action-btn">
+                  {s.media_url && (
+                    <a href={s.media_url} target="_blank" rel="noopener noreferrer" className="admin-action-btn">
                       View File
                     </a>
                   )}
@@ -879,19 +850,19 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 {submissions.map((s) => (
                   <div key={s.id} className="admin-submission-card">
-                    {s.file_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(s.file_url) && (
-                      <img src={s.file_url} alt={s.title} className="admin-submission-thumb" />
+                    {s.media_url && /\.(jpg|jpeg|png|gif|webp)$/i.test(s.media_url) && (
+                      <img src={s.media_url} alt={s.title} className="admin-submission-thumb" />
                     )}
                     <div className="admin-submission-body">
                       <p className="admin-submission-title">{s.title}</p>
                       <p className="admin-submission-meta">
-                        {s.contests?.title || 'Unknown contest'} · {s.submitter_email || '—'} ·{' '}
+                        {s.contests?.title || 'Unknown contest'} · {s.user_email || '—'} ·{' '}
                         {s.created_at ? formatDistanceToNow(new Date(s.created_at), { addSuffix: true }) : ''}
                       </p>
                       {s.description && <p style={{ fontSize: '0.82rem', opacity: 0.6, margin: '0.25rem 0 0' }}>{s.description}</p>}
                     </div>
-                    {s.file_url && (
-                      <a href={s.file_url} target="_blank" rel="noopener noreferrer" className="admin-action-btn">
+                    {s.media_url && (
+                      <a href={s.media_url} target="_blank" rel="noopener noreferrer" className="admin-action-btn">
                         View
                       </a>
                     )}
