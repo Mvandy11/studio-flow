@@ -124,42 +124,54 @@ export function AuthProvider({ children }) {
 
   // ── Auth state subscription ───────────────────────────────────────────────
   useEffect(() => {
-    let cancelled      = false;
-    let firstEventSeen = false;
+    let cancelled = false;
 
-    // Safety net: if INITIAL_SESSION never fires within 6 s, unblock the UI.
-    const safetyTimeout = setTimeout(() => {
-      if (!firstEventSeen && !cancelled) {
-        console.warn('[auth] INITIAL_SESSION did not fire in 6 s — defaulting to signed-out');
-        firstEventSeen = true;
-        setUser(null);
-        setRole(ROLES.USER);
-        setLoading(false);
+    // ── Step 1: Seed initial state via getUser() ─────────────────────────────
+    // getUser() verifies the stored JWT against the Supabase Auth server and
+    // sets the initial user synchronously — no waiting for INITIAL_SESSION.
+    async function seed() {
+      try {
+        const { data: { user: initialUser } } = await supabase.auth.getUser();
+        if (cancelled) return;
+
+        if (initialUser) {
+          // getUser() doesn't return a session, so we fetch it to get the JWT
+          // for profile resolution (one extra cache-read, no extra network call).
+          const { data: { session } } = await supabase.auth.getSession();
+          await applySession(initialUser, session?.access_token ?? null);
+        } else {
+          setUser(null);
+          setRole(ROLES.USER);
+        }
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+          setRole(ROLES.USER);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }, 6000);
+    }
+    seed();
 
+    // ── Step 2: Global listener for all subsequent auth changes ──────────────
+    // INITIAL_SESSION is skipped — initial state is owned by seed() above.
+    // SIGNED_IN / SIGNED_OUT / USER_UPDATED / TOKEN_REFRESHED are all handled.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (cancelled) return;
 
-        const isSubsequent = firstEventSeen &&
-          (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED');
-        if (isSubsequent) setLoading(true);
+        // INITIAL_SESSION fires right after subscription — already handled above.
+        if (event === 'INITIAL_SESSION') return;
 
-        // Pass the JWT from the session directly — avoids a second getSession() call
+        setLoading(true);
         await applySession(session?.user ?? null, session?.access_token ?? null);
-
-        if (!firstEventSeen) {
-          firstEventSeen = true;
-          clearTimeout(safetyTimeout);
-        }
         if (!cancelled) setLoading(false);
       }
     );
 
     return () => {
       cancelled = true;
-      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, [applySession]);
