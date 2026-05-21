@@ -19,6 +19,10 @@ export default function EventSlotView() {
   const [error,       setError]       = useState('');
   const [buying,      setBuying]      = useState(false);
 
+  // Live event action state
+  const [liveAction,  setLiveAction]  = useState(false);
+  const [liveError,   setLiveError]   = useState('');
+
   // Creator mode state
   const [choosingMode,  setChoosingMode]  = useState(false);
   const [modeError,     setModeError]     = useState('');
@@ -34,7 +38,10 @@ export default function EventSlotView() {
     setLoading(true);
     setError('');
     try {
-      const json = await api(`/api/event-slots/${slotId}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = {};
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      const json = await api(`/api/live/slot/${slotId}`, { headers });
       if (!json?.slot) { setError('Event not found.'); return; }
       setSlot(json.slot);
       setEvent(json.event || null);
@@ -65,6 +72,42 @@ export default function EventSlotView() {
       setModeError(err.message);
     } finally {
       setChoosingMode(false);
+    }
+  }
+
+  async function handleStartLive() {
+    setLiveAction(true);
+    setLiveError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setLiveError('You must be logged in.'); return; }
+      await api(`/api/live/slot/${slotId}/start`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      await load();
+    } catch (err) {
+      setLiveError(err.message);
+    } finally {
+      setLiveAction(false);
+    }
+  }
+
+  async function handleEndLive() {
+    setLiveAction(true);
+    setLiveError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setLiveError('You must be logged in.'); return; }
+      await api(`/api/live/slot/${slotId}/end`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      await load();
+    } catch (err) {
+      setLiveError(err.message);
+    } finally {
+      setLiveAction(false);
     }
   }
 
@@ -111,10 +154,13 @@ export default function EventSlotView() {
 
   const isOwner    = user && slot && user.id === slot.user_id;
   const effectMode = event?.event_mode || slot?.event_mode || null;
-  const streamKey  = event?.stream_key || slot?.stream_key || null;
+  const streamKey  = slot?.stream_key  || event?.stream_key  || null;
+  const streamUrl  = slot?.stream_url  || event?.stream_url  || null;
+  const slotStatus = slot?.status || 'pending';
   const slotVideo  = event?.video_url  || slot?.video_url  || null;
   const isOpen     = slot?.event_type  === 'open';
   const price      = Number(slot?.price ?? 0);
+  const RTMP_SERVER = 'rtmp://live.studioflow.tv/live';
 
   /* ── CREATOR VIEW ────────────────────────────────────────── */
   if (isOwner) {
@@ -197,35 +243,92 @@ export default function EventSlotView() {
                 📡 Live Event Mode Selected
               </div>
 
+              {/* Stream credentials */}
               {streamKey && (
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
-                  <p style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.75rem' }}>🔑 Your Stream Key</p>
-                  <code style={{ wordBreak: 'break-all', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', color: '#a78bfa', display: 'block' }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1rem' }}>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.75rem' }}>🔑 Stream Credentials</p>
+
+                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(200,200,215,0.55)', margin: '0 0 0.2rem' }}>RTMP Server</p>
+                  <code style={{ wordBreak: 'break-all', background: 'rgba(0,0,0,0.3)', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', color: '#34d399', display: 'block', marginBottom: '0.75rem' }}>
+                    {RTMP_SERVER}
+                  </code>
+
+                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(200,200,215,0.55)', margin: '0 0 0.2rem' }}>Stream Key</p>
+                  <code style={{ wordBreak: 'break-all', background: 'rgba(0,0,0,0.3)', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', color: '#a78bfa', display: 'block', marginBottom: '0.5rem' }}>
                     {streamKey}
                   </code>
-                  <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)', marginTop: '0.5rem' }}>
-                    Use this key in OBS, Streamlabs, or any RTMP streaming software.
-                  </p>
+
+                  {streamUrl && (
+                    <>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(200,200,215,0.55)', margin: '0 0 0.2rem' }}>Full RTMP URL</p>
+                      <code style={{ wordBreak: 'break-all', background: 'rgba(0,0,0,0.3)', padding: '0.4rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', color: 'rgba(200,200,215,0.6)', display: 'block' }}>
+                        {streamUrl}
+                      </code>
+                    </>
+                  )}
                 </div>
               )}
 
-              <div style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '12px', padding: '1rem', fontSize: '0.85rem', color: 'rgba(200,200,215,0.65)' }}>
-                <p style={{ margin: '0 0 0.5rem', fontWeight: 600 }}>Next steps:</p>
-                <ol style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <li>Open your streaming software (OBS, Streamlabs, etc.)</li>
-                  <li>Paste your stream key into the RTMP settings</li>
-                  <li>Set the RTMP URL to your Studio Flow stream endpoint</li>
-                  <li>Start streaming — your audience will see you go live!</li>
+              {/* OBS instructions */}
+              <div style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '12px', padding: '1rem', fontSize: '0.82rem', color: 'rgba(200,200,215,0.65)', marginBottom: '1.25rem' }}>
+                <p style={{ margin: '0 0 0.5rem', fontWeight: 700, color: '#a78bfa' }}>📺 OBS / Streamlabs Setup</p>
+                <ol style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <li>Open OBS → Settings → Stream</li>
+                  <li>Service: <strong style={{ color: '#fff' }}>Custom...</strong></li>
+                  <li>Server: <strong style={{ color: '#34d399' }}>{RTMP_SERVER}</strong></li>
+                  <li>Stream Key: paste the key above</li>
+                  <li>Click <strong style={{ color: '#fff' }}>Apply</strong>, then <strong style={{ color: '#fff' }}>Start Streaming</strong></li>
                 </ol>
               </div>
 
-              <button
-                onClick={() => handleChooseMode('recorded')}
-                disabled={choosingMode}
-                style={{ marginTop: '1rem', width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(200,200,215,0.45)', fontSize: '0.78rem', cursor: 'pointer' }}
-              >
-                Switch to Recorded Event instead
-              </button>
+              {/* Live event status controls */}
+              {liveError && (
+                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '0.6rem 0.875rem', color: '#fca5a5', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
+                  {liveError}
+                </div>
+              )}
+
+              {slotStatus === 'pending' && (
+                <button
+                  onClick={handleStartLive}
+                  disabled={liveAction}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: 'none', background: liveAction ? 'rgba(167,139,250,0.3)' : 'rgba(167,139,250,0.2)', color: '#a78bfa', fontWeight: 800, fontSize: '0.95rem', cursor: liveAction ? 'not-allowed' : 'pointer', marginBottom: '0.75rem' }}
+                >
+                  {liveAction ? 'Starting…' : '🔴 Start Live Event'}
+                </button>
+              )}
+
+              {slotStatus === 'live' && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', padding: '0.5rem', marginBottom: '0.75rem' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', boxShadow: '0 0 6px #ef4444' }} />
+                    <span style={{ fontWeight: 700, color: '#ef4444', fontSize: '0.88rem' }}>LIVE NOW</span>
+                  </div>
+                  <button
+                    onClick={handleEndLive}
+                    disabled={liveAction}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: 'none', background: liveAction ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)', color: '#f87171', fontWeight: 800, fontSize: '0.95rem', cursor: liveAction ? 'not-allowed' : 'pointer' }}
+                  >
+                    {liveAction ? 'Ending…' : '⏹ End Live Event'}
+                  </button>
+                </div>
+              )}
+
+              {slotStatus === 'ended' && (
+                <div style={{ textAlign: 'center', padding: '0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(200,200,215,0.45)', fontSize: '0.88rem', marginBottom: '0.75rem' }}>
+                  ✓ Event Ended
+                </div>
+              )}
+
+              {slotStatus !== 'ended' && (
+                <button
+                  onClick={() => handleChooseMode('recorded')}
+                  disabled={choosingMode}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(200,200,215,0.45)', fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Switch to Recorded Event instead
+                </button>
+              )}
             </div>
           )}
 

@@ -1,6 +1,5 @@
 -- Migration: add_stream_key_to_event_slots
--- Run this in your Supabase SQL Editor if the event_slots table ALREADY EXISTS
--- (created from the original migration that did not include stream_key/stream_url).
+-- Run this in your Supabase SQL Editor if the event_slots table ALREADY EXISTS.
 -- All statements are safe to re-run (IF NOT EXISTS / idempotent guards).
 --
 -- Fixes: "Could not find the 'stream_key' column of 'event_slots' in the schema cache."
@@ -9,7 +8,7 @@
 ALTER TABLE public.event_slots
   ADD COLUMN IF NOT EXISTS stream_key text;
 
--- 2. stream_url — optional RTMP / HLS ingest URL stored alongside the key
+-- 2. stream_url — full RTMP ingest URL, e.g. rtmp://live.studioflow.tv/live/<key>
 ALTER TABLE public.event_slots
   ADD COLUMN IF NOT EXISTS stream_url text;
 
@@ -17,7 +16,9 @@ ALTER TABLE public.event_slots
 ALTER TABLE public.event_slots
   ADD COLUMN IF NOT EXISTS submission_id uuid;
 
--- 4. Notify Supabase's schema cache to pick up the new columns immediately.
---    (Supabase auto-refreshes the PostgREST schema cache every ~5 seconds, but
---     running this notify is instant and avoids needing to restart the service.)
+-- 4. status — lifecycle state: pending | live | ended
+ALTER TABLE public.event_slots
+  ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';
+
+-- 5. Notify Supabase's PostgREST to reload its schema cache immediately
 NOTIFY pgrst, 'reload schema';

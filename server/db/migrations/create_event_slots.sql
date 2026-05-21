@@ -11,13 +11,14 @@ CREATE TABLE IF NOT EXISTS event_slots (
   title         text        NOT NULL,
   password      text        NOT NULL,
   stream_key    text,                     -- auto-generated on slot creation; used for live events
-  stream_url    text,                     -- RTMP / HLS ingest URL (optional)
+  stream_url    text,                     -- full RTMP ingest URL, e.g. rtmp://live.studioflow.tv/live/<key>
+  status        text        DEFAULT 'pending',  -- pending | live | ended
   video_id      uuid,                     -- set after the creator uploads their video
   video_url     text,                     -- public URL of the uploaded video
   created_at    timestamptz DEFAULT now()
 );
 
--- Allow service role full access (used by the API server with SUPABASE_SERVICE_ROLE_KEY)
+-- Allow service role full access (used by the API server)
 ALTER TABLE event_slots ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Service role full access on event_slots"
