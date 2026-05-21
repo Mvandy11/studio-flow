@@ -85,7 +85,7 @@ function TipJar({ creatorName }) {
 
 /* ── Membership card (own profile only) ────────────────────── */
 function MembershipSection({ user }) {
-  const { tier, meta, isActive, expiresAt, loading } = useMembership(user);
+  const { tier, meta, isActive, expiresAt, loading } = useMembership();
 
   if (loading) return null;
 

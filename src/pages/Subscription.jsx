@@ -6,7 +6,7 @@ import { useMembership } from '../hooks/useMembership';
 
 export default function SubscriptionPage() {
   const { user } = useAuth();
-  const { isActive, tier, loading: membershipLoading } = useMembership(user);
+  const { isActive, tier, loading: membershipLoading } = useMembership();
 
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');

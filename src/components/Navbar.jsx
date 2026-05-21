@@ -66,7 +66,7 @@ function ProfileDropdown({ user, role, membership, tier, meta, isActive, expires
 
 export default function Navbar({ onHamburger }) {
   const { user, role, logout } = useAuth();
-  const { tier, meta, isActive, expiresAt } = useMembership(user);
+  const { tier, meta, isActive, expiresAt } = useMembership();
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [profileOpen,  setProfileOpen]  = useState(false);
   const dropdownRef = useRef(null);
