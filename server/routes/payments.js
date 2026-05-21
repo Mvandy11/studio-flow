@@ -144,80 +144,30 @@ async function resolveSubscriptionInfo(eventType, obj) {
 /**
  * Look up a profile by stripe_customer_id and update subscription fields.
  * Uses the Service Role client to bypass RLS.
- *
- * @param {string} customerId   - Stripe customer ID
- * @param {string} status       - Stripe subscription status string
- * @param {string|null} periodEnd - ISO timestamptz for current_period_end
+ * Syncs ONLY the profiles table — no legacy tables.
  */
 async function syncProfileSubscription(customerId, status, periodEnd) {
-  if (!customerId) {
-    console.warn('[payments/webhook] syncProfileSubscription: no customerId — skipping');
-    return;
-  }
+  const timestamp = new Date().toISOString();
+  if (!customerId) return;
 
-  // 1. Find the matching profile
   const { data: profile, error: lookupErr } = await supabaseAdmin
     .from('profiles')
     .select('id, email')
     .eq('stripe_customer_id', customerId)
     .maybeSingle();
 
-  if (lookupErr) {
-    console.error('[payments/webhook] profile lookup error:', lookupErr.message);
-    return;
-  }
+  if (!profile || lookupErr) return;
 
-  if (!profile) {
-    console.warn(`[payments/webhook] no profile found for stripe_customer_id=${customerId} — skipping`);
-    return;
-  }
-
-  // 2. Derive active flag
   const isActive = ['active', 'trialing'].includes(status);
 
-  // 3. Build update payload
   const payload = {
     subscription_status: status,
     subscription_active: isActive,
-    updated_at:          new Date().toISOString(),
+    updated_at:          timestamp,
   };
   if (periodEnd) payload.current_period_end = periodEnd;
 
-  // 4. Apply update
-  const { data: updated, error: updateErr } = await supabaseAdmin
-    .from('profiles')
-    .update(payload)
-    .eq('id', profile.id)
-    .select('id, subscription_status, subscription_active, current_period_end');
-
-  if (updateErr) {
-    console.error(
-      `[payments/webhook] profile update error for user=${profile.id}:`,
-      updateErr.message,
-    );
-  } else {
-    console.info(
-      `[payments/webhook] profile updated | user=${profile.id} | status=${status} | active=${isActive} | period_end=${periodEnd ?? '—'}`,
-    );
-    console.info('[payments/webhook] Supabase update result:', JSON.stringify(updated));
-  }
-
-  // 5. Also keep memberships table in sync
-  const membershipPayload = {
-    user_id:    profile.id,
-    tier:       'monthly',
-    is_active:  isActive,
-    updated_at: new Date().toISOString(),
-  };
-  if (isActive) membershipPayload.started_at = membershipPayload.updated_at;
-
-  const { error: memErr } = await supabaseAdmin
-    .from('memberships')
-    .upsert(membershipPayload, { onConflict: 'user_id' });
-
-  if (memErr) {
-    console.error('[payments/webhook] memberships upsert error:', memErr.message);
-  }
+  await supabaseAdmin.from('profiles').update(payload).eq('id', profile.id);
 }
 
 // ── SUBSCRIPTION ─────────────────────────────────────────────────────────────
