@@ -12,9 +12,12 @@ CREATE TABLE IF NOT EXISTS event_slots (
   password      text        NOT NULL,
   stream_key    text,                     -- auto-generated on slot creation; used for live events
   stream_url    text,                     -- full RTMP ingest URL, e.g. rtmp://live.studioflow.tv/live/<key>
-  status        text        DEFAULT 'pending',  -- pending | live | ended
+  status        text        DEFAULT 'pending',  -- pending | live | ended | completed
   video_id      uuid,                     -- set after the creator uploads their video
-  video_url     text,                     -- public URL of the uploaded video
+  video_url     text,                     -- public URL of the uploaded video (legacy/external link)
+  recorded_video_url       text,          -- Supabase Storage URL after direct upload
+  recorded_video_thumbnail text,          -- optional thumbnail URL
+  is_recorded   boolean     DEFAULT false, -- true after a recorded video is uploaded
   created_at    timestamptz DEFAULT now()
 );
 

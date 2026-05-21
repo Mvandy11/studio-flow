@@ -23,6 +23,10 @@ export default function EventSlotView() {
   const [liveAction,  setLiveAction]  = useState(false);
   const [liveError,   setLiveError]   = useState('');
 
+  // Recorded video upload state
+  const [uploading,   setUploading]   = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
   // Creator mode state
   const [choosingMode,  setChoosingMode]  = useState(false);
   const [modeError,     setModeError]     = useState('');
@@ -111,6 +115,34 @@ export default function EventSlotView() {
     }
   }
 
+  async function handleVideoUpload(file) {
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setUploadError('You must be logged in.'); return; }
+
+      const formData = new FormData();
+      formData.append('video', file);
+
+      const res = await fetch(`/api/slot/${slotId}/upload-recorded`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body:    formData,
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `Upload failed (${res.status})`);
+
+      await load();
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handlePurchase() {
     setBuying(true);
     setError('');
@@ -157,7 +189,7 @@ export default function EventSlotView() {
   const streamKey  = slot?.stream_key  || event?.stream_key  || null;
   const streamUrl  = slot?.stream_url  || event?.stream_url  || null;
   const slotStatus = slot?.status || 'pending';
-  const slotVideo  = event?.video_url  || slot?.video_url  || null;
+  const slotVideo  = slot?.recorded_video_url || event?.video_url || slot?.video_url || null;
   const isOpen     = slot?.event_type  === 'open';
   const price      = Number(slot?.price ?? 0);
   const RTMP_SERVER = 'rtmp://live.studioflow.tv/live';
@@ -340,26 +372,103 @@ export default function EventSlotView() {
               </div>
 
               {slotVideo ? (
+                /* ── Video already linked / uploaded ── */
                 <div style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
-                  <p style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.5rem' }}>✓ Video Linked</p>
-                  <a href={slotVideo} target="_blank" rel="noopener noreferrer" style={{ color: '#34d399', fontSize: '0.82rem', wordBreak: 'break-all' }}>
-                    {slotVideo}
-                  </a>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.75rem' }}>✓ Video Ready</p>
+
+                  {/* Inline preview if it's a direct .mp4 / video file */}
+                  {/\.(mp4|webm|ogg|mov)(\?|$)/i.test(slotVideo) ? (
+                    <video
+                      src={slotVideo}
+                      controls
+                      style={{ width: '100%', borderRadius: '8px', marginBottom: '0.75rem', background: '#000' }}
+                    />
+                  ) : (
+                    <a
+                      href={slotVideo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#34d399', fontSize: '0.82rem', wordBreak: 'break-all', display: 'block', marginBottom: '0.75rem' }}
+                    >
+                      {slotVideo}
+                    </a>
+                  )}
+
+                  {/* Replace video */}
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    style={{ padding: '0.4rem 0.875rem', borderRadius: '8px', border: '1px solid rgba(52,211,153,0.3)', background: 'transparent', color: '#34d399', fontSize: '0.78rem', cursor: uploading ? 'not-allowed' : 'pointer' }}
+                  >
+                    {uploading ? 'Uploading…' : '↑ Replace Video'}
+                  </button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="video/mp4,video/quicktime,video/webm,video/x-msvideo,video/mpeg"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleVideoUpload(e.target.files[0])}
+                  />
                 </div>
               ) : (
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem', textAlign: 'center' }}>
-                  <p style={{ color: 'rgba(200,200,215,0.45)', fontSize: '0.85rem', marginBottom: '0.75rem' }}>No video linked yet</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                /* ── No video yet — upload or paste URL ── */
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(52,211,153,0.2)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.25rem' }}>
+
+                  {/* File upload drop zone */}
+                  <div
+                    onClick={() => !uploading && fileRef.current?.click()}
+                    style={{
+                      border: '2px dashed rgba(52,211,153,0.25)', borderRadius: '10px',
+                      padding: '1.5rem 1rem', textAlign: 'center', marginBottom: '1rem',
+                      cursor: uploading ? 'default' : 'pointer',
+                      background: 'rgba(52,211,153,0.04)',
+                      transition: 'border-color 0.15s',
+                    }}
+                  >
+                    <div style={{ fontSize: '2rem', marginBottom: '0.4rem' }}>
+                      {uploading ? '⏳' : '🎬'}
+                    </div>
+                    <p style={{ margin: '0 0 0.25rem', fontWeight: 600, fontSize: '0.9rem', color: uploading ? 'rgba(200,200,215,0.45)' : '#34d399' }}>
+                      {uploading ? 'Uploading…' : 'Click to upload your video'}
+                    </p>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)' }}>
+                      MP4, MOV, WebM, AVI — up to 500 MB
+                    </p>
+                  </div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="video/mp4,video/quicktime,video/webm,video/x-msvideo,video/mpeg"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleVideoUpload(e.target.files[0])}
+                  />
+
+                  {uploadError && (
+                    <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: '#fca5a5', fontSize: '0.8rem', marginBottom: '0.875rem' }}>
+                      {uploadError}
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                    <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+                    <span style={{ fontSize: '0.72rem', color: 'rgba(200,200,215,0.3)', whiteSpace: 'nowrap' }}>or paste a URL</span>
+                    <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+                  </div>
+
+                  {/* URL paste option */}
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <input
                       value={videoUrl}
                       onChange={(e) => setVideoUrl(e.target.value)}
-                      placeholder="Paste video URL (YouTube, Vimeo, .mp4…)"
-                      style={{ flex: 1, minWidth: '200px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '0.45rem 0.65rem', fontSize: '0.82rem', color: '#fff', outline: 'none' }}
+                      placeholder="YouTube, Vimeo, or direct .mp4 URL"
+                      disabled={uploading}
+                      style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0.45rem 0.65rem', fontSize: '0.82rem', color: '#fff', outline: 'none' }}
                     />
                     <button
                       onClick={() => handleChooseMode('recorded')}
-                      disabled={choosingMode || !videoUrl.trim()}
-                      style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: 'rgba(52,211,153,0.2)', color: '#34d399', fontWeight: 700, fontSize: '0.82rem', cursor: choosingMode || !videoUrl.trim() ? 'not-allowed' : 'pointer' }}
+                      disabled={choosingMode || !videoUrl.trim() || uploading}
+                      style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: 'rgba(52,211,153,0.2)', color: '#34d399', fontWeight: 700, fontSize: '0.82rem', cursor: (choosingMode || !videoUrl.trim() || uploading) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
                     >
                       {choosingMode ? 'Saving…' : 'Save URL'}
                     </button>

@@ -16,9 +16,19 @@ ALTER TABLE public.event_slots
 ALTER TABLE public.event_slots
   ADD COLUMN IF NOT EXISTS submission_id uuid;
 
--- 4. status — lifecycle state: pending | live | ended
+-- 4. status — lifecycle state: pending | live | ended | completed
 ALTER TABLE public.event_slots
   ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';
 
--- 5. Notify Supabase's PostgREST to reload its schema cache immediately
+-- 5. Recorded video support
+ALTER TABLE public.event_slots
+  ADD COLUMN IF NOT EXISTS recorded_video_url text;
+
+ALTER TABLE public.event_slots
+  ADD COLUMN IF NOT EXISTS recorded_video_thumbnail text;
+
+ALTER TABLE public.event_slots
+  ADD COLUMN IF NOT EXISTS is_recorded boolean DEFAULT false;
+
+-- 6. Notify Supabase's PostgREST to reload its schema cache immediately
 NOTIFY pgrst, 'reload schema';
