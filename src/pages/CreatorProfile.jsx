@@ -343,20 +343,33 @@ export default function CreatorProfile() {
       return;
     }
 
+    let cancelled = false;
+
     async function load() {
       setProfileLoading(true);
-      const [{ data: p }, { data: s }, { data: e }] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', profileId).maybeSingle(),
-        supabase.from('sessions').select('*').eq('creator_id', profileId).order('created_at', { ascending: false }).limit(12),
-        supabase.from('events').select('*').eq('creator_id', profileId).order('created_at', { ascending: false }).limit(6),
-      ]);
-      setProfile(p);
-      setSessions(s || []);
-      setEvents(e || []);
-      setProfileLoading(false);
+      try {
+        const [{ data: p }, { data: s }, { data: e }] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', profileId).maybeSingle(),
+          supabase.from('sessions').select('*').eq('creator_id', profileId).order('created_at', { ascending: false }).limit(12),
+          supabase.from('events').select('*').eq('creator_id', profileId).order('created_at', { ascending: false }).limit(6),
+        ]);
+        if (cancelled) return;
+        setProfile(p ?? null);
+        setSessions(s ?? []);
+        setEvents(e ?? []);
+      } catch {
+        if (!cancelled) {
+          setProfile(null);
+          setSessions([]);
+          setEvents([]);
+        }
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
     }
 
     load();
+    return () => { cancelled = true; };
   }, [authLoading, profileId]);
 
   async function handleLogout() {
