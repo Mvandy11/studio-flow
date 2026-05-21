@@ -57,4 +57,46 @@ router.get('/profile', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/auth/membership
+ *
+ * Returns only the subscription fields for the caller's profile.
+ * Uses the service-role key so RLS never blocks the read.
+ */
+router.get('/membership', async (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  if (!jwt) {
+    return res.status(401).json({ error: 'Authorization header is required.' });
+  }
+
+  try {
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(jwt);
+    if (authErr || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token.' });
+    }
+
+    const { data, error: dbErr } = await supabaseAdmin
+      .from('profiles')
+      .select('subscription_active, subscription_status, current_period_end')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (dbErr) {
+      console.error('[auth/membership] DB error:', dbErr.message);
+      return res.status(500).json({ error: 'Failed to read membership.' });
+    }
+
+    return res.json({
+      subscription_active: data?.subscription_active ?? false,
+      subscription_status: data?.subscription_status ?? null,
+      current_period_end:  data?.current_period_end  ?? null,
+    });
+  } catch (err) {
+    console.error('[auth/membership] Unexpected error:', err.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 export default router;

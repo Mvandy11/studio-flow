@@ -28,29 +28,46 @@ export function useMembership(): UseMembershipResult {
     if (!user?.id) {
       setMembership(null);
       setLoading(false);
+      setError(null);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
 
-    supabase
-      .from('profiles')
-      .select('subscription_active, subscription_status, current_period_end')
-      .eq('id', user.id)
-      .single()
-      .then(({ data, error: err }) => {
-        if (cancelled) return;
-        setMembership(err || !data ? EMPTY : (data as ProfileSubscription));
-        setLoading(false);
-      })
-      .catch((err: Error) => {
-        if (cancelled) return;
-        setError(err.message);
-        setMembership(EMPTY);
-        setLoading(false);
-      });
+    async function load() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const jwt = session?.access_token;
 
+        if (!jwt) {
+          if (!cancelled) { setMembership(null); setLoading(false); }
+          return;
+        }
+
+        const res = await fetch('/api/auth/membership', {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+
+        if (cancelled) return;
+        if (!res.ok) throw new Error(`Membership request failed (${res.status})`);
+
+        const data: ProfileSubscription = await res.json();
+        if (!cancelled) {
+          setMembership(data ?? EMPTY);
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError((err as Error)?.message ?? 'Failed to load membership');
+          setMembership(EMPTY);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
     return () => { cancelled = true; };
   }, [user?.id]);
 
