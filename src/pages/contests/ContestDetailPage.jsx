@@ -54,6 +54,12 @@ export default function ContestDetailPage() {
   const [submittingComment, setSubmittingComment] = useState(null);
   const [deletingComment,  setDeletingComment]  = useState(null);
 
+  // ── Contest-level comments ──────────────────────────────────────────────────
+  const [contestComments,          setContestComments]          = useState([]);
+  const [contestCommentText,       setContestCommentText]       = useState('');
+  const [loadingContestComments,   setLoadingContestComments]   = useState(false);
+  const [submittingContestComment, setSubmittingContestComment] = useState(false);
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -107,6 +113,7 @@ export default function ContestDetailPage() {
   }
 
   useEffect(() => { if (isAdmin) loadWinnerHistory(); }, [id, isAdmin]);
+  useEffect(() => { if (id) loadContestComments(); }, [id]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -227,13 +234,22 @@ export default function ContestDetailPage() {
   // ── Comment helpers ──────────────────────────────────────────
   async function loadComments(entryId) {
     setLoadingComments((prev) => new Set([...prev, entryId]));
-    const { data } = await supabase
-      .from('contest_comments')
-      .select('*')
-      .eq('entry_id', entryId)
-      .order('created_at', { ascending: true });
-    setEntryComments((prev) => ({ ...prev, [entryId]: data || [] }));
-    setLoadingComments((prev) => { const s = new Set(prev); s.delete(entryId); return s; });
+    try {
+      const json = await api(`/api/contests/${id}/entries/${entryId}/comments`);
+      setEntryComments((prev) => ({ ...prev, [entryId]: json.comments || [] }));
+    } catch {
+      setEntryComments((prev) => ({ ...prev, [entryId]: [] }));
+    } finally {
+      setLoadingComments((prev) => { const s = new Set(prev); s.delete(entryId); return s; });
+    }
+  }
+
+  async function authHeaders() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const h = { 'Content-Type': 'application/json' };
+    if (token) h.Authorization = `Bearer ${token}`;
+    return h;
   }
 
   function toggleComments(entryId) {
@@ -253,34 +269,73 @@ export default function ContestDetailPage() {
     const text = (commentInputs[entryId] || '').trim();
     if (!text || !user) return;
     setSubmittingComment(entryId);
-    const { error } = await supabase.from('contest_comments').insert({
-      entry_id:  entryId,
-      user_id:   user.id,
-      user_name: user.user_metadata?.name || user.email?.split('@')[0] || 'Creator',
-      content:   text,
-    });
-    if (!error) {
+    try {
+      const headers = await authHeaders();
+      await api(`/api/contests/${id}/entries/${entryId}/comments`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ content: text }),
+      });
       setCommentInputs((prev) => ({ ...prev, [entryId]: '' }));
       loadComments(entryId);
+    } catch {
+      // silently ignore
+    } finally {
+      setSubmittingComment(null);
     }
-    setSubmittingComment(null);
   }
 
   async function handleDeleteComment(entryId, commentId) {
     if (!user) return;
     setDeletingComment(commentId);
-    const { error } = await supabase
-      .from('contest_comments')
-      .delete()
-      .eq('id', commentId)
-      .eq('user_id', user.id);
-    if (!error) {
+    try {
+      const headers = await authHeaders();
+      await api(`/api/contests/${id}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers,
+      });
       setEntryComments((prev) => ({
         ...prev,
         [entryId]: (prev[entryId] || []).filter((c) => c.id !== commentId),
       }));
+    } catch {
+      // silently ignore
+    } finally {
+      setDeletingComment(null);
     }
-    setDeletingComment(null);
+  }
+
+  async function loadContestComments() {
+    setLoadingContestComments(true);
+    try {
+      const json = await api(`/api/contests/${id}/comments`);
+      setContestComments(json.comments || []);
+    } catch {
+      setContestComments([]);
+    } finally {
+      setLoadingContestComments(false);
+    }
+  }
+
+  async function handleContestComment(e) {
+    e.preventDefault();
+    const text = contestCommentText.trim();
+    if (!text || !user) return;
+    setSubmittingContestComment(true);
+    try {
+      const headers = await authHeaders();
+      const json = await api(`/api/contests/${id}/comments`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ content: text }),
+      });
+      setContestComments((prev) => [...prev, json.comment]);
+      setContestCommentText('');
+    } catch {
+      // silently ignore
+    } finally {
+      setSubmittingContestComment(false);
+    }
   }
   // ─────────────────────────────────────────────────────────────
 
@@ -1024,6 +1079,61 @@ export default function ContestDetailPage() {
           <p>No submissions yet. Be the first to enter!</p>
         </div>
       )}
+
+      {/* ── Contest Discussion ──────────────────────────────────── */}
+      <div className="portfolio-section" style={{ marginTop: '2.5rem' }}>
+        <h2 className="portfolio-section-title">
+          Discussion {contestComments.length > 0 && `(${contestComments.length})`}
+        </h2>
+
+        {loadingContestComments ? (
+          <div style={{ textAlign: 'center', padding: '1.25rem 0' }}>
+            <div className="cinematic-spinner" style={{ width: 22, height: 22, margin: '0 auto' }} />
+          </div>
+        ) : contestComments.length === 0 ? (
+          <p style={{ color: 'rgba(200,200,215,0.4)', fontSize: '0.9rem', fontStyle: 'italic', margin: '0 0 1rem' }}>
+            No comments yet — start the discussion!
+          </p>
+        ) : (
+          <div className="contest-comments__list" style={{ marginBottom: '1.25rem' }}>
+            {contestComments.map((c) => (
+              <div key={c.id} className="contest-comment">
+                <div className="contest-comment__meta">
+                  <span className="contest-comment__author">{c.user_name || 'Creator'}</span>
+                  <span className="contest-comment__time">
+                    {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+                <p className="contest-comment__text">{c.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {user ? (
+          <form className="contest-comments__input-row" onSubmit={handleContestComment}>
+            <input
+              className="contest-comments__input"
+              placeholder="Add a comment about this contest…"
+              value={contestCommentText}
+              onChange={(e) => setContestCommentText(e.target.value)}
+              disabled={submittingContestComment}
+              maxLength={500}
+            />
+            <button
+              type="submit"
+              className="contest-comments__submit"
+              disabled={submittingContestComment || !contestCommentText.trim()}
+            >
+              {submittingContestComment ? '…' : 'Post'}
+            </button>
+          </form>
+        ) : (
+          <p style={{ color: 'rgba(200,200,215,0.4)', fontSize: '0.85rem', margin: 0 }}>
+            Log in to join the discussion.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

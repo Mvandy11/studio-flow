@@ -20,6 +20,7 @@ import analyticsRouter           from './routes/analytics.js';
 import adminWinnersRouter        from './routes/adminWinners.js';
 import freeChatRouter            from './routes/freeChat.js';
 import commentsRouter           from './routes/comments.js';
+import contestCommentsRouter    from './routes/contestComments.js';
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 app.use('/api/ai',                    aiRoutes);
 app.use('/api/auth',                  authProfileRouter);
 app.use('/api/contests',              contestsRouter);
+app.use('/api/contests',              contestCommentsRouter);
 app.use('/api/payouts',               payoutsRouter);
 app.use('/api/likes',                 likesRouter);
 app.use('/api/announcements',         announcementsRouter);
