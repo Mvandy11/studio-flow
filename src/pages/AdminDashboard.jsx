@@ -221,14 +221,22 @@ export default function AdminDashboard() {
     const storedSub    = localStorage.getItem('admin_subscriber_count');
     setSubscriberCount(storedSub !== null ? Number(storedSub) : liveSubCount);
 
-    // Monthly membership history (last 6 months) — graceful if table missing
+    // Monthly membership history (last 6 months) — sourced from profiles
     try {
-      const { data: memRows } = await supabase
-        .from('memberships')
-        .select('started_at, is_active, updated_at')
-        .order('started_at', { ascending: false })
+      const { data: profileRows } = await supabase
+        .from('profiles')
+        .select('subscription_active, subscription_status, updated_at')
+        .not('subscription_status', 'is', null)
+        .order('updated_at', { ascending: false })
         .limit(500);
-      setSubHistory(buildMonthlyHistory(memRows || []));
+
+      // Map profiles fields to the shape buildMonthlyHistory expects
+      const mappedRows = (profileRows || []).map((p) => ({
+        started_at: p.subscription_active ? p.updated_at : null,
+        is_active:  p.subscription_active,
+        updated_at: p.updated_at,
+      }));
+      setSubHistory(buildMonthlyHistory(mappedRows));
     } catch (_) {
       setSubHistory(buildMonthlyHistory([]));
     }
