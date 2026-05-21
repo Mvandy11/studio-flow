@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './supabaseClient';
 import { createProfile } from './profile';
 
 // Sign up with email + password

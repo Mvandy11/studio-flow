@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabaseClient';
 import type { ChatMessage } from '../../lib/types';
 
 /** Update the last-read timestamp for a user on a channel. */

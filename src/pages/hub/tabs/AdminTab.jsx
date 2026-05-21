@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth.js';
 import { isCreatorAdmin } from '../../../lib/roles.js';
-import { supabase } from '../../../lib/supabase.js';
+import { supabase } from '../../../lib/supabaseClient';
 import { api } from '../../../lib/api.js';
 import { calculatePayout } from '../data.js';
 

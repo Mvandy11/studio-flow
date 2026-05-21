@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './supabaseClient';
 
 // Create a new session
 export async function createSession({ creator_id, title, description, livestream_url, start_time }) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 import { api } from '../lib/api.js';
 import { formatDistanceToNow } from 'date-fns';
 import '../styles/portfolio.css';

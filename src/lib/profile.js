@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './supabaseClient';
 
 // Create a profile (called after signup)
 export async function createProfile({ id, username, display_name, bio, avatar_url }) {

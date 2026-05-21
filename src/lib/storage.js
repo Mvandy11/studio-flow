@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './supabaseClient';
 
 export async function uploadSessionThumbnail(file, sessionId) {
   const fileExt = file.name.split('.').pop();

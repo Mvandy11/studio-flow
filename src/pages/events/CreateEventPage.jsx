@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabaseClient';
 import { api } from '../../lib/api.js';
 import EarningsCalculator from '../../components/events/EarningsCalculator';
 import BackstagePassToggle from '../../components/events/BackstagePassToggle';

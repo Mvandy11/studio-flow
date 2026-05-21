@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useMembership } from '../hooks/useMembership';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 import { isCreatorAdmin } from '../lib/roles';
 import LivePlayer from '../components/LivePlayer';
 import MembershipBadge from '../components/MembershipBadge';

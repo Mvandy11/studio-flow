@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabaseClient';
 import { requireMembership } from './requireMembership';
 import { useAuth } from '../../hooks/useAuth';
 import type { ProfileSubscription } from '../../lib/types';

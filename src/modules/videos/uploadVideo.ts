@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabaseClient';
 
 const MIME_MAP: Record<string, string> = {
   mp4:  'video/mp4',

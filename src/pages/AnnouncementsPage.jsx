@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { api } from '../lib/api.js';
 import { format } from 'date-fns';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 
 export default function AnnouncementsPage() {
   const { user, role } = useAuth();
