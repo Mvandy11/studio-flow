@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'crypto';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
 import sendEmail from '../utils/sendEmail.js';
 
@@ -249,6 +250,174 @@ router.patch('/event-requests/:id', async (req, res) => {
     res.json({ data });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/event-requests/:id/approve
+// Atomically: fetch request → create event_slot → create event → mark approved
+router.post('/event-requests/:id/approve', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { id } = req.params;
+    const { title, password } = req.body;
+
+    if (!title?.trim()) {
+      return res.status(400).json({ error: 'title is required.' });
+    }
+    if (!password?.trim()) {
+      return res.status(400).json({ error: 'password is required.' });
+    }
+
+    // 1. Fetch the request
+    const { data: request, error: fetchErr } = await supabaseAdmin
+      .from('custom_event_requests')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchErr) throw fetchErr;
+    if (!request) return res.status(404).json({ error: 'Event request not found.' });
+    if (!request.user_id) {
+      return res.status(422).json({ error: 'Request is missing user_id — cannot create event.' });
+    }
+
+    const slotId    = randomUUID();
+    const eventId   = randomUUID();
+    const streamKey = `sf-${randomUUID()}`;
+    const safeTitle = title.trim();
+
+    // 2. Create the event_slot
+    const { data: slot, error: slotErr } = await supabaseAdmin
+      .from('event_slots')
+      .insert({
+        id:         slotId,
+        user_id:    request.user_id,
+        request_id: id,
+        title:      safeTitle,
+        password:   password.trim(),
+        stream_key: streamKey,
+      })
+      .select()
+      .single();
+
+    if (slotErr) throw slotErr;
+
+    // 3. Create the event row (creator picks live/recorded later from their slot page)
+    const isPaid   = request.event_type === 'locked';
+    const { data: event, error: eventErr } = await supabaseAdmin
+      .from('events')
+      .insert({
+        id:            eventId,
+        title:         safeTitle,
+        description:   request.description || null,
+        created_by:    request.user_id,
+        creator_id:    request.user_id,
+        event_mode:    'live',           // default; creator updates when they go live
+        stream_key:    streamKey,
+        live_room_id:  slotId,
+        stage_room_id: slotId,
+        status:        'upcoming',
+        price:         request.price ?? 0,
+        is_paid:       isPaid,
+      })
+      .select()
+      .single();
+
+    if (eventErr) throw eventErr;
+
+    // 4. Mark the request as approved
+    const { error: updateErr } = await supabaseAdmin
+      .from('custom_event_requests')
+      .update({ status: 'approved', processed_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (updateErr) throw updateErr;
+
+    // 5. Notify the creator (best-effort)
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name, username')
+      .eq('id', request.user_id)
+      .maybeSingle();
+
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(request.user_id);
+    const creatorEmail = authUser?.user?.email ?? null;
+
+    if (creatorEmail) {
+      sendEmail({
+        to:      creatorEmail,
+        subject: `[Studio Flow] Your event request "${safeTitle}" has been approved!`,
+        text: `Hi ${profile?.full_name || profile?.username || 'Creator'},
+
+Great news — your custom event request has been approved!
+
+Event Title : ${safeTitle}
+Upload Password : ${password.trim()}
+Stream Key : ${streamKey}
+
+Use your upload password to post your event video, or go live using the stream key.
+
+— Studio Flow Team`,
+      }).catch(() => {});
+    }
+
+    return res.status(201).json({ success: true, event, slot, stream_key: streamKey });
+  } catch (err) {
+    console.error('[admin/event-requests/approve]', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/event-requests/:id/reject
+router.post('/event-requests/:id/reject', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const { data: request, error: fetchErr } = await supabaseAdmin
+      .from('custom_event_requests')
+      .select('user_id, title')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchErr) throw fetchErr;
+    if (!request) return res.status(404).json({ error: 'Event request not found.' });
+
+    const { error: updateErr } = await supabaseAdmin
+      .from('custom_event_requests')
+      .update({ status: 'rejected', processed_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (updateErr) throw updateErr;
+
+    // Notify creator (best-effort)
+    if (request.user_id) {
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(request.user_id);
+      const creatorEmail = authUser?.user?.email ?? null;
+      if (creatorEmail) {
+        sendEmail({
+          to:      creatorEmail,
+          subject: `[Studio Flow] Update on your event request "${request.title}"`,
+          text: `Thank you for submitting your event request to Studio Flow.
+
+After review, we were unable to approve "${request.title}" at this time${reason ? `:\n\n${reason}` : '.'}
+
+You're welcome to submit a new request in the future.
+
+— Studio Flow Team`,
+        }).catch(() => {});
+      }
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[admin/event-requests/reject]', err.message);
+    return res.status(500).json({ error: err.message });
   }
 });
 

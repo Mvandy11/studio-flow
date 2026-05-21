@@ -56,23 +56,10 @@ export default function AdminEventRequests() {
     setSaveError('');
     try {
       const token = await getToken();
-      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
-
-      await api('/api/custom-events/create-slot', {
+      await api(`/api/admin/event-requests/${approving.id}/approve`, {
         method:  'POST',
-        headers,
-        body:    JSON.stringify({
-          request_id: approving.id,
-          user_id:    approving.user_id,
-          title:      slotTitle.trim(),
-          password:   slotPassword.trim(),
-        }),
-      });
-
-      await api(`/api/admin/event-requests/${approving.id}`, {
-        method:  'PATCH',
-        headers,
-        body:    JSON.stringify({ status: 'approved', processed_at: new Date().toISOString() }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ title: slotTitle.trim(), password: slotPassword.trim() }),
       });
 
       setApproving(null);
@@ -88,12 +75,13 @@ export default function AdminEventRequests() {
 
   async function handleReject(id) {
     if (!confirm('Reject this request?')) return;
+    const reason = prompt('Optional rejection reason (leave blank to skip):') ?? '';
     try {
       const token = await getToken();
-      await api(`/api/admin/event-requests/${id}`, {
-        method:  'PATCH',
+      await api(`/api/admin/event-requests/${id}/reject`, {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ status: 'rejected', processed_at: new Date().toISOString() }),
+        body:    JSON.stringify({ reason: reason.trim() || null }),
       });
     } catch (err) {
       setError(err.message);
