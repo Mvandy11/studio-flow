@@ -1,0 +1,68 @@
+/**
+ * POST /api/payments/subscription-webhook
+ *
+ * Stripe → Supabase membership sync.
+ * Cleaned version:
+ *   - No legacy memberships table
+ *   - No legacy subscription_status table
+ *   - Bulletproof logging
+ *   - Guaranteed 200 OK
+ */
+router.post(
+  '/subscription-webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const timestamp = new Date().toISOString();
+
+    let event;
+    try {
+      event = parseWebhookEvent(req);
+    } catch (err) {
+      console.error(`[${timestamp}] [webhook] ❌ Signature verification failed:`, err.message);
+      return res.status(400).json({ error: `Webhook error: ${err.message}` });
+    }
+
+    const eventType = event.type;
+    const obj       = event.data.object;
+
+    console.info(`[${timestamp}] [webhook] 📩 Received event: ${eventType}`);
+
+    try {
+      const HANDLED = new Set([
+        'checkout.session.completed',
+        'customer.subscription.created',
+        'customer.subscription.updated',
+        'customer.subscription.deleted',
+        'invoice.paid',
+        'invoice.payment_failed',
+      ]);
+
+      if (!HANDLED.has(eventType)) {
+        console.info(`[${timestamp}] [webhook] ℹ️ Unhandled event type — ignoring: ${eventType}`);
+        return res.json({ received: true });
+      }
+
+      // Resolve subscription info
+      const info = await resolveSubscriptionInfo(eventType, obj);
+
+      if (!info) {
+        console.warn(`[${timestamp}] [webhook] ⚠️ Could not resolve subscription info for ${eventType}`);
+        return res.json({ received: true });
+      }
+
+      console.info(
+        `[${timestamp}] [webhook] customer=${info.customerId} | status=${info.status} | period_end=${info.currentPeriodEnd ?? '—'}`
+      );
+
+      // Sync to Supabase profiles table
+      await syncProfileSubscription(info.customerId, info.status, info.currentPeriodEnd);
+
+      console.info(`[${timestamp}] [webhook] ✅ Profile sync complete`);
+    } catch (err) {
+      console.error(`[${timestamp}] [webhook] ❌ Handler error (non-fatal):`, err.message);
+    }
+
+    // Always return 200 so Stripe does not retry
+    res.json({ received: true });
+  },
+);

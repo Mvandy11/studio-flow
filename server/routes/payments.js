@@ -276,40 +276,31 @@ router.post('/create-subscription', async (req, res) => {
  * POST /api/payments/subscription-webhook
  *
  * Stripe → Supabase membership sync.
- *
- * Resolution order for profile lookup:
- *   stripe_customer_id column on profiles table
- *
- * Events handled:
- *   checkout.session.completed      → active
- *   customer.subscription.created   → per subscription.status
- *   customer.subscription.updated   → per subscription.status
- *   customer.subscription.deleted   → canceled / inactive
- *   invoice.paid                    → per subscription.status
- *   invoice.payment_failed          → past_due / inactive
- *
- * Always returns 200 — Stripe must never receive a non-2xx from a healthy server.
+ * Cleaned version:
+ *   - No legacy memberships table
+ *   - No legacy subscription_status table
+ *   - Bulletproof logging
+ *   - Guaranteed 200 OK
  */
 router.post(
   '/subscription-webhook',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
-    // Always ACK Stripe first — parse errors still return 200 after logging
+    const timestamp = new Date().toISOString();
+
     let event;
     try {
       event = parseWebhookEvent(req);
     } catch (err) {
-      console.error('[payments/webhook] Signature verification failed:', err.message);
-      // Return 400 only for bad signatures so Stripe knows to retry correctly
+      console.error(`[${timestamp}] [webhook] ❌ Signature verification failed:`, err.message);
       return res.status(400).json({ error: `Webhook error: ${err.message}` });
     }
 
     const eventType = event.type;
     const obj       = event.data.object;
 
-    console.info('[payments/webhook] Received event:', eventType);
+    console.info(`[${timestamp}] [webhook] 📩 Received event: ${eventType}`);
 
-    // Wrap everything so a Supabase/Stripe error never stops the 200 response
     try {
       const HANDLED = new Set([
         'checkout.session.completed',
@@ -320,47 +311,32 @@ router.post(
         'invoice.payment_failed',
       ]);
 
-      if (HANDLED.has(eventType)) {
-        const info = await resolveSubscriptionInfo(eventType, obj);
-
-        if (info) {
-          console.info(
-            `[payments/webhook] customer=${info.customerId} | status=${info.status} | period_end=${info.currentPeriodEnd ?? '—'}`,
-          );
-          await syncProfileSubscription(info.customerId, info.status, info.currentPeriodEnd);
-        } else {
-          console.warn('[payments/webhook] Could not resolve subscription info for event:', eventType);
-        }
-
-        // Keep subscription_status table in sync for legacy consumers
-        const customerId = info?.customerId ?? obj?.customer;
-        const subId      = obj?.subscription ?? obj?.id;
-        if (customerId && subId) {
-          const isActive = ['active', 'trialing'].includes(info?.status ?? '');
-          await supabaseAdmin
-            .from('subscription_status')
-            .upsert(
-              {
-                id:                     randomUUID(),
-                stripe_customer_id:     customerId,
-                stripe_subscription_id: subId,
-                is_active:              isActive,
-                updated_at:             new Date().toISOString(),
-              },
-              { onConflict: 'stripe_customer_id' },
-            )
-            .then(({ error }) => {
-              if (error) console.error('[payments/webhook] subscription_status upsert error:', error.message);
-            });
-        }
-      } else {
-        console.info('[payments/webhook] Unhandled event type — ignoring:', eventType);
+      if (!HANDLED.has(eventType)) {
+        console.info(`[${timestamp}] [webhook] ℹ️ Unhandled event type — ignoring: ${eventType}`);
+        return res.json({ received: true });
       }
+
+      // Resolve subscription info
+      const info = await resolveSubscriptionInfo(eventType, obj);
+
+      if (!info) {
+        console.warn(`[${timestamp}] [webhook] ⚠️ Could not resolve subscription info for ${eventType}`);
+        return res.json({ received: true });
+      }
+
+      console.info(
+        `[${timestamp}] [webhook] customer=${info.customerId} | status=${info.status} | period_end=${info.currentPeriodEnd ?? '—'}`
+      );
+
+      // Sync to Supabase profiles table
+      await syncProfileSubscription(info.customerId, info.status, info.currentPeriodEnd);
+
+      console.info(`[${timestamp}] [webhook] ✅ Profile sync complete`);
     } catch (err) {
-      // Log but still return 200 so Stripe doesn't endlessly retry
-      console.error('[payments/webhook] Handler error (non-fatal):', err.message);
+      console.error(`[${timestamp}] [webhook] ❌ Handler error (non-fatal):`, err.message);
     }
 
+    // Always return 200 so Stripe does not retry
     res.json({ received: true });
   },
 );
