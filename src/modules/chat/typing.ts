@@ -15,31 +15,34 @@ const TYPING_TIMEOUT_MS = 3000;
  */
 export function useTypingIndicator(channelId: string, userId: string | undefined) {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const chRef       = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chRef    = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!channelId) return;
 
-    const ch = supabase.channel(`typing:${channelId}`, {
-      config: { presence: { key: userId ?? 'anon' } },
-    });
+    // Build the channel with ALL listeners registered BEFORE subscribe()
+    const ch = supabase
+      .channel(`typing:${channelId}`, {
+        config: { presence: { key: userId ?? 'anon' } },
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const state = ch.presenceState<{ typing?: boolean }>();
+        const active = Object.entries(state)
+          .filter(([key, presences]) => {
+            if (key === (userId ?? 'anon')) return false;
+            return (presences as { typing?: boolean }[]).some((p) => p.typing);
+          })
+          .map(([key]) => key);
+        setTypingUsers(active);
+      })
+      .subscribe();
+
     chRef.current = ch;
 
-    ch.on('presence', { event: 'sync' }, () => {
-      const state = ch.presenceState<{ typing?: boolean }>();
-      const active = Object.entries(state)
-        .filter(([key, presences]) => {
-          if (key === (userId ?? 'anon')) return false;
-          return (presences as { typing?: boolean }[]).some((p) => p.typing);
-        })
-        .map(([key]) => key);
-      setTypingUsers(active);
-    });
-
-    ch.subscribe();
     return () => {
       chRef.current = null;
+      if (timerRef.current) clearTimeout(timerRef.current);
       supabase.removeChannel(ch);
     };
   }, [channelId, userId]);

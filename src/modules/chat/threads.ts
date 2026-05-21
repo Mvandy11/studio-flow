@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import type { ChatMessage } from '../../lib/types';
 
@@ -38,20 +38,44 @@ export async function replyToMessage(
   return data as ChatMessage;
 }
 
-/** Hook: load a thread and subscribe to live replies. */
+/**
+ * Hook: load a thread and subscribe to live replies.
+ *
+ * Ensures ALL postgres_changes listeners are registered BEFORE subscribe()
+ * is called, preventing the "cannot add callbacks after subscribe()" error.
+ * Uses a mounted-guard so rapid open/close of threads doesn't leave stale
+ * state updates queued.
+ */
 export function useThread(parentMessageId: string | null) {
   const [replies,    setReplies]    = useState<ChatMessage[]>([]);
   const [loading,    setLoading]    = useState(false);
   const [replyCount, setReplyCount] = useState(0);
 
+  // Stable ref to the current channel so we can clean up even if the ID
+  // changes before the async initial load completes.
+  const chRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   useEffect(() => {
-    if (!parentMessageId) { setReplies([]); return; }
+    if (!parentMessageId) {
+      setReplies([]);
+      setReplyCount(0);
+      return;
+    }
 
+    let mounted = true;
     setLoading(true);
-    getThread(parentMessageId)
-      .then((msgs) => { setReplies(msgs); setReplyCount(msgs.length); })
-      .finally(() => setLoading(false));
 
+    // Initial load — guarded so stale async results are discarded
+    getThread(parentMessageId)
+      .then((msgs) => {
+        if (!mounted) return;
+        setReplies(msgs);
+        setReplyCount(msgs.length);
+      })
+      .catch(() => { /* network errors are non-fatal */ })
+      .finally(() => { if (mounted) setLoading(false); });
+
+    // Subscribe: ALL .on() listeners MUST be registered before .subscribe()
     const ch = supabase
       .channel(`thread:${parentMessageId}`)
       .on(
@@ -63,13 +87,24 @@ export function useThread(parentMessageId: string | null) {
           filter: `parent_message_id=eq.${parentMessageId}`,
         },
         (p) => {
-          setReplies((prev) => [...prev, p.new as ChatMessage]);
+          if (!mounted) return;
+          setReplies((prev) => {
+            // Deduplicate: ignore if we already have this message
+            if (prev.some((r) => r.id === (p.new as ChatMessage).id)) return prev;
+            return [...prev, p.new as ChatMessage];
+          });
           setReplyCount((c) => c + 1);
         },
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(ch); };
+    chRef.current = ch;
+
+    return () => {
+      mounted = false;
+      chRef.current = null;
+      supabase.removeChannel(ch);
+    };
   }, [parentMessageId]);
 
   return { replies, loading, replyCount };
