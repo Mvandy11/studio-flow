@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { requestLogger } from './middleware/logger.js';
+import { logError } from './utils/logError.js';
 
 import aiRoutes                  from './routes/ai/index.js';
 import authProfileRouter         from './routes/authProfile.js';
@@ -108,6 +109,7 @@ app.use((err, req, res, _next) => {
   const ts = new Date().toISOString();
   console.error(`[${ts}] [server] ❌ Unhandled error on ${req.method} ${req.path}:`);
   console.error(err.stack || err.message);
+  logError(err, req.path).catch(() => {});
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 

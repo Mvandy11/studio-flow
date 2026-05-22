@@ -14,6 +14,7 @@ import { Router }    from 'express';
 import multer        from 'multer';
 import { randomUUID } from 'crypto';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { logError } from '../utils/logError.js';
 
 const router = Router();
 
@@ -129,6 +130,7 @@ router.post('/:slotId/upload-recorded', upload.single('video'), async (req, res)
     res.json({ success: true, recorded_video_url: publicUrl });
   } catch (err) {
     console.error('[recorded] upload:', err.message);
+    await logError(err, `/api/slot/${req.params?.slotId}/upload-recorded`);
     res.status(500).json({ error: err.message });
   }
 });

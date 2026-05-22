@@ -11,6 +11,7 @@
 
 import { Router } from 'express';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { logError } from '../utils/logError.js';
 
 const router = Router();
 
@@ -106,6 +107,7 @@ router.post('/slot/:slotId/start', async (req, res) => {
     res.json({ success: true, status: 'live' });
   } catch (err) {
     console.error('[live] start:', err.message);
+    await logError(err, `/api/live/slot/${req.params?.slotId}/start`);
     res.status(500).json({ error: err.message });
   }
 });
@@ -139,6 +141,7 @@ router.post('/slot/:slotId/end', async (req, res) => {
     res.json({ success: true, status: 'ended' });
   } catch (err) {
     console.error('[live] end:', err.message);
+    await logError(err, `/api/live/slot/${req.params?.slotId}/end`);
     res.status(500).json({ error: err.message });
   }
 });

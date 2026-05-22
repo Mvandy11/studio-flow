@@ -14,6 +14,7 @@ import express from 'express';
 import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { logError } from '../utils/logError.js';
 import { subscriptionLink, donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
 const router = express.Router();
@@ -268,6 +269,7 @@ router.post('/create-checkout-session', async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('[payments] create-checkout-session error:', err.message);
+    await logError(err, '/api/payments/create-checkout-session');
     res.status(500).json({ error: err.message });
   }
 });
@@ -388,6 +390,7 @@ router.post('/donation-webhook', async (req, res) => {
     res.json({ received: true });
   } catch (err) {
     console.error('[payments] donation-webhook error:', err.message);
+    await logError(err, '/api/payments/donation-webhook');
     res.status(500).json({ error: err.message });
   }
 });
@@ -452,6 +455,7 @@ router.post('/event-webhook', async (req, res) => {
     res.json({ received: true });
   } catch (err) {
     console.error('[payments] event-webhook error:', err.message);
+    await logError(err, '/api/payments/event-webhook');
     res.status(500).json({ error: err.message });
   }
 });

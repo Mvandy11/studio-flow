@@ -1,6 +1,7 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { logError } from '../utils/logError.js';
 
 const router = express.Router();
 
@@ -122,6 +123,7 @@ router.post('/', async (req, res) => {
     return res.status(201).json({ slot, event: event || null, stream_key: streamKey });
   } catch (err) {
     console.error('[slots/POST]', err.message);
+    await logError(err, '/api/slots');
     return res.status(500).json({ error: err.message });
   }
 });

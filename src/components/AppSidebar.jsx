@@ -134,6 +134,16 @@ export default function AppSidebar({ open, onClose }) {
                 <span className="app-sidebar__link-icon">📊</span>
                 Analytics
               </NavLink>
+              <NavLink
+                to="/admin/errors"
+                className={({ isActive }) =>
+                  `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`
+                }
+                onClick={onClose}
+              >
+                <span className="app-sidebar__link-icon">🔴</span>
+                Error Logs
+              </NavLink>
             </nav>
             <div className="app-sidebar__divider" />
           </>

@@ -2,6 +2,7 @@ import express from 'express';
 import { randomUUID } from 'crypto';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
 import sendEmail from '../utils/sendEmail.js';
+import { logError } from '../utils/logError.js';
 
 const router = express.Router();
 
@@ -372,6 +373,7 @@ Use your upload password to post your event video, or go live using the stream k
     return res.status(201).json({ success: true, event, slot, stream_key: streamKey });
   } catch (err) {
     console.error('[admin/event-requests/approve]', err.message);
+    await logError(err, `/api/admin/event-requests/${req.params?.id}/approve`);
     return res.status(500).json({ error: err.message });
   }
 });
@@ -561,7 +563,43 @@ You are welcome to submit again in a future round.
     return res.json({ success: true });
   } catch (err) {
     console.error('[admin/reject]', err.message);
+    await logError(err, '/api/admin/reject');
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/errors ─────────────────────────────────────────────────────
+// Returns the last 200 backend errors. Admin-only.
+router.get('/errors', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(authHeader.slice(7));
+    if (authErr || !user) return res.status(401).json({ error: 'Authentication required.' });
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!profile || !['admin', 'creator_admin'].includes(profile.role)) {
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+
+    const { data: errors, error: dbErr } = await supabaseAdmin
+      .from('backend_errors')
+      .select('id, message, stack, route, created_at')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (dbErr) throw dbErr;
+    res.json({ errors: errors || [] });
+  } catch (err) {
+    console.error('[admin/errors]', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

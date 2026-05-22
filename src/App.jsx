@@ -27,6 +27,7 @@ import ContestsPage from './pages/contests/ContestsPage';
 import ContestDetailPage from './pages/contests/ContestDetailPage';
 import CreateContestPage from './pages/contests/CreateContestPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminErrorsDashboard from './pages/admin/AdminErrorsDashboard';
 import EarningsDashboard from './pages/EarningsDashboard';
 import CreatorProfile from './pages/CreatorProfile';
 import AnnouncementsPage from './pages/AnnouncementsPage';
@@ -104,6 +105,7 @@ export default function App() {
           <Route path="/admin/event-requests"   element={<AdminEventRequests />} />
           <Route path="/admin/winners"            element={<AdminWinnersDashboard />} />
           <Route path="/admin/analytics"         element={<AdminAnalyticsDashboard />} />
+          <Route path="/admin/errors"            element={<AdminErrorsDashboard />} />
 
           {/* ── Account ── */}
           <Route path="/earnings" element={<EarningsDashboard />} />
