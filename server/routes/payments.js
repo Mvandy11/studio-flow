@@ -3,16 +3,16 @@
  *
  * Stripe → Supabase membership sync pipeline:
  *   - Validates webhook signatures with STRIPE_WEBHOOK_SECRET
- *   - Looks up profiles by stripe_customer_id
+ *   - Looks up profiles by stripe_customer_id, falls back to email
+ *   - On first email-match, writes stripe_customer_id back to the profile so
+ *     future webhooks match by customer ID directly
  *   - Updates subscription_status, subscription_active, current_period_end
- *   - Uses Service Role key (bypasses RLS)
- *   - Supabase trigger auto-logs changes to user_history — no manual writes here
+ *   - Uses supabaseAdmin (Service Role key — bypasses RLS)
  *   - Always returns 200 to Stripe; never crashes the server
  */
 import express from 'express';
 import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
-import supabase from '../supabase/supabase.js';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
 import { subscriptionLink, donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
@@ -28,7 +28,7 @@ function getStripe() {
 async function getUserFromHeader(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return null;
-  const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7));
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(authHeader.slice(7));
   if (error || !user) return null;
   return user;
 }
@@ -60,11 +60,8 @@ function parseWebhookEvent(req) {
 }
 
 /**
- * Resolve the subscription object and customer ID from any Stripe event.
- * For subscription events the object IS the subscription.
- * For checkout/invoice events we either derive or retrieve it from Stripe.
- *
- * Returns { customerId, status, currentPeriodEnd } or null if unresolvable.
+ * Resolve the subscription object and customer info from any Stripe event.
+ * Returns { customerId, customerEmail, status, currentPeriodEnd } or null.
  */
 async function resolveSubscriptionInfo(eventType, obj) {
   const stripe = getStripe();
@@ -75,8 +72,17 @@ async function resolveSubscriptionInfo(eventType, obj) {
     eventType === 'customer.subscription.updated' ||
     eventType === 'customer.subscription.deleted'
   ) {
+    // Fetch customer email from Stripe so we can do an email fallback
+    let customerEmail = null;
+    if (stripe && obj.customer) {
+      try {
+        const customer = await stripe.customers.retrieve(obj.customer);
+        customerEmail = customer.email || null;
+      } catch (_) {}
+    }
     return {
       customerId:       obj.customer,
+      customerEmail,
       status:           obj.status,
       currentPeriodEnd: obj.current_period_end
         ? new Date(obj.current_period_end * 1000).toISOString()
@@ -86,12 +92,15 @@ async function resolveSubscriptionInfo(eventType, obj) {
 
   // ── checkout.session.completed → retrieve subscription from Stripe ───────
   if (eventType === 'checkout.session.completed') {
-    const subId = obj.subscription;
+    const subId         = obj.subscription;
+    const customerEmail = obj.customer_email || obj.customer_details?.email || null;
+
     if (subId && stripe) {
       try {
         const sub = await stripe.subscriptions.retrieve(subId);
         return {
           customerId:       obj.customer ?? sub.customer,
+          customerEmail,
           status:           sub.status,
           currentPeriodEnd: sub.current_period_end
             ? new Date(sub.current_period_end * 1000).toISOString()
@@ -104,6 +113,7 @@ async function resolveSubscriptionInfo(eventType, obj) {
     // Fallback: no subscription ID (one-time payment) — mark as active
     return {
       customerId:       obj.customer,
+      customerEmail,
       status:           'active',
       currentPeriodEnd: null,
     };
@@ -117,6 +127,7 @@ async function resolveSubscriptionInfo(eventType, obj) {
         const sub = await stripe.subscriptions.retrieve(subId);
         return {
           customerId:       obj.customer,
+          customerEmail:    obj.customer_email || null,
           status:           sub.status,
           currentPeriodEnd: sub.current_period_end
             ? new Date(sub.current_period_end * 1000).toISOString()
@@ -126,13 +137,14 @@ async function resolveSubscriptionInfo(eventType, obj) {
         console.error('[payments/webhook] subscription retrieve error (invoice.paid):', err.message);
       }
     }
-    return { customerId: obj.customer, status: 'active', currentPeriodEnd: null };
+    return { customerId: obj.customer, customerEmail: obj.customer_email || null, status: 'active', currentPeriodEnd: null };
   }
 
   // ── invoice.payment_failed → mark past_due ────────────────────────────────
   if (eventType === 'invoice.payment_failed') {
     return {
       customerId:       obj.customer,
+      customerEmail:    obj.customer_email || null,
       status:           'past_due',
       currentPeriodEnd: null,
     };
@@ -142,21 +154,61 @@ async function resolveSubscriptionInfo(eventType, obj) {
 }
 
 /**
- * Look up a profile by stripe_customer_id and update subscription fields.
- * Uses the Service Role client to bypass RLS.
- * Syncs ONLY the profiles table — no legacy tables.
+ * Find a profile and update subscription fields.
+ *
+ * Lookup order:
+ *   1. stripe_customer_id match (fastest path once ID is stored)
+ *   2. email match (first-time subscribers whose ID was never saved)
+ *
+ * On a successful email-based match we immediately write stripe_customer_id
+ * back to the profile so the next webhook uses the fast path.
+ *
+ * Uses supabaseAdmin — bypasses RLS.
  */
-async function syncProfileSubscription(customerId, status, periodEnd) {
+async function syncProfileSubscription(customerId, status, periodEnd, customerEmail) {
   const timestamp = new Date().toISOString();
-  if (!customerId) return;
+  if (!customerId && !customerEmail) return;
 
-  const { data: profile, error: lookupErr } = await supabaseAdmin
-    .from('profiles')
-    .select('id, email')
-    .eq('stripe_customer_id', customerId)
-    .maybeSingle();
+  let profile = null;
 
-  if (!profile || lookupErr) return;
+  // 1. Try stripe_customer_id
+  if (customerId) {
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email')
+      .eq('stripe_customer_id', customerId)
+      .maybeSingle();
+    profile = data || null;
+    if (profile) {
+      console.log(`[${timestamp}] [webhook] profile found by stripe_customer_id → ${profile.id}`);
+    }
+  }
+
+  // 2. Fall back to email lookup
+  if (!profile && customerEmail) {
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email')
+      .eq('email', customerEmail)
+      .maybeSingle();
+    profile = data || null;
+    if (profile) {
+      console.log(`[${timestamp}] [webhook] profile found by email (${customerEmail}) → ${profile.id}`);
+      // Save the customer ID so future webhooks use fast path
+      if (customerId) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', profile.id);
+        console.log(`[${timestamp}] [webhook] wrote stripe_customer_id to profile`);
+      }
+    }
+  }
+
+  if (!profile) {
+    console.warn(`[${timestamp}] [webhook] ⚠️  no profile found for customerId=${customerId} email=${customerEmail}`);
+    return;
+  }
 
   const isActive = ['active', 'trialing'].includes(status);
 
@@ -167,7 +219,16 @@ async function syncProfileSubscription(customerId, status, periodEnd) {
   };
   if (periodEnd) payload.current_period_end = periodEnd;
 
-  await supabaseAdmin.from('profiles').update(payload).eq('id', profile.id);
+  const { error } = await supabaseAdmin
+    .from('profiles')
+    .update(payload)
+    .eq('id', profile.id);
+
+  if (error) {
+    console.error(`[${timestamp}] [webhook] ❌ profile update error:`, error.message);
+  } else {
+    console.log(`[${timestamp}] [webhook] ✅ profile updated: subscription_active=${isActive} status=${status}`);
+  }
 }
 
 // ── SUBSCRIPTION ─────────────────────────────────────────────────────────────
@@ -226,67 +287,66 @@ router.post('/create-subscription', async (req, res) => {
  * POST /api/payments/subscription-webhook
  *
  * Stripe → Supabase membership sync.
- * Cleaned version:
  *   - No legacy memberships table
- *   - No legacy subscription_status table
  *   - Bulletproof logging
- *   - Guaranteed 200 OK
+ *   - Guaranteed 200 OK to prevent Stripe retries
  */
 router.post('/subscription-webhook', async (req, res) => {
-    const timestamp = new Date().toISOString();
+  const timestamp = new Date().toISOString();
 
-    let event;
-    try {
-      event = parseWebhookEvent(req);
-    } catch (err) {
-      console.error(`[${timestamp}] [webhook] ❌ Signature verification failed:`, err.message);
-      return res.status(400).json({ error: `Webhook error: ${err.message}` });
+  let event;
+  try {
+    event = parseWebhookEvent(req);
+  } catch (err) {
+    console.error(`[${timestamp}] [webhook] ❌ Signature verification failed:`, err.message);
+    return res.status(400).json({ error: `Webhook error: ${err.message}` });
+  }
+
+  const eventType = event.type;
+  const obj       = event.data.object;
+
+  console.log(`[${timestamp}] [webhook] 📩 Stripe webhook received: ${eventType}`);
+
+  try {
+    const HANDLED = new Set([
+      'checkout.session.completed',
+      'customer.subscription.created',
+      'customer.subscription.updated',
+      'customer.subscription.deleted',
+      'invoice.paid',
+      'invoice.payment_failed',
+    ]);
+
+    if (!HANDLED.has(eventType)) {
+      console.log(`[${timestamp}] [webhook] ℹ️ Ignoring unhandled event type: ${eventType}`);
+      return res.json({ received: true });
     }
 
-    const eventType = event.type;
-    const obj       = event.data.object;
+    const info = await resolveSubscriptionInfo(eventType, obj);
 
-    console.info(`[${timestamp}] [webhook] 📩 Received event: ${eventType}`);
-
-    try {
-      const HANDLED = new Set([
-        'checkout.session.completed',
-        'customer.subscription.created',
-        'customer.subscription.updated',
-        'customer.subscription.deleted',
-        'invoice.paid',
-        'invoice.payment_failed',
-      ]);
-
-      if (!HANDLED.has(eventType)) {
-        console.info(`[${timestamp}] [webhook] ℹ️ Unhandled event type — ignoring: ${eventType}`);
-        return res.json({ received: true });
-      }
-
-      // Resolve subscription info
-      const info = await resolveSubscriptionInfo(eventType, obj);
-
-      if (!info) {
-        console.warn(`[${timestamp}] [webhook] ⚠️ Could not resolve subscription info for ${eventType}`);
-        return res.json({ received: true });
-      }
-
-      console.info(
-        `[${timestamp}] [webhook] customer=${info.customerId} | status=${info.status} | period_end=${info.currentPeriodEnd ?? '—'}`
-      );
-
-      // Sync to Supabase profiles table
-      await syncProfileSubscription(info.customerId, info.status, info.currentPeriodEnd);
-
-      console.info(`[${timestamp}] [webhook] ✅ Profile sync complete`);
-    } catch (err) {
-      console.error(`[${timestamp}] [webhook] ❌ Handler error (non-fatal):`, err.message);
+    if (!info) {
+      console.warn(`[${timestamp}] [webhook] ⚠️ Could not resolve subscription info for ${eventType}`);
+      return res.json({ received: true });
     }
 
-    // Always return 200 so Stripe does not retry
-    res.json({ received: true });
-  },
-);
+    console.log(
+      `[${timestamp}] [webhook] customer=${info.customerId} email=${info.customerEmail} ` +
+      `status=${info.status} period_end=${info.currentPeriodEnd ?? '—'}`
+    );
+
+    await syncProfileSubscription(
+      info.customerId,
+      info.status,
+      info.currentPeriodEnd,
+      info.customerEmail,
+    );
+  } catch (err) {
+    console.error(`[${timestamp}] [webhook] ❌ Handler error (non-fatal):`, err.message);
+  }
+
+  // Always return 200 so Stripe does not retry
+  res.json({ received: true });
+});
 
 // ── DONATIONS ─────────────────────────────────────────────────────────────────
 
@@ -316,16 +376,18 @@ router.post('/donation-webhook', async (req, res) => {
         : (obj?.amount_received ? obj.amount_received / 100 : null);
 
       if (amount) {
-        await supabase.from('donations').insert({
+        const { error } = await supabaseAdmin.from('donations').insert({
           id:                randomUUID(),
           stripe_payment_id: obj.id,
           amount,
         });
+        if (error) console.error('[payments] donation-webhook insert error:', error.message);
       }
     }
 
     res.json({ received: true });
   } catch (err) {
+    console.error('[payments] donation-webhook error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -341,7 +403,7 @@ router.post('/create-event-payment', async (req, res) => {
     if (!event_slot_id) return res.status(400).json({ error: 'event_slot_id is required.' });
     if (!amount || Number(amount) <= 0) return res.status(400).json({ error: 'A positive amount is required.' });
 
-    const { data: slot } = await supabase
+    const { data: slot } = await supabaseAdmin
       .from('event_slots')
       .select('id, title')
       .eq('id', event_slot_id)
@@ -355,6 +417,7 @@ router.post('/create-event-payment', async (req, res) => {
 
     res.json({ url: sessionUrl, slot });
   } catch (err) {
+    console.error('[payments] create-event-payment error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -375,7 +438,7 @@ router.post('/event-webhook', async (req, res) => {
       const creatorShare = Math.round(amount * 0.98 * 100) / 100;
       const studioFee    = Math.round(amount * 0.02 * 100) / 100;
 
-      await supabase.from('event_payments').insert({
+      const { error } = await supabaseAdmin.from('event_payments').insert({
         id:                    randomUUID(),
         event_slot_id:         eventSlotId || null,
         amount,
@@ -383,10 +446,12 @@ router.post('/event-webhook', async (req, res) => {
         creator_payout_amount: creatorShare,
         studio_fee_amount:     studioFee,
       });
+      if (error) console.error('[payments] event-webhook insert error:', error.message);
     }
 
     res.json({ received: true });
   } catch (err) {
+    console.error('[payments] event-webhook error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
