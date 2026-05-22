@@ -211,11 +211,19 @@ async function syncProfileSubscription(customerId, status, periodEnd, customerEm
     return;
   }
 
-  const isActive = ['active', 'trialing'].includes(status);
+  console.log(`[${timestamp}] [webhook] Stripe subscription status: ${status}`);
+
+  // active + trialing + past_due → member retains access
+  // canceled, unpaid, incomplete, incomplete_expired → membership revoked
+  const isActive       = ['active', 'trialing', 'past_due'].includes(status);
+  const membershipStatus = isActive ? 'active' : 'inactive';
+
+  console.log(`[${timestamp}] [webhook] Resolved membership_status: ${membershipStatus} (subscription_active=${isActive})`);
 
   const payload = {
     subscription_status: status,
     subscription_active: isActive,
+    membership_status:   membershipStatus,
     updated_at:          timestamp,
   };
   if (periodEnd) payload.current_period_end = periodEnd;
@@ -228,7 +236,7 @@ async function syncProfileSubscription(customerId, status, periodEnd, customerEm
   if (error) {
     console.error(`[${timestamp}] [webhook] ❌ profile update error:`, error.message);
   } else {
-    console.log(`[${timestamp}] [webhook] ✅ profile updated: subscription_active=${isActive} status=${status}`);
+    console.log(`[${timestamp}] [webhook] ✅ profile updated: membership_status=${membershipStatus} subscription_active=${isActive} status=${status}`);
   }
 }
 
