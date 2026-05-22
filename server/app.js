@@ -26,6 +26,7 @@ import contestCommentsRouter    from './routes/contestComments.js';
 import liveEventsRouter         from './routes/liveEvents.js';
 import liveChatRouter           from './routes/liveChat.js';
 import recordedEventsRouter     from './routes/recordedEvents.js';
+import stripePortalRouter       from './routes/stripePortal.js';
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.use('/api/likes',                 likesRouter);
 app.use('/api/announcements',         announcementsRouter);
 app.use('/api/custom-events',         customEventsRouter);
 app.use('/api/payments',              paymentsRouter);
+app.use('/api/stripe',                stripePortalRouter);
 app.use('/api/submissions',           submissionsRouter);
 app.use('/api/event-slots',           eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);

@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMembership } from '../modules/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { MEMBERSHIP } from '../lib/membership';
+import { supabase } from '../lib/supabaseClient';
 
 function StatusBadge({ active }: { active: boolean }) {
   return (
@@ -35,6 +37,29 @@ const PERKS = [
 export default function MembershipPage() {
   const { user, loading: authLoading } = useAuth();
   const { membership, loading, hasAccess } = useMembership();
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError,   setPortalError]   = useState('');
+
+  async function handleManageSubscription() {
+    setPortalLoading(true);
+    setPortalError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('You must be logged in.');
+
+      const res = await fetch('/api/stripe/create-portal-session', {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to open billing portal.');
+
+      window.location.href = json.url;
+    } catch (err: any) {
+      setPortalError(err.message);
+      setPortalLoading(false);
+    }
+  }
 
   if (authLoading || loading) {
     return (
@@ -92,9 +117,51 @@ export default function MembershipPage() {
         </div>
 
         {periodEnd && (
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #888)' }}>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #888)', marginBottom: '1rem' }}>
             {hasAccess ? 'Renews' : 'Expired'} {periodEnd}
           </div>
+        )}
+
+        {/* Manage Subscription — shown to active subscribers */}
+        {hasAccess && (
+          <div>
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              style={{
+                display:      'inline-flex',
+                alignItems:   'center',
+                gap:          '0.4rem',
+                padding:      '0.55rem 1.2rem',
+                borderRadius: '10px',
+                border:       '1px solid rgba(134,239,172,0.3)',
+                background:   portalLoading ? 'rgba(134,239,172,0.05)' : 'rgba(134,239,172,0.1)',
+                color:        '#86efac',
+                fontWeight:   700,
+                fontSize:     '0.875rem',
+                cursor:       portalLoading ? 'not-allowed' : 'pointer',
+                transition:   'background 0.15s',
+              }}
+            >
+              {portalLoading ? (
+                <>
+                  <span style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid #86efac', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                  Opening portal…
+                </>
+              ) : (
+                <>⚙ Manage Subscription</>
+              )}
+            </button>
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted, #888)' }}>
+              Update payment method · Cancel · View invoices
+            </p>
+          </div>
+        )}
+
+        {portalError && (
+          <p style={{ margin: '0.75rem 0 0', fontSize: '0.8rem', color: '#fca5a5' }}>
+            {portalError}
+          </p>
         )}
       </div>
 
@@ -182,6 +249,10 @@ export default function MembershipPage() {
       <p style={{ fontSize: '0.72rem', color: 'var(--text-muted, #888)', marginTop: '1.5rem' }}>
         {MEMBERSHIP.refundPolicy}
       </p>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
