@@ -118,6 +118,7 @@ router.post('/', async (req, res) => {
       console.error('[slots/POST] events row error:', eventErr.message);
     }
 
+    console.log(`[slots/create] ✅ slot_id=${slotId} event_id=${eventId || '(none)'} stream_key=${streamKey} user_id=${userId}`);
     return res.status(201).json({ slot, event: event || null, stream_key: streamKey });
   } catch (err) {
     console.error('[slots/POST]', err.message);

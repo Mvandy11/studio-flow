@@ -368,6 +368,7 @@ Use your upload password to post your event video, or go live using the stream k
       }).catch(() => {});
     }
 
+    console.log(`[admin/approve] ✅ approved request=${id} event_id=${eventId} slot_id=${slotId} stream_key=${streamKey} user_id=${request.user_id}`);
     return res.status(201).json({ success: true, event, slot, stream_key: streamKey });
   } catch (err) {
     console.error('[admin/event-requests/approve]', err.message);

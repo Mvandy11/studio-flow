@@ -102,6 +102,7 @@ router.post('/slot/:slotId/start', async (req, res) => {
       .update({ status: 'live' })
       .eq('live_room_id', slotId);
 
+    console.log(`[live/start] ✅ slot_id=${slotId} user_id=${user.id}`);
     res.json({ success: true, status: 'live' });
   } catch (err) {
     console.error('[live] start:', err.message);
@@ -134,6 +135,7 @@ router.post('/slot/:slotId/end', async (req, res) => {
       .update({ status: 'ended' })
       .eq('live_room_id', slotId);
 
+    console.log(`[live/end] ✅ slot_id=${slotId} user_id=${user.id}`);
     res.json({ success: true, status: 'ended' });
   } catch (err) {
     console.error('[live] end:', err.message);

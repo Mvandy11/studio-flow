@@ -125,6 +125,7 @@ router.post('/:slotId/upload-recorded', upload.single('video'), async (req, res)
       .update({ video_url: publicUrl, event_mode: 'recorded', status: 'completed' })
       .eq('live_room_id', slotId);
 
+    console.log(`[recorded/upload] ✅ slot_id=${slotId} url=${publicUrl} user_id=${user.id}`);
     res.json({ success: true, recorded_video_url: publicUrl });
   } catch (err) {
     console.error('[recorded] upload:', err.message);

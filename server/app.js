@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { requestLogger } from './middleware/logger.js';
 
 import aiRoutes                  from './routes/ai/index.js';
 import authProfileRouter         from './routes/authProfile.js';
@@ -33,7 +34,13 @@ const app = express();
 app.use(cors({ origin: '*' }));
 
 // ─────────────────────────────────────────────────────────────
-// 2. STRIPE WEBHOOK — raw body MUST be parsed before express.json()
+// 2. REQUEST LOGGER — mounted before routes so every request is logged.
+//    Skips printing the raw body on Stripe webhook paths.
+// ─────────────────────────────────────────────────────────────
+app.use(requestLogger);
+
+// ─────────────────────────────────────────────────────────────
+// 3. STRIPE WEBHOOK — raw body MUST be parsed before express.json()
 //    Applying express.raw() per path keeps req.body as a Buffer
 //    only for webhook endpoints; all other routes get JSON.
 // ─────────────────────────────────────────────────────────────
@@ -43,13 +50,13 @@ app.use('/api/payments/donation-webhook',     RAW_JSON);
 app.use('/api/payments/event-webhook',        RAW_JSON);
 
 // ─────────────────────────────────────────────────────────────
-// 3. Normal body parsers (AFTER webhook raw)
+// 4. Normal body parsers (AFTER webhook raw)
 // ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '6mb' }));
 app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 
 // ─────────────────────────────────────────────────────────────
-// 4. All routes (each router mounted exactly once)
+// 5. All routes (each router mounted exactly once)
 // ─────────────────────────────────────────────────────────────
 app.use('/api/ai',                    aiRoutes);
 app.use('/api/auth',                  authProfileRouter);
@@ -76,24 +83,31 @@ app.use('/api/free-chat',             freeChatRouter);
 app.use('/api/comments',             commentsRouter);
 
 // ─────────────────────────────────────────────────────────────
-// 5. Health check
+// 6. Health check
 // ─────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', server: 'Studio Flow API', timestamp: new Date().toISOString() });
+  res.json({
+    status:    'ok',
+    server:    'Studio Flow API',
+    uptime:    process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // ─────────────────────────────────────────────────────────────
-// 6. 404
+// 7. 404
 // ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
 // ─────────────────────────────────────────────────────────────
-// 7. Error handler
+// 8. Global error handler — logs full stack, returns JSON
 // ─────────────────────────────────────────────────────────────
-app.use((err, _req, res, _next) => {
-  console.error('[server]', err.message);
+app.use((err, req, res, _next) => {
+  const ts = new Date().toISOString();
+  console.error(`[${ts}] [server] ❌ Unhandled error on ${req.method} ${req.path}:`);
+  console.error(err.stack || err.message);
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
