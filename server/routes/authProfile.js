@@ -79,7 +79,7 @@ router.get('/membership', async (req, res) => {
 
     const { data, error: dbErr } = await supabaseAdmin
       .from('profiles')
-      .select('subscription_active, subscription_status, current_period_end')
+      .select('subscription_active, subscription_status, current_period_end, membership_active, membership_tier, membership_started_at')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -88,10 +88,20 @@ router.get('/membership', async (req, res) => {
       return res.status(500).json({ error: 'Failed to read membership.' });
     }
 
+    // Derive effective access from either path (webhook sync OR payment link activate)
+    const effectiveActive =
+      (data?.subscription_active ?? false) ||
+      (data?.membership_active   ?? false);
+
     return res.json({
-      subscription_active: data?.subscription_active ?? false,
-      subscription_status: data?.subscription_status ?? null,
-      current_period_end:  data?.current_period_end  ?? null,
+      subscription_active:  data?.subscription_active  ?? false,
+      subscription_status:  data?.subscription_status  ?? null,
+      current_period_end:   data?.current_period_end   ?? null,
+      membership_active:    data?.membership_active    ?? false,
+      membership_tier:      data?.membership_tier      ?? 'free',
+      membership_started_at: data?.membership_started_at ?? null,
+      // Convenience flag: true when either activation path grants access
+      has_access:           effectiveActive,
     });
   } catch (err) {
     console.error('[auth/membership] Unexpected error:', err.message);

@@ -318,13 +318,13 @@ router.post('/subscription-webhook', async (req, res) => {
   console.log(`[${timestamp}] [webhook] 📩 Stripe webhook received: ${eventType}`);
 
   try {
+    // Studio Flow uses Stripe Payment Links (not Subscription objects).
+    // Only checkout.session.completed is handled here as a fallback sync
+    // for any checkout that fires this webhook. Subscription lifecycle events
+    // are intentionally excluded — membership is activated via
+    // POST /api/membership/activate on the success redirect.
     const HANDLED = new Set([
       'checkout.session.completed',
-      'customer.subscription.created',
-      'customer.subscription.updated',
-      'customer.subscription.deleted',
-      'invoice.paid',
-      'invoice.payment_failed',
     ]);
 
     if (!HANDLED.has(eventType)) {

@@ -8,14 +8,20 @@ export interface UseMembershipResult {
   membership: ProfileSubscription | null;
   loading: boolean;
   error: string | null;
-  /** True when the user has full access (admin or subscription_active) */
+  /** True when the user has full premium access (admin, webhook, or payment link) */
   hasAccess: boolean;
+  /** Membership tier: 'free' | 'member_30' | 'creator_50' */
+  tier: string;
 }
 
 const EMPTY: ProfileSubscription = {
-  subscription_active: false,
-  subscription_status: null,
-  current_period_end:  null,
+  subscription_active:  false,
+  subscription_status:  null,
+  current_period_end:   null,
+  membership_active:    false,
+  membership_tier:      'free',
+  membership_started_at: null,
+  has_access:           false,
 };
 
 export function useMembership(): UseMembershipResult {
@@ -74,7 +80,11 @@ export function useMembership(): UseMembershipResult {
   const hasAccess = requireMembership({
     role,
     subscriptionActive: membership?.subscription_active,
+    membershipActive:   membership?.membership_active,
+    hasAccessFlag:      membership?.has_access,
   });
 
-  return { membership, loading, error, hasAccess };
+  const tier = membership?.membership_tier ?? 'free';
+
+  return { membership, loading, error, hasAccess, tier };
 }

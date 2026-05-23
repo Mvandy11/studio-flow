@@ -14,11 +14,18 @@ export interface Profile {
   updated_at: string | null;
 }
 
-/** Subscription state read from the `profiles` table (set by Stripe webhook). */
+/** Membership state read from the `profiles` table. */
 export interface ProfileSubscription {
+  // Legacy webhook-based fields (kept for backward compat)
   subscription_active: boolean;
   subscription_status: string | null;
   current_period_end: string | null;
+  // Payment Link-based membership fields
+  membership_active:     boolean;
+  membership_tier:       'free' | 'member_30' | 'creator_50' | string;
+  membership_started_at: string | null;
+  /** Convenience: true when either activation path grants access */
+  has_access:            boolean;
 }
 
 export interface Contest {

@@ -47,6 +47,7 @@ import DevFeed from './pages/Feed.tsx';
 import DevChat from './pages/Chat.tsx';
 import FreeChatPage from './pages/FreeChatPage';
 import MembershipPage from './pages/MembershipPage';
+import MembershipSuccess from './pages/MembershipSuccess';
 import ChatPage from './pages/ChatPage';
 
 export default function App() {
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="/submissions"            element={<SubmissionsPage />} />
           <Route path="/subscription"           element={<SubscriptionPage />} />
           <Route path="/membership"             element={<MembershipPage />} />
+          <Route path="/membership/success"     element={<MembershipSuccess />} />
           <Route path="/admin/event-requests"   element={<AdminEventRequests />} />
           <Route path="/admin/winners"            element={<AdminWinnersDashboard />} />
           <Route path="/admin/analytics"         element={<AdminAnalyticsDashboard />} />

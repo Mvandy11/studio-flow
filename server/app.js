@@ -28,6 +28,7 @@ import liveChatRouter           from './routes/liveChat.js';
 import recordedEventsRouter     from './routes/recordedEvents.js';
 import uploadRecordedVideoRouter from './routes/uploadRecordedVideo.js';
 import stripePortalRouter       from './routes/stripePortal.js';
+import membershipRouter         from './routes/membership.js';
 
 const app = express();
 
@@ -71,6 +72,7 @@ app.use('/api/announcements',         announcementsRouter);
 app.use('/api/custom-events',         customEventsRouter);
 app.use('/api/payments',              paymentsRouter);
 app.use('/api/stripe',                stripePortalRouter);
+app.use('/api/membership',            membershipRouter);
 app.use('/api/submissions',           submissionsRouter);
 app.use('/api/event-slots',           eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);
