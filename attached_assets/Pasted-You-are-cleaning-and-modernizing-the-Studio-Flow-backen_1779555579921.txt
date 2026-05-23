@@ -1,0 +1,179 @@
+You are cleaning and modernizing the Studio Flow backend for Render
+deployment under the new Studio Flow 2.0 architecture.
+
+The backend must no longer depend on Stripe secret keys, Stripe webhooks,
+subscription objects, or any server-side billing logic. Studio Flow 2.0 uses
+Stripe Payment Links only, which require no backend Stripe integration.
+
+Perform the following changes:
+
+────────────────────────────────────────
+1. REMOVE ALL STRIPE SERVER-SIDE LOGIC
+────────────────────────────────────────
+
+Delete or disable any code that:
+
+- Imports Stripe:
+    import Stripe from "stripe"
+    const stripe = new Stripe(...)
+- References:
+    process.env.STRIPE_SECRET_KEY
+    process.env.STRIPE_WEBHOOK_SECRET
+- Creates Stripe webhook handlers:
+    app.post("/webhook", ...)
+- Handles events:
+    customer.subscription.created
+    customer.subscription.updated
+    invoice.paid
+    invoice.payment_failed
+    checkout.session.completed
+- Reads subscription metadata
+- Syncs subscription status to Supabase
+- Uses Stripe customer IDs or subscription IDs
+
+Studio Flow 2.0 does NOT use Stripe server-side.
+
+────────────────────────────────────────
+2. REMOVE ENVIRONMENT VARIABLE CHECKS
+────────────────────────────────────────
+
+Delete any code that logs or throws errors like:
+
+❌ MISSING required env var: STRIPE_SECRET_KEY
+❌ MISSING required env var: STRIPE_WEBHOOK_SECRET
+
+These are no longer required.
+
+The only required backend env vars are:
+
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+
+Optional:
+- OPENAI_API_KEY (if used for AI features)
+
+────────────────────────────────────────
+3. CLEAN UP PACKAGE.JSON
+────────────────────────────────────────
+
+Ensure package.json contains:
+
+{
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
+
+Remove Stripe from dependencies:
+
+- "stripe"
+- "@stripe/stripe-js" (frontend only, if present in backend)
+
+Remove any unused packages left over from webhook logic.
+
+────────────────────────────────────────
+4. VERIFY SERVER ENTRY FILE
+────────────────────────────────────────
+
+Ensure the backend starts with:
+
+node index.js
+
+And index.js contains:
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log("Studio Flow API running on port " + PORT);
+});
+
+Remove any Netlify or Replit-specific wrappers:
+
+- exports.handler
+- module.exports.handler
+- Replit AI imports
+- Replit DB imports
+
+────────────────────────────────────────
+5. REMOVE ANY NATIVE MODULES THAT BREAK RENDER
+────────────────────────────────────────
+
+Delete or disable imports for:
+
+- fluent-ffmpeg
+- ffmpeg-static
+- sharp (if not used)
+- any binary-dependent modules
+
+Render cannot build these without custom environments.
+
+Studio Flow 2.0 does not require them.
+
+────────────────────────────────────────
+6. VERIFY SUPABASE CLIENT USAGE
+────────────────────────────────────────
+
+Backend must use:
+
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+Ensure no frontend anon key is used in backend.
+
+────────────────────────────────────────
+7. REMOVE OLD MEMBERSHIP SYNC LOGIC
+────────────────────────────────────────
+
+Delete any code that:
+
+- Reads subscription status from Stripe
+- Updates membership_tier based on Stripe events
+- Handles trialing → active transitions
+- Handles past_due → active transitions
+
+Studio Flow 2.0 uses:
+
+POST /api/membership/activate
+
+to update membership tiers.
+
+────────────────────────────────────────
+8. ENSURE ONLY THESE BACKEND ROUTES EXIST
+────────────────────────────────────────
+
+Keep or create:
+
+- POST /api/membership/activate
+- POST /api/events/create
+- GET /api/events/list
+- GET /api/events/:id
+- POST /api/donations/record
+- POST /api/revenue/record
+- Any other non-Stripe, non-webhook routes
+
+Remove any unused or obsolete routes.
+
+────────────────────────────────────────
+9. TESTING CHECKLIST
+────────────────────────────────────────
+
+After cleanup:
+
+- Backend boots with NO Stripe warnings
+- No missing env var warnings
+- No webhook routes exist
+- No Stripe imports exist
+- No subscription logic exists
+- Render deploy logs show:
+    SUPABASE_URL is set
+    SUPABASE_SERVICE_ROLE_KEY is set
+    Studio Flow API running on port 10000
+- No crashes
+- No 404 errors except for root path (expected)
+- All API routes respond correctly
+
+Make all changes now.

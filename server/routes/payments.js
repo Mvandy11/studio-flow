@@ -1,27 +1,22 @@
 /**
  * /api/payments — Studio Flow 2.0 payment endpoints.
  *
- * Membership is handled exclusively via Stripe Payment Links.
- * After payment, Stripe redirects to /membership/success?tier=<tier>
- * which calls POST /api/membership/activate — no subscription objects needed.
+ * Studio Flow 2.0 uses Stripe Payment Links only.
+ * No server-side Stripe SDK, no subscription objects, no webhook verification.
  *
- * Webhooks here are kept as receive-and-acknowledge endpoints only.
- * No subscription sync is performed server-side.
+ * Membership is activated by the frontend redirect:
+ *   /membership/success?tier=<tier> → POST /api/membership/activate
+ *
+ * These webhook endpoints exist only to acknowledge Stripe pings and
+ * prevent automatic retries. No database writes are performed here.
  */
 import express from 'express';
-import Stripe from 'stripe';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
 import { logError } from '../utils/logError.js';
 import { donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 import { randomUUID } from 'crypto';
 
 const router = express.Router();
-
-// ── Stripe client ─────────────────────────────────────────────────────────────
-function getStripe() {
-  if (!process.env.STRIPE_SECRET_KEY) return null;
-  return new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-11-20.acacia' });
-}
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 async function getUserFromHeader(req) {
@@ -38,44 +33,19 @@ async function requireAuth(req, res) {
   return user;
 }
 
-// ── Webhook parser ────────────────────────────────────────────────────────────
-function parseWebhookEvent(req) {
-  const sig           = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const stripe        = getStripe();
-
-  if (stripe && sig && webhookSecret) {
-    return stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  }
-
-  const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
-  return typeof raw === 'string' ? JSON.parse(raw) : raw;
-}
-
-// ── SUBSCRIPTION WEBHOOK ──────────────────────────────────────────────────────
-//
-// Studio Flow 2.0 uses Payment Links only — no Stripe Subscription objects.
-// Membership is activated by the frontend redirect hitting POST /api/membership/activate.
-// This endpoint exists only to acknowledge Stripe pings and prevent retries.
-//
-router.post('/subscription-webhook', async (req, res) => {
-  const timestamp = new Date().toISOString();
-
-  try {
-    parseWebhookEvent(req); // validates signature if STRIPE_WEBHOOK_SECRET is set
-  } catch (err) {
-    console.error(`[${timestamp}] [subscription-webhook] ❌ Signature error:`, err.message);
-    return res.status(400).json({ error: `Webhook error: ${err.message}` });
-  }
-
-  // Membership activation is handled client-side via /api/membership/activate.
-  // All subscription lifecycle events are intentionally ignored.
-  console.log(`[${timestamp}] [subscription-webhook] ℹ️ Acknowledged (no-op — Payment Links model)`);
+// ── SUBSCRIPTION WEBHOOK (no-op acknowledge) ──────────────────────────────────
+router.post('/subscription-webhook', (req, res) => {
+  console.log('[payments] subscription-webhook acknowledged (no-op — Payment Links model)');
   res.json({ received: true });
 });
 
-// ── DONATIONS ─────────────────────────────────────────────────────────────────
+// ── DONATION WEBHOOK (no-op acknowledge) ──────────────────────────────────────
+// Donation records are inserted by /donate/success which has full context.
+router.post('/donation-webhook', (req, res) => {
+  res.json({ received: true });
+});
 
+// ── DONATION LINK REDIRECT ────────────────────────────────────────────────────
 router.post('/create-donation', async (req, res) => {
   try {
     const user = await requireAuth(req, res);
@@ -84,17 +54,6 @@ router.post('/create-donation', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
-// Donation webhook — acknowledge only; donation records are inserted by the
-// /donate/success page which has full event_id + creator_id context.
-router.post('/donation-webhook', async (req, res) => {
-  try {
-    parseWebhookEvent(req);
-  } catch (err) {
-    return res.status(400).json({ error: `Webhook error: ${err.message}` });
-  }
-  res.json({ received: true });
 });
 
 // ── CUSTOM EVENT PAYMENTS ─────────────────────────────────────────────────────
@@ -127,39 +86,9 @@ router.post('/create-event-payment', async (req, res) => {
   }
 });
 
-router.post('/event-webhook', async (req, res) => {
-  let event;
-  try {
-    event = parseWebhookEvent(req);
-  } catch (err) {
-    return res.status(400).json({ error: `Webhook error: ${err.message}` });
-  }
-
-  try {
-    if (event.type === 'checkout.session.completed') {
-      const session      = event.data?.object;
-      const eventSlotId  = session?.client_reference_id;
-      const amount       = session?.amount_total ? session.amount_total / 100 : 0;
-      const creatorShare = Math.round(amount * 0.98 * 100) / 100;
-      const studioFee    = Math.round(amount * 0.02 * 100) / 100;
-
-      const { error } = await supabaseAdmin.from('event_payments').insert({
-        id:                    randomUUID(),
-        event_slot_id:         eventSlotId || null,
-        amount,
-        stripe_payment_id:     session?.payment_intent || session?.id,
-        creator_payout_amount: creatorShare,
-        studio_fee_amount:     studioFee,
-      });
-      if (error) console.error('[payments] event-webhook insert error:', error.message);
-    }
-
-    res.json({ received: true });
-  } catch (err) {
-    console.error('[payments] event-webhook error:', err.message);
-    await logError(err, '/api/payments/event-webhook');
-    res.status(500).json({ error: err.message });
-  }
+// ── EVENT WEBHOOK (no-op acknowledge) ────────────────────────────────────────
+router.post('/event-webhook', (req, res) => {
+  res.json({ received: true });
 });
 
 export default router;

@@ -15,14 +15,14 @@ import app from './app.js';
 const PORT = process.env.PORT || 3001;
 
 // ── Startup diagnostics ───────────────────────────────────────────────────────
-const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'];
-const OPTIONAL = ['SUPABASE_ANON_KEY'];
+const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const OPTIONAL = ['SUPABASE_ANON_KEY', 'REPLICATE_API_TOKEN'];
 REQUIRED.forEach(v => {
   if (!process.env[v]) console.error(`[server] ❌ MISSING required env var: ${v}`);
   else                  console.log(`[server] ✅ ${v} is set`);
 });
 OPTIONAL.forEach(v => {
-  if (!process.env[v]) console.warn(`[server] ⚠️  Optional env var not set: ${v}`);
+  if (process.env[v]) console.log(`[server] ✅ ${v} is set`);
 });
 
 app.listen(PORT, '0.0.0.0', () => {

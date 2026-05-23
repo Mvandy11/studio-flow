@@ -41,22 +41,11 @@ app.use(cors({ origin: '*' }));
 
 // ─────────────────────────────────────────────────────────────
 // 2. REQUEST LOGGER — mounted before routes so every request is logged.
-//    Skips printing the raw body on Stripe webhook paths.
 // ─────────────────────────────────────────────────────────────
 app.use(requestLogger);
 
 // ─────────────────────────────────────────────────────────────
-// 3. STRIPE WEBHOOK — raw body MUST be parsed before express.json()
-//    Applying express.raw() per path keeps req.body as a Buffer
-//    only for webhook endpoints; all other routes get JSON.
-// ─────────────────────────────────────────────────────────────
-const RAW_JSON = express.raw({ type: 'application/json' });
-app.use('/api/payments/subscription-webhook', RAW_JSON);
-app.use('/api/payments/donation-webhook',     RAW_JSON);
-app.use('/api/payments/event-webhook',        RAW_JSON);
-
-// ─────────────────────────────────────────────────────────────
-// 4. Normal body parsers (AFTER webhook raw)
+// 3. Body parsers
 // ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '6mb' }));
 app.use(express.urlencoded({ extended: true, limit: '6mb' }));
