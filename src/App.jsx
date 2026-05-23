@@ -49,6 +49,8 @@ import FreeChatPage from './pages/FreeChatPage';
 import MembershipPage from './pages/MembershipPage';
 import MembershipSuccess from './pages/MembershipSuccess';
 import ChatPage from './pages/ChatPage';
+import NewEventPage from './pages/creator/NewEventPage';
+import CreatorEventPage from './pages/creator/CreatorEventPage';
 
 export default function App() {
   return (
@@ -72,9 +74,14 @@ export default function App() {
           {/* ── Events ── */}
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/create" element={<CreateEventPage />} />
+          <Route path="/events/category/:category" element={<EventsPage />} />
           <Route path="/events/:id" element={<EventDetailsPage />} />
           <Route path="/events/:eventId/purchase" element={<PurchasePage />} />
           <Route path="/stage/:stageRoomId" element={<StagePage />} />
+
+          {/* ── Creator Events (direct-publish, no approval) ── */}
+          <Route path="/creator/new-event" element={<NewEventPage />} />
+          <Route path="/event/:slotId" element={<CreatorEventPage />} />
 
           {/* ── AI Tools ── */}
           <Route path="/tools" element={<Tools />} />

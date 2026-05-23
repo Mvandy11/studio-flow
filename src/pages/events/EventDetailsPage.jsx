@@ -471,6 +471,33 @@ export default function EventDetailsPage() {
         </div>
       )}
 
+      {/* ── Donation button ── */}
+      <div style={{
+        padding: '1.1rem 1.4rem',
+        background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)',
+        borderRadius: '14px', marginBottom: '1.75rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem',
+      }}>
+        <div>
+          <p style={{ margin: 0, fontWeight: 700, color: '#f5a623', fontSize: '0.92rem' }}>💛 Support This Event</p>
+          <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'rgba(200,200,215,0.45)' }}>
+            Any amount helps keep Studio Flow events running.
+          </p>
+        </div>
+        <a
+          href="https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            padding: '0.55rem 1.2rem', borderRadius: '9px',
+            background: 'rgba(245,166,35,0.16)', border: '1px solid rgba(245,166,35,0.3)',
+            color: '#f5a623', fontWeight: 800, fontSize: '0.88rem', textDecoration: 'none',
+          }}
+        >
+          Donate ❤️
+        </a>
+      </div>
+
       {/* CTA buttons */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
         {isLive && (eventStatus === 'live' || eventStatus === 'upcoming') && (

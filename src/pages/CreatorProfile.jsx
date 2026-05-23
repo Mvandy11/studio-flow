@@ -319,6 +319,103 @@ function AccountSection({ onLogout, userEmail }) {
   );
 }
 
+/* ── Creator-posted event slots section ────────────────────── */
+function CreatorEventSlots({ profileId, isOwn }) {
+  const [slots,   setSlots]   = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/creator/events/public?creator_id=${profileId}`)
+      .then((r) => r.json())
+      .then((data) => setSlots(Array.isArray(data) ? data : []))
+      .catch(() => setSlots([]))
+      .finally(() => setLoading(false));
+  }, [profileId]);
+
+  if (loading || slots.length === 0) {
+    if (!isOwn || loading) return null;
+    // Own profile + no events yet → encourage posting
+    return (
+      <div className="portfolio-section">
+        <h2 className="portfolio-section-title">🎬 My Events</h2>
+        <div style={{
+          padding: '1.5rem', borderRadius: '14px', textAlign: 'center',
+          background: 'rgba(167,139,250,0.05)', border: '1px dashed rgba(167,139,250,0.2)',
+        }}>
+          <p style={{ margin: '0 0 0.75rem', color: 'rgba(200,200,215,0.45)', fontSize: '0.88rem' }}>
+            You haven't posted any events yet.
+          </p>
+          <Link
+            to="/creator/new-event"
+            style={{
+              display: 'inline-block', padding: '0.5rem 1.25rem',
+              borderRadius: '8px', background: 'rgba(167,139,250,0.15)',
+              border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa',
+              fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none',
+            }}
+          >
+            + Post Your First Event
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="portfolio-section">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <h2 className="portfolio-section-title" style={{ margin: 0 }}>🎬 Events</h2>
+        {isOwn && (
+          <Link
+            to="/creator/new-event"
+            style={{
+              fontSize: '0.78rem', fontWeight: 700, padding: '0.3rem 0.85rem',
+              borderRadius: '8px', background: 'rgba(167,139,250,0.1)',
+              border: '1px solid rgba(167,139,250,0.25)', color: '#a78bfa',
+              textDecoration: 'none',
+            }}
+          >
+            + Post Event
+          </Link>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        {slots.map((slot) => (
+          <Link
+            key={slot.id}
+            to={`/event/${slot.id}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '1rem',
+              padding: '0.875rem 1rem', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+              textDecoration: 'none', transition: 'border-color 0.2s',
+            }}
+            onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(167,139,250,0.3)'}
+            onMouseOut={(e)  => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
+          >
+            {slot.thumbnail_url ? (
+              <img src={slot.thumbnail_url} alt={slot.title} style={{ width: '64px', height: '48px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: '64px', height: '48px', borderRadius: '8px', background: 'rgba(167,139,250,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>
+                {slot.is_live ? '📡' : '🎬'}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-soft, #e0e0f0)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {slot.title}
+              </p>
+              <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: 'rgba(200,200,215,0.4)' }}>
+                {slot.category && `#${slot.category} · `}{slot.is_live ? '📡 Live' : '🎬 Recorded'}
+              </p>
+            </div>
+            <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.35)', flexShrink: 0 }}>→</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────────── */
 export default function CreatorProfile() {
   const { id } = useParams();
@@ -747,6 +844,9 @@ function ProfileView({
           </div>
         </div>
       )}
+
+      {/* My Events (creator_50 direct-publish slots) */}
+      <CreatorEventSlots profileId={profile.id} isOwn={isOwn} />
 
       {/* Tip Jar — only on other creators' profiles */}
       {!isOwn && <TipJar creatorName={displayName} />}
