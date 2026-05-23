@@ -51,6 +51,7 @@ import MembershipSuccess from './pages/MembershipSuccess';
 import ChatPage from './pages/ChatPage';
 import NewEventPage from './pages/creator/NewEventPage';
 import CreatorEventPage from './pages/creator/CreatorEventPage';
+import DonateSuccess from './pages/DonateSuccess';
 
 export default function App() {
   return (
@@ -82,6 +83,7 @@ export default function App() {
           {/* ── Creator Events (direct-publish, no approval) ── */}
           <Route path="/creator/new-event" element={<NewEventPage />} />
           <Route path="/event/:slotId" element={<CreatorEventPage />} />
+          <Route path="/donate/success" element={<DonateSuccess />} />
 
           {/* ── AI Tools ── */}
           <Route path="/tools" element={<Tools />} />

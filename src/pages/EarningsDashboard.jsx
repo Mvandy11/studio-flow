@@ -22,6 +22,7 @@ const STATUS_COLORS = {
 export default function EarningsDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [earnings,     setEarnings]     = useState([]);
+  const [donations,    setDonations]    = useState([]);
   const [settings,     setSettings]     = useState(null);
   const [loading,      setLoading]      = useState(true);
   const [requesting,   setRequesting]   = useState(false);
@@ -42,9 +43,16 @@ export default function EarningsDashboard() {
         .select('payout_method, paypal, cashapp, venmo, stripe, custom_url')
         .eq('creator_id', user.id)
         .maybeSingle(),
-    ]).then(([earningsRes, settingsRes]) => {
+      supabase
+        .from('donations')
+        .select('id, amount, created_at, event_id, event_slots:event_id ( title )')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50),
+    ]).then(([earningsRes, settingsRes, donationsRes]) => {
       setEarnings(earningsRes.data || []);
       setSettings(settingsRes.data || null);
+      setDonations(donationsRes.data || []);
       setLoading(false);
     });
   }, [authLoading, user]);
@@ -153,6 +161,73 @@ export default function EarningsDashboard() {
           <p style={{ fontSize: '0.85rem', color: 'rgba(200,200,215,0.7)', marginTop: '0.75rem' }}>
             {requestMsg}
           </p>
+        )}
+      </div>
+
+      {/* Donations received */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 className="earnings-section-title">💛 Donations Received</h2>
+        {donations.length === 0 ? (
+          <div className="earnings-empty">
+            <p>No donations received yet.</p>
+            <p style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>
+              Post events and share your donation link to start receiving support.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div style={{
+              display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem',
+            }}>
+              <div style={{
+                padding: '0.875rem 1.25rem', borderRadius: '12px',
+                background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.2)',
+                minWidth: '140px',
+              }}>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f5a623' }}>
+                  ${donations.reduce((s, d) => s + Number(d.amount), 0).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginTop: '0.2rem' }}>
+                  Total Received
+                </div>
+              </div>
+              <div style={{
+                padding: '0.875rem 1.25rem', borderRadius: '12px',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                minWidth: '140px',
+              }}>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff' }}>
+                  {donations.length}
+                </div>
+                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginTop: '0.2rem' }}>
+                  Supporters
+                </div>
+              </div>
+            </div>
+            <div className="earnings-txn-list">
+              {donations.map((d) => (
+                <div key={d.id} className="earnings-txn">
+                  <div className="earnings-txn__icon" style={{ background: 'rgba(245,166,35,0.1)' }}>
+                    💛
+                  </div>
+                  <div className="earnings-txn__label">
+                    Donation
+                    {d.event_slots?.title && (
+                      <span style={{ marginLeft: '0.4rem', fontSize: '0.78rem', color: 'rgba(200,200,215,0.45)' }}>
+                        · {d.event_slots.title}
+                      </span>
+                    )}
+                  </div>
+                  <div className="earnings-txn__amount" style={{ color: '#f5a623' }}>+${Number(d.amount).toFixed(2)}</div>
+                  <div className="earnings-txn__date">
+                    {d.created_at
+                      ? formatDistanceToNow(new Date(d.created_at), { addSuffix: true })
+                      : '—'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

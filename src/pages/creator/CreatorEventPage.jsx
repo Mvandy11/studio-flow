@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link }    from 'react-router-dom';
 import { useAuth }             from '../../hooks/useAuth';
+import { supabase }            from '../../lib/supabaseClient';
 import LiveChatPanel           from '../../components/live/LiveChatPanel';
 import LiveEventViewer         from '../../components/live/LiveEventViewer';
 
@@ -40,9 +41,11 @@ function VideoPlayer({ url }) {
 export default function CreatorEventPage() {
   const { slotId } = useParams();
   const { user }   = useAuth();
-  const [event,    setEvent]   = useState(null);
-  const [loading,  setLoading] = useState(true);
-  const [error,    setError]   = useState('');
+  const [event,          setEvent]         = useState(null);
+  const [loading,        setLoading]       = useState(true);
+  const [error,          setError]         = useState('');
+  const [donationTotal,  setDonationTotal] = useState(null);
+  const [supporterCount, setSupporterCount] = useState(null);
 
   useEffect(() => {
     fetch(`/api/creator/events/public/${slotId}`)
@@ -53,6 +56,20 @@ export default function CreatorEventPage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  }, [slotId]);
+
+  useEffect(() => {
+    if (!slotId) return;
+    supabase
+      .from('donations')
+      .select('amount')
+      .eq('event_id', slotId)
+      .then(({ data }) => {
+        if (data) {
+          setDonationTotal(data.reduce((s, d) => s + Number(d.amount), 0));
+          setSupporterCount(data.length);
+        }
+      });
   }, [slotId]);
 
   if (loading) {
@@ -156,32 +173,56 @@ export default function CreatorEventPage() {
         </p>
       )}
 
-      {/* ── Donation button ─────────────────────────────────────── */}
+      {/* ── Donation panel ──────────────────────────────────────── */}
       <div style={{
         padding: '1.25rem 1.5rem',
         background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.22)',
         borderRadius: '14px', marginBottom: '2rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
       }}>
-        <div>
-          <p style={{ margin: 0, fontWeight: 700, color: '#f5a623', fontSize: '0.95rem' }}>💛 Support This Event</p>
-          <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'rgba(200,200,215,0.45)' }}>
-            Help keep this creator going with a one-time donation — any amount appreciated.
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, color: '#f5a623', fontSize: '0.95rem' }}>💛 Support This Event</p>
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'rgba(200,200,215,0.45)' }}>
+              Help keep this creator going with a one-time donation.
+            </p>
+          </div>
+          <a
+            href={`${DONATION_LINK}?client_reference_id=${slotId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: '0.65rem 1.4rem', borderRadius: '10px',
+              background: 'rgba(245,166,35,0.18)', border: '1px solid rgba(245,166,35,0.35)',
+              color: '#f5a623', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Donate ❤️
+          </a>
         </div>
-        <a
-          href={DONATION_LINK}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            padding: '0.65rem 1.4rem', borderRadius: '10px',
-            background: 'rgba(245,166,35,0.18)', border: '1px solid rgba(245,166,35,0.35)',
-            color: '#f5a623', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Donate ❤️
-        </a>
+
+        {/* Donation totals */}
+        {supporterCount !== null && supporterCount > 0 && (
+          <div style={{
+            display: 'flex', gap: '1.25rem', marginTop: '1rem',
+            paddingTop: '0.875rem', borderTop: '1px solid rgba(245,166,35,0.15)',
+          }}>
+            <div>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f5a623' }}>
+                ${donationTotal.toFixed(2)}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'rgba(200,200,215,0.4)', marginLeft: '0.3rem' }}>raised</span>
+            </div>
+            <div>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>
+                {supporterCount}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'rgba(200,200,215,0.4)', marginLeft: '0.3rem' }}>
+                {supporterCount === 1 ? 'supporter' : 'supporters'}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Reactions placeholder ──────────────────────────────── */}
