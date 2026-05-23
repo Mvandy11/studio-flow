@@ -61,6 +61,15 @@ router.post('/activate', async (req, res) => {
 
     if (updateErr) throw updateErr;
 
+    // When creator_50 activates, contribute $25 to the revenue pool
+    if (tier === 'creator_50') {
+      await supabaseAdmin.from('revenue_pool_entries').insert({
+        creator_id: user.id,
+        amount:     25,
+        source:     'subscription',
+      });
+    }
+
     console.log(`[membership/activate] ✅ user=${user.id} tier=${tier ?? '(none → free)'}`);
     res.json({ success: true, tier: payload.membership_tier });
   } catch (err) {

@@ -19,10 +19,21 @@ const STATUS_COLORS = {
   failed:    'rgba(248,113,113,0.8)',
 };
 
+const CURRENT_MONTH = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+const POOL_SOURCE_LABELS = {
+  subscription: '🟣 Creator_50 Subscription',
+  donation:     '💛 Donation Received',
+};
+
 export default function EarningsDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [earnings,     setEarnings]     = useState([]);
   const [donations,    setDonations]    = useState([]);
+  const [poolEntries,  setPoolEntries]  = useState([]);
+  const [poolMonthly,  setPoolMonthly]  = useState(0);
+  const [poolAllTime,  setPoolAllTime]  = useState(0);
+  const [poolTotal,    setPoolTotal]    = useState(0);
   const [settings,     setSettings]     = useState(null);
   const [loading,      setLoading]      = useState(true);
   const [requesting,   setRequesting]   = useState(false);
@@ -30,6 +41,12 @@ export default function EarningsDashboard() {
 
   useEffect(() => {
     if (authLoading || !user) return;
+
+    const startOfMonth = `${CURRENT_MONTH}-01`;
+    const [y, m] = CURRENT_MONTH.split('-').map(Number);
+    const nextMonth = m === 12
+      ? `${y + 1}-01-01`
+      : `${y}-${String(m + 1).padStart(2, '0')}-01`;
 
     Promise.all([
       supabase
@@ -49,10 +66,38 @@ export default function EarningsDashboard() {
         .eq('creator_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50),
-    ]).then(([earningsRes, settingsRes, donationsRes]) => {
+      // All pool entries for this creator
+      supabase
+        .from('revenue_pool_entries')
+        .select('id, amount, source, created_at')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100),
+      // This month's pool entries
+      supabase
+        .from('revenue_pool_entries')
+        .select('amount')
+        .eq('creator_id', user.id)
+        .gte('created_at', startOfMonth)
+        .lt('created_at', nextMonth),
+      // Current month pool total
+      supabase
+        .from('revenue_pool')
+        .select('total_amount')
+        .eq('month', CURRENT_MONTH)
+        .maybeSingle(),
+    ]).then(([earningsRes, settingsRes, donationsRes, poolAllRes, poolMonthRes, poolTotalRes]) => {
       setEarnings(earningsRes.data || []);
       setSettings(settingsRes.data || null);
       setDonations(donationsRes.data || []);
+
+      const allEntries   = poolAllRes.data   || [];
+      const monthEntries = poolMonthRes.data  || [];
+      setPoolEntries(allEntries);
+      setPoolAllTime(allEntries.reduce((s, e) => s + Number(e.amount), 0));
+      setPoolMonthly(monthEntries.reduce((s, e) => s + Number(e.amount), 0));
+      setPoolTotal(poolTotalRes.data?.total_amount ?? 0);
+
       setLoading(false);
     });
   }, [authLoading, user]);
@@ -164,7 +209,85 @@ export default function EarningsDashboard() {
         )}
       </div>
 
-      {/* Donations received */}
+      {/* ── My Monthly Earnings ────────────────────────────────── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 className="earnings-section-title">📈 My Monthly Earnings</h2>
+        <div style={{
+          display: 'flex', gap: '1rem', flexWrap: 'wrap',
+          padding: '1.25rem 1.5rem', borderRadius: '14px',
+          background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.15)',
+        }}>
+          <div style={{ flex: '1 1 160px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.4)', marginBottom: '0.3rem' }}>
+              Your Pool Contributions This Month
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#a78bfa' }}>
+              ${poolMonthly.toFixed(2)}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)', marginTop: '0.2rem' }}>
+              {CURRENT_MONTH}
+            </div>
+          </div>
+          <div style={{ flex: '1 1 160px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.4)', marginBottom: '0.3rem' }}>
+              Total Pool This Month
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff' }}>
+              ${poolTotal.toFixed(2)}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.2rem' }}>
+              across all creators
+            </div>
+          </div>
+          <div style={{ flex: '1 1 160px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.4)', marginBottom: '0.3rem' }}>
+              All-Time Pool Activity
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#60a5fa' }}>
+              ${poolAllTime.toFixed(2)}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.2rem' }}>
+              total contributed
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── My Revenue Pool Contributions ──────────────────────── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 className="earnings-section-title">🟣 My Revenue Pool Contributions</h2>
+        {poolEntries.length === 0 ? (
+          <div className="earnings-empty">
+            <p>No pool contributions yet.</p>
+            <p style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>
+              Upgrade to Creator_50 or receive donations to start contributing.
+            </p>
+          </div>
+        ) : (
+          <div className="earnings-txn-list">
+            {poolEntries.map((e) => (
+              <div key={e.id} className="earnings-txn">
+                <div className="earnings-txn__icon" style={{ background: e.source === 'subscription' ? 'rgba(167,139,250,0.1)' : 'rgba(245,166,35,0.1)' }}>
+                  {e.source === 'subscription' ? '🟣' : '💛'}
+                </div>
+                <div className="earnings-txn__label">
+                  {POOL_SOURCE_LABELS[e.source] || e.source}
+                </div>
+                <div className="earnings-txn__amount" style={{ color: e.source === 'subscription' ? '#a78bfa' : '#f5a623' }}>
+                  +${Number(e.amount).toFixed(2)}
+                </div>
+                <div className="earnings-txn__date">
+                  {e.created_at
+                    ? formatDistanceToNow(new Date(e.created_at), { addSuffix: true })
+                    : '—'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Donations received ─────────────────────────────────── */}
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 className="earnings-section-title">💛 Donations Received</h2>
         {donations.length === 0 ? (

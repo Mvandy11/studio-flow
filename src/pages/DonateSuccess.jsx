@@ -43,6 +43,13 @@ export default function DonateSuccess() {
           amount:     FIXED_AMOUNT,
         });
 
+        // 4. Record donation in revenue pool
+        await supabase.from('revenue_pool_entries').insert({
+          creator_id: slot.creator_id,
+          amount:     FIXED_AMOUNT,
+          source:     'donation',
+        });
+
         setStatus('done');
       } catch {
         setStatus('done'); // fail silently — payment already went through
