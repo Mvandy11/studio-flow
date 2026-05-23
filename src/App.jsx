@@ -11,6 +11,7 @@ import SessionEditor from './pages/SessionEditor';
 import PremierSettings from './pages/PremierSettings';
 import PayoutSettings from './pages/PayoutSettings';
 import EventsPage from './pages/events/EventsPage';
+import CategoryEventsPage from './pages/events/CategoryEventsPage';
 import EventDetailsPage from './pages/events/EventDetailsPage';
 import PurchasePage from './pages/events/PurchasePage';
 import CreateEventPage from './pages/events/CreateEventPage';
@@ -32,13 +33,10 @@ import EarningsDashboard from './pages/EarningsDashboard';
 import CreatorProfile from './pages/CreatorProfile';
 import AnnouncementsPage from './pages/AnnouncementsPage';
 import LoginPage from './pages/LoginPage';
-import EducationPage from './pages/Education';
 import EventSlotUpload from './pages/EventSlotUpload';
-import CustomEventRequestPage from './pages/CustomEventRequestPage';
 import SubmissionsPage from './pages/SubmissionsPage';
 import EventSlotView from './pages/EventSlotView';
 import SubscriptionPage from './pages/Subscription';
-import AdminEventRequests from './pages/AdminEventRequests';
 import AdminWinnersDashboard from './pages/AdminWinnersDashboard';
 import AdminAnalyticsDashboard from './pages/AdminAnalyticsDashboard';
 import Dashboard from './pages/Dashboard.tsx';
@@ -79,12 +77,12 @@ export default function App() {
           <Route path="/premier/settings" element={<PremierSettings />} />
 
           {/* ── Events ── */}
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/events/create" element={<CreateEventPage />} />
-          <Route path="/events/category/:category" element={<EventsPage />} />
-          <Route path="/events/:id" element={<EventDetailsPage />} />
-          <Route path="/events/:eventId/purchase" element={<PurchasePage />} />
-          <Route path="/stage/:stageRoomId" element={<StagePage />} />
+          <Route path="/events"                 element={<EventsPage />} />
+          <Route path="/events/create"          element={<CreateEventPage />} />
+          <Route path="/events/view/:id"        element={<EventDetailsPage />} />
+          <Route path="/events/view/:id/purchase" element={<PurchasePage />} />
+          <Route path="/events/:category"       element={<CategoryEventsPage />} />
+          <Route path="/stage/:stageRoomId"     element={<StagePage />} />
 
           {/* ── Creator Hub ── */}
           <Route path="/creator/new-event"   element={<NewEventPage />} />
@@ -118,15 +116,15 @@ export default function App() {
           <Route path="/free-chat" element={<FreeChatPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/contest/:contestId" element={<ChatPage />} />
-          <Route path="/education"              element={<EducationPage />} />
+          <Route path="/education"              element={<Navigate to="/events" replace />} />
+          <Route path="/custom-event-request"   element={<Navigate to="/events" replace />} />
           <Route path="/event-slot/:slotId"     element={<EventSlotUpload />} />
           <Route path="/event-view/:slotId"     element={<EventSlotView />} />
-          <Route path="/custom-event-request"   element={<Navigate to="/events" replace />} />
           <Route path="/submissions"            element={<SubmissionsPage />} />
           <Route path="/subscription"           element={<SubscriptionPage />} />
           <Route path="/membership"             element={<MembershipPage />} />
           <Route path="/membership/success"     element={<MembershipSuccess />} />
-          <Route path="/admin/event-requests"   element={<AdminEventRequests />} />
+          <Route path="/admin/event-requests"   element={<Navigate to="/admin" replace />} />
           <Route path="/admin/winners"            element={<AdminWinnersDashboard />} />
           <Route path="/admin/analytics"         element={<AdminAnalyticsDashboard />} />
           <Route path="/admin/errors"            element={<AdminErrorsDashboard />} />
