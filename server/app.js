@@ -26,6 +26,7 @@ import contestCommentsRouter    from './routes/contestComments.js';
 import liveEventsRouter         from './routes/liveEvents.js';
 import liveChatRouter           from './routes/liveChat.js';
 import recordedEventsRouter     from './routes/recordedEvents.js';
+import uploadRecordedVideoRouter from './routes/uploadRecordedVideo.js';
 import stripePortalRouter       from './routes/stripePortal.js';
 
 const app = express();
@@ -82,6 +83,7 @@ app.use('/api/test-winner-pull',      testWinnerPullRouter);
 app.use('/api/live',                  liveEventsRouter);
 app.use('/api/live',                  liveChatRouter);
 app.use('/api/slot',                  recordedEventsRouter);
+app.use('/api/events',               uploadRecordedVideoRouter);
 app.use('/api/free-chat',             freeChatRouter);
 app.use('/api/comments',             commentsRouter);
 
