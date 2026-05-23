@@ -1,0 +1,122 @@
+You are updating the Studio Flow frontend to implement the new
+Studio Flow 2.0 Membership Success Page. This page must activate
+the user's membership tier using the new Payment Link redirect flow
+and update the UI to match the new membership system.
+
+Make the following changes:
+
+────────────────────────────────────────
+1. CREATE OR UPDATE PAGE: /membership/success
+────────────────────────────────────────
+
+Create a new React/Next.js page at:
+  /membership/success
+
+This page must:
+
+- Read the "tier" query parameter from the URL:
+    member_30 or creator_50
+
+- Immediately call:
+    POST /api/membership/activate
+  with JSON:
+    { tier: "member_30" | "creator_50" }
+
+- Show a loading state while activating
+
+- On success:
+    - Display a success message
+    - Display the unlocked benefits
+    - Redirect after 1.5 seconds:
+        If member_30 → /dashboard
+        If creator_50 → /creator/dashboard
+
+- On error:
+    - Show an error message
+    - Provide a button to retry activation
+    - Provide a link back to /membership
+
+────────────────────────────────────────
+2. SUCCESS PAGE UI REQUIREMENTS
+────────────────────────────────────────
+
+Success state must show:
+
+🎉 Membership Activated!
+
+Headline:
+  "Welcome to Studio Flow! Your membership is now active."
+
+Sub-headline:
+  "Your account has been upgraded to: Member ($30/mo)" OR
+  "Your account has been upgraded to: Creator ($50/mo)"
+
+Benefits for Member:
+  - Full event access
+  - Live chat
+  - Community features
+  - Contest entry
+  - Contest reward eligibility
+
+Benefits for Creator:
+  - Everything in Member tier
+  - Create unlimited events
+  - Upload videos / Go live
+  - Donations
+  - Revenue pool participation
+  - Creator dashboard + analytics
+  - Contest entry + rewards
+
+Show:
+  "Redirecting you to your dashboard..."
+
+────────────────────────────────────────
+3. ERROR STATE UI
+────────────────────────────────────────
+
+If tier is missing or activation fails:
+
+Show:
+  ❌ "Something went wrong activating your membership."
+
+Buttons:
+  - "Retry Activation"
+  - "Return to Membership Page"
+
+────────────────────────────────────────
+4. REMOVE OLD MEMBERSHIP SUCCESS LOGIC
+────────────────────────────────────────
+
+Delete or disable any old pages or components that:
+
+- Used Stripe subscription objects
+- Expected webhook-based activation
+- Used old membership tiers
+- Redirected to outdated dashboards
+
+Studio Flow 2.0 uses Payment Links only.
+
+────────────────────────────────────────
+5. UPDATE NAVIGATION IF NEEDED
+────────────────────────────────────────
+
+Ensure the navigation reflects the new membership system:
+
+- Free users → show "Membership"
+- Members → show "Dashboard"
+- Creators → show "Creator Dashboard"
+
+────────────────────────────────────────
+6. TESTING CHECKLIST
+────────────────────────────────────────
+
+After implementation:
+
+- Visiting /membership/success?tier=member_30 activates Member tier
+- Visiting /membership/success?tier=creator_50 activates Creator tier
+- Redirects work correctly
+- Contest eligibility is included in benefits
+- No old membership logic remains
+- Page loads cleanly on Render
+
+Make all changes now.
