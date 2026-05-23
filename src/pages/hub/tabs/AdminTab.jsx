@@ -216,10 +216,10 @@ export default function AdminTab() {
 
               <h2 className="hub-section-title" style={{ marginTop: '1.5rem' }}>Quick Links</h2>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link to="/admin"              className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🛡 Full Dashboard</Link>
-                <Link to="/admin/event-requests" className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🗂 Event Requests</Link>
+                <Link to="/admin"               className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🛡 Full Dashboard</Link>
+                <Link to="/creator/new-event"  className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🎬 Post Event</Link>
                 <Link to="/contests/create"    className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🏆 Create Contest</Link>
-                <Link to="/events/create"      className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>📡 Create Event</Link>
+                <Link to="/events"             className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>📋 All Events</Link>
                 <Link to="/announcements"      className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>📢 Announcements</Link>
               </div>
             </>
@@ -277,8 +277,7 @@ export default function AdminTab() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h2 className="hub-section-title" style={{ margin: 0 }}>All Events ({events.length})</h2>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Link to="/admin/event-requests" className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.82rem' }}>Requests</Link>
-                  <Link to="/events/create"        className="hub-btn hub-btn--gold"  style={{ textDecoration: 'none', fontSize: '0.85rem' }}>+ New Event</Link>
+                  <Link to="/creator/new-event"    className="hub-btn hub-btn--gold"  style={{ textDecoration: 'none', fontSize: '0.85rem' }}>+ Post Event</Link>
                 </div>
               </div>
               {events.length === 0 ? (
