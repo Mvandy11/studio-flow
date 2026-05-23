@@ -292,23 +292,27 @@ router.post('/event-requests/:id/approve', async (req, res) => {
     const safeTitle = title.trim();
 
     // 2. Create the event_slot
+    const slotPayload = {
+      id:         slotId,
+      user_id:    request.user_id,
+      request_id: id,
+      title:      safeTitle,
+      password:   password.trim(),
+      stream_key: streamKey,
+      stream_url: streamUrl,
+      hls_url:    hlsUrl,
+      status:     'pending',
+    };
+    console.log('[admin/approve] Creating event slot with:', slotPayload);
+
     const { data: slot, error: slotErr } = await supabaseAdmin
       .from('event_slots')
-      .insert({
-        id:         slotId,
-        user_id:    request.user_id,
-        request_id: id,
-        title:      safeTitle,
-        password:   password.trim(),
-        stream_key: streamKey,
-        stream_url: streamUrl,
-        hls_url:    hlsUrl,
-        status:     'pending',
-      })
+      .insert(slotPayload)
       .select()
       .single();
 
     if (slotErr) throw slotErr;
+    console.log('[admin/approve] Event slot created:', slot);
 
     // 3. Create the event row (creator picks live/recorded later from their slot page)
     const isPaid   = request.event_type === 'locked';
