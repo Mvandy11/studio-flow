@@ -1,6 +1,6 @@
 import './styles/cinematic.css';
 import './styles/components.css';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Feed from './pages/Feed';
@@ -51,7 +51,13 @@ import MembershipSuccess from './pages/MembershipSuccess';
 import ChatPage from './pages/ChatPage';
 import NewEventPage from './pages/creator/NewEventPage';
 import CreatorEventPage from './pages/creator/CreatorEventPage';
+import CreatorDashboardPage from './pages/creator/CreatorDashboardPage';
+import CreatorEventsPage from './pages/creator/CreatorEventsPage';
+import CreatorRevenuePage from './pages/creator/CreatorRevenuePage';
+import CreatorDonationsPage from './pages/creator/CreatorDonationsPage';
+import MyContestEntriesPage from './pages/contests/MyContestEntriesPage';
 import DonateSuccess from './pages/DonateSuccess';
+
 
 export default function App() {
   return (
@@ -80,10 +86,17 @@ export default function App() {
           <Route path="/events/:eventId/purchase" element={<PurchasePage />} />
           <Route path="/stage/:stageRoomId" element={<StagePage />} />
 
-          {/* ── Creator Events (direct-publish, no approval) ── */}
-          <Route path="/creator/new-event" element={<NewEventPage />} />
-          <Route path="/event/:slotId" element={<CreatorEventPage />} />
-          <Route path="/donate/success" element={<DonateSuccess />} />
+          {/* ── Creator Hub ── */}
+          <Route path="/creator/new-event"   element={<NewEventPage />} />
+          <Route path="/creator/dashboard"   element={<CreatorDashboardPage />} />
+          <Route path="/creator/events"      element={<CreatorEventsPage />} />
+          <Route path="/creator/revenue"     element={<CreatorRevenuePage />} />
+          <Route path="/creator/donations"   element={<CreatorDonationsPage />} />
+          <Route path="/event/:slotId"       element={<CreatorEventPage />} />
+          <Route path="/donate/success"      element={<DonateSuccess />} />
+
+          {/* ── Contests ── */}
+          <Route path="/contests/my-entries" element={<MyContestEntriesPage />} />
 
           {/* ── AI Tools ── */}
           <Route path="/tools" element={<Tools />} />
@@ -108,7 +121,7 @@ export default function App() {
           <Route path="/education"              element={<EducationPage />} />
           <Route path="/event-slot/:slotId"     element={<EventSlotUpload />} />
           <Route path="/event-view/:slotId"     element={<EventSlotView />} />
-          <Route path="/custom-event-request"   element={<CustomEventRequestPage />} />
+          <Route path="/custom-event-request"   element={<Navigate to="/events" replace />} />
           <Route path="/submissions"            element={<SubmissionsPage />} />
           <Route path="/subscription"           element={<SubscriptionPage />} />
           <Route path="/membership"             element={<MembershipPage />} />

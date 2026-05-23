@@ -2,29 +2,17 @@ import { useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
+import { useMembership } from '../modules/memberships/useMembership';
 
 const DONATION_URL = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
 
-const NAV_LINKS = [
-  { to: '/',                label: 'Home',            icon: '⌂', end: true },
-  { to: '/feed',            label: 'Feed',            icon: '◈' },
-  { to: '/events',          label: 'Events',          icon: '🎬' },
-  { to: '/studio',          label: 'Studio',          icon: '⬡' },
-  { to: '/tools/denoise',   label: 'AI Denoise',      icon: '♫' },
-  { to: '/tools/upscale',   label: 'AI Upscale',      icon: '⤢' },
-  { to: '/tools/enhance',   label: 'AI Enhance',      icon: '✦' },
-  { to: '/contests',        label: 'Contests',        icon: '🏆' },
-  { to: '/submissions',     label: 'Submissions',     icon: '📬' },
-  { to: '/announcements',   label: 'Announcements',   icon: '📢' },
-  { to: '/free-chat',       label: 'Free Chat',       icon: '💬' },
-  { to: '/creator-academy', label: 'Academy',         icon: '🎓' },
-  { to: '/membership',      label: 'Membership',      icon: '⭐' },
-  { to: '/earnings',        label: 'Earnings',        icon: '◎' },
-  { to: '/profile',         label: 'Profile',         icon: '◉' },
-];
-
 export default function MobileDrawer({ open, onClose }) {
   const { user, role, logout } = useAuth();
+  const { tier }               = useMembership();
+
+  const isCreator50 = tier === 'creator_50';
+  const isMember30  = tier === 'member_30';
+  const isFree      = !isCreator50 && !isMember30;
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -36,6 +24,34 @@ export default function MobileDrawer({ open, onClose }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  function Item({ to, icon, label, end }) {
+    return (
+      <NavLink
+        to={to}
+        end={end}
+        className={({ isActive }) => `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`}
+        onClick={onClose}
+      >
+        <span className="mob-drawer__link-icon">{icon}</span>
+        {label}
+      </NavLink>
+    );
+  }
+
+  function AdminItem({ to, icon, label }) {
+    return (
+      <NavLink
+        to={to}
+        className={({ isActive }) => `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`}
+        onClick={onClose}
+        style={{ color: 'var(--accent-gold)' }}
+      >
+        <span className="mob-drawer__link-icon">{icon}</span>
+        {label}
+      </NavLink>
+    );
+  }
 
   return (
     <>
@@ -52,81 +68,67 @@ export default function MobileDrawer({ open, onClose }) {
         aria-modal="true"
       >
         <div className="mob-drawer__header">
-          <Link to="/" className="mob-drawer__logo" onClick={onClose}>
-            Studio Flow
-          </Link>
+          <Link to="/" className="mob-drawer__logo" onClick={onClose}>Studio Flow</Link>
           <button className="mob-drawer__close" onClick={onClose} aria-label="Close menu">✕</button>
         </div>
 
         <nav className="mob-drawer__nav">
-          {NAV_LINKS.map(({ to, label, icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
-              }
-              onClick={onClose}
-            >
-              <span className="mob-drawer__link-icon">{icon}</span>
-              {label}
-            </NavLink>
-          ))}
+          {/* ── Core (all tiers) ── */}
+          <Item to="/"       icon="⌂" label="Home" end />
+          <Item to="/feed"   icon="◈" label="Feed" />
+          <Item to="/events" icon="🎬" label="Events" />
+          <Item to="/studio" icon="⬡" label="Studio" />
 
-          {isCreatorAdmin(role) && (
-            <>
-              <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
-                }
-                onClick={onClose}
-                style={{ color: 'var(--accent-gold)' }}
-              >
-                <span className="mob-drawer__link-icon">🛡</span>
-                Admin
-              </NavLink>
-              <NavLink
-                to="/creator/new-event"
-                className={({ isActive }) =>
-                  `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
-                }
-                onClick={onClose}
-                style={{ color: 'var(--accent-gold)' }}
-              >
-                <span className="mob-drawer__link-icon">🎬</span>
-                Post Event
-              </NavLink>
-              <NavLink
-                to="/admin/winners"
-                className={({ isActive }) =>
-                  `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
-                }
-                onClick={onClose}
-                style={{ color: 'var(--accent-gold)' }}
-              >
-                <span className="mob-drawer__link-icon">🏆</span>
-                Winners
-              </NavLink>
-              <NavLink
-                to="/admin/analytics"
-                className={({ isActive }) =>
-                  `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
-                }
-                onClick={onClose}
-                style={{ color: 'var(--accent-gold)' }}
-              >
-                <span className="mob-drawer__link-icon">📊</span>
-                Analytics
-              </NavLink>
-            </>
+          {/* ── AI Tools ── */}
+          <Item to="/tools/denoise" icon="♫" label="AI Denoise" />
+          <Item to="/tools/upscale" icon="⤢" label="AI Upscale" />
+          <Item to="/tools/enhance" icon="✦" label="AI Enhance" />
+
+          {/* ── Platform ── */}
+          <Item to="/contests"        icon="🏆" label="Contests" />
+          <Item to="/announcements"   icon="📢" label="Announcements" />
+          <Item to="/free-chat"       icon="💬" label="Free Chat" />
+          <Item to="/creator-academy" icon="🎓" label="Academy" />
+
+          {/* ── Free tier ── */}
+          {isFree && (
+            <Item to="/membership" icon="⭐" label="Membership" />
           )}
+
+          {/* ── Member tier ── */}
+          {isMember30 && <>
+            <Item to="/events"              icon="🌟" label="Dashboard" />
+            <Item to="/contests/my-entries" icon="🏆" label="Contest Entries" />
+            <Item to="/membership"          icon="⭐" label="Membership" />
+          </>}
+
+          {/* ── Creator tier ── */}
+          {isCreator50 && <>
+            <Item to="/creator/dashboard"   icon="🎬" label="Creator Dashboard" />
+            <Item to="/creator/new-event"   icon="➕" label="Create Event" />
+            <Item to="/creator/events"      icon="📋" label="My Events" />
+            <Item to="/creator/donations"   icon="💛" label="Donations" />
+            <Item to="/creator/revenue"     icon="📈" label="Revenue Pool" />
+            <Item to="/contests/my-entries" icon="🏆" label="Contest Entries" />
+          </>}
+
+          {/* ── Account (all tiers) ── */}
+          <Item to="/submissions" icon="📬" label="Submissions" />
+          <Item to="/earnings"    icon="◎"  label="Earnings" />
+          <Item to="/profile"     icon="◉"  label="Profile" />
+
+          {/* ── Admin ── */}
+          {isCreatorAdmin(role) && <>
+            <AdminItem to="/admin"              icon="🛡" label="Admin" />
+            <AdminItem to="/creator/new-event"  icon="🎬" label="Post Event" />
+            <AdminItem to="/admin/winners"      icon="🏆" label="Winners" />
+            <AdminItem to="/admin/analytics"    icon="📊" label="Analytics" />
+            <AdminItem to="/admin/errors"       icon="🔴" label="Error Logs" />
+          </>}
         </nav>
 
         <div className="mob-drawer__divider" />
 
-        {/* Donate */}
         <a
           href={DONATION_URL}
           target="_blank"

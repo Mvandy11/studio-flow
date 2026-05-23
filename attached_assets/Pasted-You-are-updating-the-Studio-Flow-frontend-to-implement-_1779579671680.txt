@@ -1,0 +1,116 @@
+You are updating the Studio Flow frontend to implement the new
+Studio Flow 2.0 Event Categories Page and remove all legacy event
+request logic.
+
+Make the following changes:
+
+────────────────────────────────────────
+1. CREATE OR UPDATE PAGE: /events
+────────────────────────────────────────
+
+This page must include:
+
+- A hero section:
+    Title: "Discover Events"
+    Subtitle: "Explore live and on-demand events across every category."
+
+- A category grid with the following categories:
+    Comedy
+    Music
+    Dance
+    Fitness
+    Gaming
+    Education
+    Cooking
+    Motivation
+    Kids
+    Talk Show
+    Tutorials
+    Art
+
+Each category card must link to:
+    /events/<CategoryName>
+
+- Optional: Featured Events section
+- Optional: Trending Events section
+
+────────────────────────────────────────
+2. CREATE CATEGORY ROUTE: /events/:category
+────────────────────────────────────────
+
+Create a dynamic page that:
+
+- Reads the category from the URL
+- Queries the event_slots table for events where category = :category
+- Displays events in a grid layout
+- Shows:
+    - Title
+    - Thumbnail
+    - Creator name
+    - Live indicator if is_live = true
+    - Donation button (optional)
+- Includes filters:
+    - All
+    - Live
+    - Video
+
+────────────────────────────────────────
+3. REMOVE OLD EVENT REQUEST SYSTEM
+────────────────────────────────────────
+
+Delete or disable:
+
+- /events/request
+- /events/submit
+- /education
+- /diy-event-creator
+- Any "Request Event" or "Submit Event Request" UI
+- Any components referencing old event request logic
+
+Studio Flow 2.0 uses event_slots only.
+
+────────────────────────────────────────
+4. ACCESS LOGIC
+────────────────────────────────────────
+
+Free users:
+  - Can browse categories
+  - Can view event thumbnails
+  - Cannot watch full events
+  - Show "Upgrade to watch" CTA
+
+Member users (member_30):
+  - Full access to watch events
+  - Can enter contests
+
+Creator users (creator_50):
+  - Full access
+  - Can create events
+  - Can manage their events
+
+────────────────────────────────────────
+5. CLEAN UP NAVIGATION LINKS
+────────────────────────────────────────
+
+Ensure navigation links point to:
+
+- /events
+- /events/<category>
+- /event/<id>
+
+Remove any links pointing to old request pages.
+
+────────────────────────────────────────
+6. TESTING CHECKLIST
+────────────────────────────────────────
+
+After implementation:
+
+- /events loads category grid
+- /events/<category> loads events for that category
+- No old event request pages exist
+- Free users see upgrade prompts
+- Members and creators can watch events
+- Creators can navigate to Create Event from nav
+
+Make all changes now.

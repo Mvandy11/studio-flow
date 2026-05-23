@@ -14,6 +14,33 @@ export default function AppSidebar({ open, onClose }) {
   const isMember30  = tier === 'member_30';
   const isFree      = !isCreator50 && !isMember30;
 
+  function NavItem({ to, icon, label, end }) {
+    return (
+      <NavLink
+        to={to}
+        end={end}
+        className={({ isActive }) => `app-sidebar__link${isActive ? ' active' : ''}`}
+        onClick={onClose}
+      >
+        <span className="app-sidebar__link-icon">{icon}</span>
+        {label}
+      </NavLink>
+    );
+  }
+
+  function AdminItem({ to, icon, label }) {
+    return (
+      <NavLink
+        to={to}
+        className={({ isActive }) => `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`}
+        onClick={onClose}
+      >
+        <span className="app-sidebar__link-icon">{icon}</span>
+        {label}
+      </NavLink>
+    );
+  }
+
   return (
     <>
       <div
@@ -23,7 +50,6 @@ export default function AppSidebar({ open, onClose }) {
       />
 
       <aside className={`app-sidebar${open ? ' app-sidebar--open' : ''}`}>
-        {/* Logo */}
         <Link to="/" className="app-sidebar__logo" onClick={onClose}>
           <div className="app-sidebar__logo-mark">S</div>
           <span className="app-sidebar__logo-text">Studio Flow</span>
@@ -31,183 +57,86 @@ export default function AppSidebar({ open, onClose }) {
 
         <div className="app-sidebar__divider" />
 
-        {/* Core nav */}
+        {/* ── Core ── */}
         <nav className="app-sidebar__nav">
-          {[
-            { to: '/',     icon: '⌂', label: 'Home',   end: true },
-            { to: '/feed', icon: '◈', label: 'Feed' },
-            { to: '/events', icon: '🎬', label: 'Events' },
-            { to: '/studio', icon: '⬡', label: 'Studio' },
-          ].map(({ to, icon, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) => `app-sidebar__link${isActive ? ' active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="app-sidebar__link-icon">{icon}</span>
-              {label}
-            </NavLink>
-          ))}
+          <NavItem to="/"       icon="⌂" label="Home"   end />
+          <NavItem to="/feed"   icon="◈" label="Feed" />
+          <NavItem to="/events" icon="🎬" label="Events" />
+          <NavItem to="/studio" icon="⬡" label="Studio" />
         </nav>
 
         <div className="app-sidebar__divider" />
 
-        {/* AI Tools */}
+        {/* ── AI Tools ── */}
         <div className="app-sidebar__section-label">AI Tools</div>
         <nav className="app-sidebar__nav">
-          {[
-            { to: '/tools/denoise', icon: '♫', label: 'Denoise' },
-            { to: '/tools/upscale', icon: '⤢', label: 'Upscale' },
-            { to: '/tools/enhance', icon: '✦', label: 'Enhance' },
-          ].map(({ to, icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => `app-sidebar__link${isActive ? ' active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="app-sidebar__link-icon">{icon}</span>
-              {label}
-            </NavLink>
-          ))}
+          <NavItem to="/tools/denoise" icon="♫" label="Denoise" />
+          <NavItem to="/tools/upscale" icon="⤢" label="Upscale" />
+          <NavItem to="/tools/enhance" icon="✦" label="Enhance" />
         </nav>
 
         <div className="app-sidebar__divider" />
 
-        {/* Platform */}
+        {/* ── Platform ── */}
         <div className="app-sidebar__section-label">Platform</div>
         <nav className="app-sidebar__nav">
-          {[
-            { to: '/contests',        icon: '🏆', label: 'Contests' },
-            { to: '/submissions',     icon: '📬', label: 'Submissions' },
-            { to: '/announcements',   icon: '📢', label: 'Announcements' },
-            { to: '/free-chat',       icon: '💬', label: 'Free Chat' },
-            { to: '/creator-academy', icon: '🎓', label: 'Academy' },
-          ].map(({ to, icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => `app-sidebar__link${isActive ? ' active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="app-sidebar__link-icon">{icon}</span>
-              {label}
-            </NavLink>
-          ))}
+          <NavItem to="/contests"        icon="🏆" label="Contests" />
+          <NavItem to="/announcements"   icon="📢" label="Announcements" />
+          <NavItem to="/free-chat"       icon="💬" label="Free Chat" />
+          <NavItem to="/creator-academy" icon="🎓" label="Academy" />
         </nav>
 
         <div className="app-sidebar__divider" />
 
-        {/* Account — tier-aware */}
+        {/* ── Account — tier-aware ── */}
         <div className="app-sidebar__section-label">Account</div>
         <nav className="app-sidebar__nav">
-          {/* Tier-based dashboard link */}
+
+          {/* Free: Membership upgrade prompt */}
           {isFree && (
-            <NavLink
-              to="/membership"
-              className={({ isActive }) => `app-sidebar__link${isActive ? ' active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="app-sidebar__link-icon">⭐</span>
-              Membership
-            </NavLink>
-          )}
-          {isMember30 && (
-            <NavLink
-              to="/events"
-              className={({ isActive }) => `app-sidebar__link${isActive ? ' active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="app-sidebar__link-icon">🌟</span>
-              Dashboard
-            </NavLink>
-          )}
-          {isCreator50 && (
-            <NavLink
-              to="/earnings"
-              className={({ isActive }) => `app-sidebar__link${isActive ? ' active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="app-sidebar__link-icon">🎬</span>
-              Creator Dashboard
-            </NavLink>
+            <NavItem to="/membership"   icon="⭐" label="Membership" />
           )}
 
-          {[
-            { to: '/earnings', icon: '◎', label: 'Earnings' },
-            { to: '/profile',  icon: '◉', label: 'Profile' },
-          ].map(({ to, icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => `app-sidebar__link${isActive ? ' active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="app-sidebar__link-icon">{icon}</span>
-              {label}
-            </NavLink>
-          ))}
+          {/* Member: Dashboard + Contest Entries */}
+          {isMember30 && <>
+            <NavItem to="/events"              icon="🌟" label="Dashboard" />
+            <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
+            <NavItem to="/membership"          icon="⭐" label="Membership" />
+          </>}
+
+          {/* Creator: Full creator suite */}
+          {isCreator50 && <>
+            <NavItem to="/creator/dashboard"   icon="🎬" label="Creator Dashboard" />
+            <NavItem to="/creator/new-event"   icon="➕" label="Create Event" />
+            <NavItem to="/creator/events"      icon="📋" label="My Events" />
+            <NavItem to="/creator/donations"   icon="💛" label="Donations" />
+            <NavItem to="/creator/revenue"     icon="📈" label="Revenue Pool" />
+            <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
+          </>}
+
+          <NavItem to="/earnings" icon="◎"  label="Earnings" />
+          <NavItem to="/profile"  icon="◉"  label="Profile" />
         </nav>
 
         <div className="app-sidebar__divider" />
 
-        {/* Admin links */}
+        {/* ── Admin ── */}
         {isCreatorAdmin(role) && (
           <>
             <nav className="app-sidebar__nav">
               <NavLink
                 to="/admin"
-                className={({ isActive }) =>
-                  `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`
-                }
+                className={({ isActive }) => `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`}
                 onClick={onClose}
               >
                 <span className="app-sidebar__link-icon">🛡</span>
                 Admin
                 <span className="app-sidebar__badge">Admin</span>
               </NavLink>
-              <NavLink
-                to="/creator/new-event"
-                className={({ isActive }) =>
-                  `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`
-                }
-                onClick={onClose}
-              >
-                <span className="app-sidebar__link-icon">🎬</span>
-                Post Event
-              </NavLink>
-              <NavLink
-                to="/admin/winners"
-                className={({ isActive }) =>
-                  `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`
-                }
-                onClick={onClose}
-              >
-                <span className="app-sidebar__link-icon">🏆</span>
-                Winners
-              </NavLink>
-              <NavLink
-                to="/admin/analytics"
-                className={({ isActive }) =>
-                  `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`
-                }
-                onClick={onClose}
-              >
-                <span className="app-sidebar__link-icon">📊</span>
-                Analytics
-              </NavLink>
-              <NavLink
-                to="/admin/errors"
-                className={({ isActive }) =>
-                  `app-sidebar__link app-sidebar__admin-link${isActive ? ' active' : ''}`
-                }
-                onClick={onClose}
-              >
-                <span className="app-sidebar__link-icon">🔴</span>
-                Error Logs
-              </NavLink>
+              <AdminItem to="/creator/new-event"  icon="🎬" label="Post Event" />
+              <AdminItem to="/admin/winners"      icon="🏆" label="Winners" />
+              <AdminItem to="/admin/analytics"    icon="📊" label="Analytics" />
+              <AdminItem to="/admin/errors"       icon="🔴" label="Error Logs" />
             </nav>
             <div className="app-sidebar__divider" />
           </>
@@ -215,7 +144,7 @@ export default function AppSidebar({ open, onClose }) {
 
         <div className="app-sidebar__spacer" />
 
-        {/* Donate link */}
+        {/* Donate */}
         <div style={{ padding: '0 0.625rem', marginBottom: '0.5rem' }}>
           <a
             href={DONATION_URL}
@@ -234,11 +163,8 @@ export default function AppSidebar({ open, onClose }) {
             <div className="app-sidebar__avatar">{initial}</div>
             <div className="app-sidebar__user-info">
               <div className="app-sidebar__user-email">{user.email}</div>
-              {tier && tier !== 'free' && (
-                <div style={{ fontSize: '0.68rem', color: tier === 'creator_50' ? '#a78bfa' : '#60a5fa', fontWeight: 600, marginTop: '2px' }}>
-                  {tier === 'creator_50' ? '🎬 Creator' : '🌟 Member'}
-                </div>
-              )}
+              {isCreator50 && <div style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 600, marginTop: '2px' }}>🎬 Creator</div>}
+              {isMember30  && <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600, marginTop: '2px' }}>🌟 Member</div>}
             </div>
             <button
               className="app-sidebar__logout"

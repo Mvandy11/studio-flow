@@ -1,0 +1,113 @@
+You are updating the Studio Flow frontend navigation and sidebar to match
+the new Studio Flow 2.0 architecture. Remove all old event request logic
+and implement tier-based navigation for Free, Member, and Creator users.
+
+Make the following changes:
+
+────────────────────────────────────────
+1. REMOVE OLD NAVIGATION ITEMS
+────────────────────────────────────────
+
+Delete or disable any navigation or sidebar items related to:
+
+- Request Event
+- Submit Event Request
+- My Requests
+- Pending Approval
+- Creator Application
+- Old Membership page
+- Classes (if present)
+- Any leftover event request workflow
+
+Studio Flow 2.0 does NOT use event requests.
+
+────────────────────────────────────────
+2. IMPLEMENT NEW NAVIGATION STRUCTURE
+────────────────────────────────────────
+
+Navigation must change based on membership_tier:
+
+Free users:
+  - Home
+  - Events
+  - Categories
+  - Contests
+  - Membership
+
+Member users (member_30):
+  - Home
+  - Events
+  - Categories
+  - Contests
+  - Dashboard
+
+Creator users (creator_50):
+  - Home
+  - Events
+  - Categories
+  - Create Event
+  - My Events
+  - Creator Dashboard
+  - Contests
+
+Implement conditional rendering based on the user's profile.
+
+────────────────────────────────────────
+3. UPDATE SIDEBAR (MOBILE)
+────────────────────────────────────────
+
+Sidebar must mirror the navigation logic above.
+
+Creators must see:
+  - Create Event
+  - My Events
+  - Donations
+  - Revenue Pool
+  - Contest Entries
+  - Creator Dashboard
+
+Members must see:
+  - Dashboard
+  - Contest Entries
+
+Free users must see:
+  - Membership
+
+────────────────────────────────────────
+4. ADD NEW ROUTE LINKS
+────────────────────────────────────────
+
+Ensure the following routes exist in the navigation:
+
+- /creator/new-event
+- /creator/events
+- /creator/dashboard
+- /creator/revenue
+- /creator/donations
+- /contests/my-entries
+
+────────────────────────────────────────
+5. CLEAN UP COMPONENTS
+────────────────────────────────────────
+
+Remove or refactor any components that reference:
+
+- Old event request forms
+- Old approval logic
+- Old membership logic
+- Old navigation arrays
+
+────────────────────────────────────────
+6. TESTING CHECKLIST
+────────────────────────────────────────
+
+After implementation:
+
+- Free users see Membership but not Dashboard or Creator tools
+- Members see Dashboard but not Create Event
+- Creators see Create Event, My Events, Donations, Revenue Pool
+- No old event request items appear anywhere
+- Navigation updates instantly after membership activation
+- Sidebar matches navigation
+
+Make all changes now.
