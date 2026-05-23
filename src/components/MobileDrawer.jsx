@@ -6,21 +6,21 @@ import { isCreatorAdmin } from '../lib/roles';
 const DONATION_URL = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
 
 const NAV_LINKS = [
-  { to: '/',                     label: 'Home',          icon: '⌂', end: true },
-  { to: '/feed',                 label: 'Feed',          icon: '◈' },
-  { to: '/studio',               label: 'Studio',        icon: '⬡' },
-  { to: '/tools/denoise',        label: 'AI Denoise',    icon: '♫' },
-  { to: '/tools/upscale',        label: 'AI Upscale',    icon: '⤢' },
-  { to: '/tools/enhance',        label: 'AI Enhance',    icon: '✦' },
-  { to: '/custom-event-request', label: 'Custom Events', icon: '🎬' },
-  { to: '/contests',             label: 'Contests',      icon: '🏆' },
-  { to: '/submissions',          label: 'Submissions',   icon: '📬' },
-  { to: '/announcements',        label: 'Announcements', icon: '📢' },
-  { to: '/free-chat',            label: 'Free Chat',     icon: '💬' },
-  { to: '/creator-academy',      label: 'Academy',       icon: '🎓' },
-  { to: '/earnings',             label: 'Earnings',      icon: '◎' },
-  { to: '/settings/payouts',     label: 'Payout Settings', icon: '💳' },
-  { to: '/profile',              label: 'Profile',       icon: '◉' },
+  { to: '/',                label: 'Home',            icon: '⌂', end: true },
+  { to: '/feed',            label: 'Feed',            icon: '◈' },
+  { to: '/events',          label: 'Events',          icon: '🎬' },
+  { to: '/studio',          label: 'Studio',          icon: '⬡' },
+  { to: '/tools/denoise',   label: 'AI Denoise',      icon: '♫' },
+  { to: '/tools/upscale',   label: 'AI Upscale',      icon: '⤢' },
+  { to: '/tools/enhance',   label: 'AI Enhance',      icon: '✦' },
+  { to: '/contests',        label: 'Contests',        icon: '🏆' },
+  { to: '/submissions',     label: 'Submissions',     icon: '📬' },
+  { to: '/announcements',   label: 'Announcements',   icon: '📢' },
+  { to: '/free-chat',       label: 'Free Chat',       icon: '💬' },
+  { to: '/creator-academy', label: 'Academy',         icon: '🎓' },
+  { to: '/membership',      label: 'Membership',      icon: '⭐' },
+  { to: '/earnings',        label: 'Earnings',        icon: '◎' },
+  { to: '/profile',         label: 'Profile',         icon: '◉' },
 ];
 
 export default function MobileDrawer({ open, onClose }) {
@@ -88,15 +88,15 @@ export default function MobileDrawer({ open, onClose }) {
                 Admin
               </NavLink>
               <NavLink
-                to="/admin/event-requests"
+                to="/creator/new-event"
                 className={({ isActive }) =>
                   `mob-drawer__link${isActive ? ' mob-drawer__link--active' : ''}`
                 }
                 onClick={onClose}
                 style={{ color: 'var(--accent-gold)' }}
               >
-                <span className="mob-drawer__link-icon">🗂</span>
-                Event Requests
+                <span className="mob-drawer__link-icon">🎬</span>
+                Post Event
               </NavLink>
               <NavLink
                 to="/admin/winners"

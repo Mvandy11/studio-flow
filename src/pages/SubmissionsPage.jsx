@@ -62,11 +62,11 @@ export default function SubmissionsPage() {
           <p style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📭</p>
           <p style={{ fontWeight: 700, marginBottom: '0.4rem' }}>No submissions yet</p>
           <p style={{ color: 'rgba(200,200,215,0.45)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
-            Enter a contest or submit a custom event request to get started.
+            Enter a contest or post an event to get started.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/contests" className="btn btn--primary">Browse Contests</Link>
-            <Link to="/custom-event-request" className="btn">Request Custom Event</Link>
+            <Link to="/events" className="btn">Browse Events</Link>
           </div>
         </div>
       ) : (
