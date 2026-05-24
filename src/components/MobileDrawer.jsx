@@ -10,8 +10,9 @@ export default function MobileDrawer({ open, onClose }) {
   const { user, role, logout } = useAuth();
   const { tier }               = useMembership();
 
-  const isCreator50 = tier === 'creator_50';
-  const isMember30  = tier === 'member_30';
+  const isAdmin     = isCreatorAdmin(role);
+  const isCreator50 = isAdmin || tier === 'creator_50';
+  const isMember30  = !isCreator50 && tier === 'member_30';
   const isFree      = !isCreator50 && !isMember30;
 
   useEffect(() => {
@@ -97,9 +98,8 @@ export default function MobileDrawer({ open, onClose }) {
 
           {/* ── Member tier ── */}
           {isMember30 && <>
-            <Item to="/events"              icon="🌟" label="Dashboard" />
+            <Item to="/membership"          icon="🌟" label="Dashboard" />
             <Item to="/contests/my-entries" icon="🏆" label="Contest Entries" />
-            <Item to="/membership"          icon="⭐" label="Membership" />
           </>}
 
           {/* ── Creator tier ── */}
@@ -113,9 +113,8 @@ export default function MobileDrawer({ open, onClose }) {
           </>}
 
           {/* ── Account (all tiers) ── */}
-          <Item to="/submissions" icon="📬" label="Submissions" />
-          <Item to="/earnings"    icon="◎"  label="Earnings" />
-          <Item to="/profile"     icon="◉"  label="Profile" />
+          <Item to="/earnings" icon="◎" label="Earnings" />
+          <Item to="/profile"  icon="◉" label="Profile" />
 
           {/* ── Admin ── */}
           {isCreatorAdmin(role) && <>

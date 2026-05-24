@@ -36,7 +36,6 @@ import LoginPage from './pages/LoginPage';
 import EventSlotUpload from './pages/EventSlotUpload';
 import SubmissionsPage from './pages/SubmissionsPage';
 import EventSlotView from './pages/EventSlotView';
-import SubscriptionPage from './pages/Subscription';
 import AdminWinnersDashboard from './pages/AdminWinnersDashboard';
 import AdminAnalyticsDashboard from './pages/AdminAnalyticsDashboard';
 import Dashboard from './pages/Dashboard.tsx';
@@ -121,7 +120,7 @@ export default function App() {
           <Route path="/event-slot/:slotId"     element={<EventSlotUpload />} />
           <Route path="/event-view/:slotId"     element={<EventSlotView />} />
           <Route path="/submissions"            element={<SubmissionsPage />} />
-          <Route path="/subscription"           element={<SubscriptionPage />} />
+          <Route path="/subscription"           element={<Navigate to="/membership" replace />} />
           <Route path="/membership"             element={<MembershipPage />} />
           <Route path="/membership/success"     element={<MembershipSuccess />} />
           <Route path="/admin/event-requests"   element={<Navigate to="/admin" replace />} />

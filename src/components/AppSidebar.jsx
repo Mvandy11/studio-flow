@@ -10,8 +10,9 @@ export default function AppSidebar({ open, onClose }) {
   const { tier }               = useMembership();
   const initial                = user?.email?.[0]?.toUpperCase() ?? '?';
 
-  const isCreator50 = tier === 'creator_50';
-  const isMember30  = tier === 'member_30';
+  const isAdmin     = isCreatorAdmin(role);
+  const isCreator50 = isAdmin || tier === 'creator_50';
+  const isMember30  = !isCreator50 && tier === 'member_30';
   const isFree      = !isCreator50 && !isMember30;
 
   function NavItem({ to, icon, label, end }) {
@@ -97,11 +98,10 @@ export default function AppSidebar({ open, onClose }) {
             <NavItem to="/membership"   icon="⭐" label="Membership" />
           )}
 
-          {/* Member: Dashboard + Contest Entries */}
+          {/* Member: Membership dashboard + Contest Entries */}
           {isMember30 && <>
-            <NavItem to="/events"              icon="🌟" label="Dashboard" />
+            <NavItem to="/membership"          icon="🌟" label="Dashboard" />
             <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
-            <NavItem to="/membership"          icon="⭐" label="Membership" />
           </>}
 
           {/* Creator: Full creator suite */}

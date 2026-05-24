@@ -297,7 +297,7 @@ export default function MembershipPage() {
       <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-muted, #888)', flexWrap: 'wrap' }}>
         <Link to="/contests" style={{ color: 'inherit' }}>Browse Contests</Link>
         <Link to="/free-chat" style={{ color: 'inherit' }}>Free Chat</Link>
-        <Link to="/subscription" style={{ color: 'inherit' }}>Legacy Billing</Link>
+        <Link to="/events" style={{ color: 'inherit' }}>Explore Events</Link>
       </div>
 
       <p style={{ fontSize: '0.72rem', color: 'var(--text-muted, #888)', marginTop: '1.5rem' }}>
