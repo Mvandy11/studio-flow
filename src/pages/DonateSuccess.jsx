@@ -2,62 +2,56 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
-const FIXED_AMOUNT = 5;
-
 export default function DonateSuccess() {
   const [params]  = useSearchParams();
   const eventId   = params.get('event_id');
+  const amount    = params.get('amount');
 
-  const [status,  setStatus]  = useState('recording'); // recording | done | error | guest
+  const [status,     setStatus]     = useState('recording');
   const [eventTitle, setEventTitle] = useState('');
 
   useEffect(() => {
+    record();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function record() {
     if (!eventId) {
       setStatus('done');
       return;
     }
 
-    async function record() {
-      try {
-        // 1. Fetch the current user
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          setStatus('guest');
-          return;
-        }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
 
-        // 2. Fetch the event slot to get creator_id and title
-        const res  = await fetch(`/api/creator/events/public/${eventId}`);
-        const slot = await res.json();
-        if (slot?.error || !slot?.id) {
-          setStatus('done'); // still show success even if fetch fails
-          return;
-        }
-        setEventTitle(slot.title || '');
+      const res = await fetch('/api/donations/record', {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({
+          event_id: eventId,
+          amount:   amount ? Number(amount) : 5,
+        }),
+      });
 
-        // 3. Insert donation record (idempotent — duplicate is harmless)
-        await supabase.from('donations').insert({
-          event_id:   eventId,
-          creator_id: slot.creator_id,
-          user_id:    session.user.id,
-          amount:     FIXED_AMOUNT,
-        });
+      const json = await res.json().catch(() => ({}));
 
-        // 4. Record donation in revenue pool
-        await supabase.from('revenue_pool_entries').insert({
-          creator_id: slot.creator_id,
-          amount:     FIXED_AMOUNT,
-          source:     'donation',
-        });
+      if (json.event_title) setEventTitle(json.event_title);
 
-        setStatus('done');
-      } catch {
-        setStatus('done'); // fail silently — payment already went through
+      if (!res.ok) {
+        console.warn('[DonateSuccess] record failed:', json.error);
       }
-    }
 
-    record();
-  }, [eventId]);
+      setStatus(session?.user ? 'done' : 'guest');
+    } catch (err) {
+      console.warn('[DonateSuccess] record error:', err.message);
+      setStatus('done');
+    }
+  }
 
   return (
     <div style={{

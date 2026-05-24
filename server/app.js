@@ -31,6 +31,7 @@ import stripePortalRouter       from './routes/stripePortal.js';
 import membershipRouter         from './routes/membership.js';
 import creatorEventsRouter      from './routes/creatorEvents.js';
 import revenuePoolRouter        from './routes/revenuePool.js';
+import donationsRouter          from './routes/donations.js';
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.use('/api/stripe',                stripePortalRouter);
 app.use('/api/membership',            membershipRouter);
 app.use('/api/creator/events',        creatorEventsRouter);
 app.use('/api/revenue-pool',          revenuePoolRouter);
+app.use('/api/donations',             donationsRouter);
 app.use('/api/submissions',           submissionsRouter);
 app.use('/api/event-slots',           eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);
