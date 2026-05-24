@@ -41,53 +41,31 @@ export default function MembershipSuccess() {
   const activatedRef = useRef(false);
 
   useEffect(() => {
-    if (!activatedRef.current) {
-      activatedRef.current = true;
-      activate();
-    }
-  }, []);
-
-  async function activate() {
-    setStatus('activating');
-    setErrMsg('');
-
-    const params = new URLSearchParams(window.location.search);
-    const tier   = params.get('tier');
-    setTierKey(tier);
-
-    if (!tier || !TIER_CONFIG[tier]) {
-      setErrMsg('No valid membership tier found in the URL. Please use the membership page to upgrade.');
-      setStatus('error');
-      return;
-    }
-
-    try {
+    const activate = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+
       if (!session) {
-        localStorage.setItem('pending_membership_tier', tier);
-        navigate('/login?redirect=' + encodeURIComponent('/membership/success?tier=' + tier));
+        console.log('No Supabase session found after redirect');
         return;
       }
 
+      const tier = new URLSearchParams(window.location.search).get('tier');
+
       const res = await fetch('/api/membership/activate', {
-        method:  'POST',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization:  `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ tier }),
       });
 
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Activation failed.');
+      const data = await res.json();
+      console.log('Activation response:', data);
+    };
 
-      setStatus('success');
-      setTimeout(() => navigate(TIER_CONFIG[tier].redirectTo), 1500);
-    } catch (err) {
-      setErrMsg(err.message);
-      setStatus('error');
-    }
-  }
+    activate();
+  }, []);
 
   const cfg = TIER_CONFIG[tierKey] ?? null;
 
