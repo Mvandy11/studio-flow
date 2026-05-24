@@ -127,31 +127,23 @@ export default function ContestDetailPage() {
     setSubmitting(true);
     setSubError(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('You must be signed in.');
+
       let media_url = null;
 
-      // 1. Upload file directly to Supabase storage (if provided)
+      // 1. Upload file to Supabase Storage (client handles the binary upload directly)
       if (subFile) {
         const ext = subFile.name.split('.').pop().toLowerCase();
         const filename = `${crypto.randomUUID()}.${ext}`;
         const storagePath = `contest-entries/${id}/${filename}`;
 
-        // Explicit MIME map — browser subFile.type is often wrong for video files
         const MIME_MAP = {
-          mp4:  'video/mp4',
-          mov:  'video/quicktime',
-          avi:  'video/x-msvideo',
-          webm: 'video/webm',
-          mkv:  'video/x-matroska',
-          m4v:  'video/mp4',
-          jpg:  'image/jpeg',
-          jpeg: 'image/jpeg',
-          png:  'image/png',
-          gif:  'image/gif',
-          webp: 'image/webp',
-          pdf:  'application/pdf',
-          mp3:  'audio/mpeg',
-          wav:  'audio/wav',
-          ogg:  'audio/ogg',
+          mp4: 'video/mp4', mov: 'video/quicktime', avi: 'video/x-msvideo',
+          webm: 'video/webm', mkv: 'video/x-matroska', m4v: 'video/mp4',
+          jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+          gif: 'image/gif', webp: 'image/webp', pdf: 'application/pdf',
+          mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
         };
         const contentType = MIME_MAP[ext] || subFile.type || 'application/octet-stream';
 
@@ -167,20 +159,22 @@ export default function ContestDetailPage() {
         media_url = urlData?.publicUrl || null;
       }
 
-      // 2. Insert submission row directly via Supabase client
-      const { error: insertErr } = await supabase.from('submissions').insert({
-        contest_id:  id,
-        user_id:     user.id,
-        user_name:   user.user_metadata?.name || user.email?.split('@')[0] || 'Creator',
-        user_email:  user.email,
-        title:       subTitle.trim(),
-        description: subDesc.trim() || null,
-        media_url,
-        video_url:   media_url,
-        status:      'active',
+      // 2. Submit entry via server — validates membership tier + sets user_id authoritatively
+      const res = await fetch(`/api/contests/${id}/enter`, {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization:  `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          title:       subTitle.trim(),
+          description: subDesc.trim() || null,
+          media_url,
+        }),
       });
 
-      if (insertErr) throw new Error(insertErr.message);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Submission failed.');
 
       setSubSuccess(true);
       setSubTitle(''); setSubDesc(''); setSubFile(null);

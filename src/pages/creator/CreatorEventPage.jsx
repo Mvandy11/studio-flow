@@ -205,15 +205,31 @@ export default function CreatorEventPage() {
 
         {/* Thumbnail only (no video, or free user without video) */}
         {(!event.video_url && !isLive) && event.thumbnail_url && (
-          <div style={{ width: '100%', aspectRatio: '16/9', overflow: 'hidden', background: '#111' }}>
-            <img src={event.thumbnail_url} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'relative' }}>
+            <div style={{ width: '100%', aspectRatio: '16/9', overflow: 'hidden', background: '#111' }}>
+              <img src={event.thumbnail_url} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            {/* Members see a "video not yet available" overlay when they have access but no video */}
+            {canWatch && (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0.625rem 1rem', background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'rgba(200,200,215,0.6)' }}>
+                <span>⏳</span>
+                <span>The creator hasn't uploaded video yet — check back soon.</span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Placeholder thumbnail if nothing */}
+        {/* Placeholder when no thumbnail and no video */}
         {!event.thumbnail_url && !event.video_url && !isLive && (
           <div style={{ ...ratio16x9, background: 'linear-gradient(135deg, #1a1a2e, #16213e)' }}>
-            <div style={{ ...absoluteFill, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', position: 'absolute', inset: 0 }}>🎬</div>
+            <div style={{ ...absoluteFill, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', position: 'absolute', inset: 0 }}>
+              <span style={{ fontSize: '4rem' }}>🎬</span>
+              {canWatch && (
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(200,200,215,0.4)' }}>
+                  Video not yet available — check back soon.
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>

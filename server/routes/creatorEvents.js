@@ -22,6 +22,43 @@ const CATEGORIES = [
   'Cooking','Motivation','Kids','Talk Show','Tutorials','Art',
 ];
 
+const TITLE_MAX       = 120;
+const DESCRIPTION_MAX = 2000;
+const ALLOWED_IMAGE_EXTS = /\.(jpe?g|png|webp|gif|avif|svg)(\?.*)?$/i;
+const ALLOWED_VIDEO_EXTS = /\.(mp4|mov|webm|mkv|m4v|avi|ogv)(\?.*)?$/i;
+const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'vimeo.com'];
+
+function isValidHttpUrl(str) {
+  try {
+    const u = new URL(str);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function validateMediaUrl(url, type) {
+  // type: 'thumbnail' | 'video'
+  if (!url) return null; // optional fields — null is fine
+  const trimmed = url.trim();
+  if (!isValidHttpUrl(trimmed)) return `${type} must be a valid http/https URL.`;
+  if (type === 'thumbnail' && !ALLOWED_IMAGE_EXTS.test(trimmed)) {
+    // Allow Supabase storage URLs (they may not end in an extension)
+    if (!trimmed.includes('supabase.co/storage')) {
+      return 'Thumbnail must be a JPG, PNG, WebP, GIF, or AVIF image URL.';
+    }
+  }
+  if (type === 'video') {
+    const isStorageUrl  = trimmed.includes('supabase.co/storage');
+    const isAllowedHost = ALLOWED_VIDEO_HOSTS.some((h) => trimmed.includes(h));
+    const isAllowedExt  = ALLOWED_VIDEO_EXTS.test(trimmed);
+    if (!isStorageUrl && !isAllowedHost && !isAllowedExt) {
+      return 'Video must be an MP4/MOV/WebM file URL, or a YouTube/Vimeo link.';
+    }
+  }
+  return null;
+}
+
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 async function getUser(req) {
@@ -62,10 +99,22 @@ router.post('/', async (req, res) => {
     const { title, description, category, thumbnail_url, video_url, is_live } = req.body || {};
 
     if (!title?.trim())  return res.status(400).json({ error: 'Title is required.' });
-    if (!category)       return res.status(400).json({ error: 'Category is required.' });
+    if (title.trim().length > TITLE_MAX) {
+      return res.status(400).json({ error: `Title must be ${TITLE_MAX} characters or fewer.` });
+    }
+    if (description && description.length > DESCRIPTION_MAX) {
+      return res.status(400).json({ error: `Description must be ${DESCRIPTION_MAX} characters or fewer.` });
+    }
+    if (!category) return res.status(400).json({ error: 'Category is required.' });
     if (!CATEGORIES.includes(category)) {
       return res.status(400).json({ error: `Invalid category. Must be one of: ${CATEGORIES.join(', ')}.` });
     }
+
+    const thumbErr = validateMediaUrl(thumbnail_url, 'thumbnail');
+    if (thumbErr) return res.status(400).json({ error: thumbErr });
+
+    const videoErr = validateMediaUrl(video_url, 'video');
+    if (videoErr) return res.status(400).json({ error: videoErr });
 
     const slotId    = randomUUID();
     const streamKey = `sf-${randomUUID()}`;

@@ -128,6 +128,76 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// ── POST /api/contests/:id/enter — submit a contest entry ────
+// Validates auth + membership tier server-side so user_id can't be spoofed.
+router.post('/:id/enter', async (req, res) => {
+  try {
+    const user = await getUserFromHeader(req);
+    if (!user) return res.status(401).json({ error: 'You must be logged in to submit an entry.' });
+
+    // Membership gate — member_30, creator_50, or creator_admin
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('membership_tier, membership_active, role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const isAdmin   = profile?.role === 'creator_admin';
+    const isEligible = isAdmin
+      || (profile?.membership_active && ['member_30', 'creator_50'].includes(profile?.membership_tier));
+
+    if (!isEligible) {
+      return res.status(403).json({
+        error: 'A membership ($30/mo or $50/mo) is required to submit contest entries.',
+        upgrade_url: '/membership',
+      });
+    }
+
+    const contestId = req.params.id;
+
+    // Verify the contest exists and is accepting entries
+    const { data: contest, error: cErr } = await supabaseAdmin
+      .from('contests')
+      .select('id, status, title')
+      .eq('id', contestId)
+      .maybeSingle();
+
+    if (cErr) throw cErr;
+    if (!contest) return res.status(404).json({ error: 'Contest not found.' });
+    if (!['active', 'voting'].includes(contest.status) && !isAdmin) {
+      return res.status(400).json({ error: 'This contest is not currently accepting entries.' });
+    }
+
+    const { title, description, media_url } = req.body || {};
+    if (!title?.trim()) return res.status(400).json({ error: 'Entry title is required.' });
+    if (title.trim().length > 120) return res.status(400).json({ error: 'Title must be 120 characters or fewer.' });
+
+    const { data, error: insertErr } = await supabaseAdmin
+      .from('submissions')
+      .insert({
+        contest_id:  contestId,
+        user_id:     user.id,
+        user_name:   user.user_metadata?.name || user.email?.split('@')[0] || 'Creator',
+        user_email:  user.email,
+        title:       title.trim(),
+        description: description?.trim() || null,
+        media_url:   media_url || null,
+        video_url:   media_url || null,
+        status:      'active',
+      })
+      .select('id, title, created_at')
+      .single();
+
+    if (insertErr) throw insertErr;
+
+    console.log(`[contests/enter] ✅ entry=${data.id} contest=${contestId} user=${user.id}`);
+    res.status(201).json({ success: true, entry: data });
+  } catch (err) {
+    console.error('[contests/enter] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── POST /api/contests (create — admin only) ──────────────────
 router.post('/', async (req, res) => {
   try {
