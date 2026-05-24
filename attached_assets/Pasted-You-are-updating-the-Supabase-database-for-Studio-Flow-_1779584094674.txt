@@ -1,0 +1,104 @@
+You are updating the Supabase database for Studio Flow 2.0. Create or update
+the following tables, indexes, and RLS policies. Ensure all tables use
+uuid_generate_v4() and timestamps default to now().
+
+────────────────────────────────────────
+TABLE: profiles
+────────────────────────────────────────
+id uuid primary key
+email text
+membership_active boolean default false
+membership_tier text default 'free'
+membership_started_at timestamp null
+created_at timestamp default now()
+
+RLS:
+- Enable RLS
+- Allow users to select their own profile
+- Allow service role full access
+
+────────────────────────────────────────
+TABLE: event_slots
+────────────────────────────────────────
+id uuid primary key default uuid_generate_v4()
+creator_id uuid references profiles(id)
+title text
+description text
+category text
+thumbnail_url text
+video_url text
+is_live boolean default false
+created_at timestamp default now()
+updated_at timestamp default now()
+
+RLS:
+- Public read access
+- Insert/update/delete only for creator_id = auth.uid()
+
+────────────────────────────────────────
+TABLE: donations
+────────────────────────────────────────
+id uuid primary key default uuid_generate_v4()
+event_id uuid references event_slots(id)
+creator_id uuid references profiles(id)
+user_id uuid references profiles(id)
+amount numeric
+created_at timestamp default now()
+
+RLS:
+- Public read access
+- Insert allowed for authenticated users
+- No updates or deletes
+
+────────────────────────────────────────
+TABLE: revenue_pool
+────────────────────────────────────────
+id uuid primary key default uuid_generate_v4()
+month text
+total_amount numeric default 0
+created_at timestamp default now()
+
+RLS:
+- Service role only
+
+────────────────────────────────────────
+TABLE: revenue_pool_entries
+────────────────────────────────────────
+id uuid primary key default uuid_generate_v4()
+creator_id uuid references profiles(id)
+amount numeric
+source text
+created_at timestamp default now()
+
+RLS:
+- Service role only
+
+────────────────────────────────────────
+TABLE: contest_entries
+────────────────────────────────────────
+id uuid primary key default uuid_generate_v4()
+contest_id uuid
+user_id uuid references profiles(id)
+media_url text
+created_at timestamp default now()
+
+RLS:
+- Insert allowed for member_30 and creator_50
+- Public read access
+
+────────────────────────────────────────
+GENERAL CLEANUP
+────────────────────────────────────────
+Drop old tables:
+- event_requests
+- creator_applications
+- subscription_sync
+- webhook_logs
+- any unused legacy tables
+
+Ensure all tables have:
+- RLS enabled
+- Correct policies
+- Correct foreign keys
+
+Apply all changes now.
