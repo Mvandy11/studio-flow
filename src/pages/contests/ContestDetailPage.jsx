@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
+import { useMembership } from '../../modules/memberships/useMembership';
 import { supabase } from '../../lib/supabaseClient';
 import { api } from '../../lib/api.js';
 import '../../styles/contests.css';
@@ -11,7 +12,10 @@ export default function ContestDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
-  const isAdmin = isCreatorAdmin(role);
+  const { tier } = useMembership();
+  const isAdmin      = isCreatorAdmin(role);
+  // Only member_30, creator_50, and admins can enter contests and win rewards
+  const isEligible   = isAdmin || tier === 'member_30' || tier === 'creator_50';
 
   const [contest,       setContest]       = useState(null);
   const [entries,       setEntries]       = useState([]);
@@ -498,7 +502,19 @@ export default function ContestDetailPage() {
         <img src={contest.thumbnail_url} alt={contest.title} className="contest-detail__hero" />
       )}
 
-      <h1 className="page-title">{contest.title}</h1>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+        <h1 className="page-title" style={{ margin: 0 }}>{contest.title}</h1>
+        <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+          {user && isEligible && (
+            <Link
+              to="/contests/my-entries"
+              style={{ display: 'inline-block', padding: '0.5rem 1rem', borderRadius: '9px', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', color: '#a78bfa', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}
+            >
+              🏆 My Entries
+            </Link>
+          )}
+        </div>
+      </div>
 
       {isAdmin && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap', padding: '0.875rem 1rem', borderRadius: '10px', background: 'rgba(242,201,143,0.04)', border: '1px solid rgba(242,201,143,0.15)' }}>
@@ -808,11 +824,45 @@ export default function ContestDetailPage() {
         <p className="contest-detail__description">{contest.description}</p>
       )}
 
-      {/* ── Submission Form ── */}
-      {user && !subSuccess && (
+      {/* ── Submission Form / Entry Gate ── */}
+
+      {/* Not logged in */}
+      {!user && (
+        <div style={entryGateStyle}>
+          <div>
+            <p style={{ fontWeight: 700, margin: '0 0 0.25rem', fontSize: '0.95rem' }}>🔒 Sign in to enter this contest</p>
+            <p style={{ color: 'rgba(200,200,215,0.5)', fontSize: '0.82rem', margin: 0 }}>Members and creators can submit entries and compete for prizes.</p>
+          </div>
+          <Link to="/login" style={upgradeBtn}>Sign In →</Link>
+        </div>
+      )}
+
+      {/* Logged in but free tier — show upgrade CTA */}
+      {user && !isEligible && (
+        <div style={entryGateStyle}>
+          <div>
+            <p style={{ fontWeight: 700, margin: '0 0 0.25rem', fontSize: '0.95rem' }}>🌟 Upgrade to Enter Contests</p>
+            <p style={{ color: 'rgba(200,200,215,0.5)', fontSize: '0.82rem', margin: 0 }}>
+              A membership ($30/mo or $50/mo) lets you submit entries and win prizes.
+            </p>
+          </div>
+          <Link to="/membership" style={upgradeBtn}>Upgrade to Enter →</Link>
+        </div>
+      )}
+
+      {/* Eligible + success banner */}
+      {user && isEligible && subSuccess && (
+        <div style={{ padding:'1rem 1.25rem', borderRadius:'12px', background:'rgba(134,239,172,0.1)', border:'1px solid rgba(134,239,172,0.3)', color:'#86efac', marginBottom:'1.5rem' }}>
+          ✓ Your entry has been submitted! Good luck.{' '}
+          <Link to="/contests/my-entries" style={{ color: '#86efac', fontWeight: 700 }}>View My Entries →</Link>
+        </div>
+      )}
+
+      {/* Eligible — show the submission form */}
+      {user && isEligible && !subSuccess && (
         <div className="contest-submit-form">
           <h2 className="contest-submit-form__title">Submit Your Entry</h2>
-          {subError && <p style={{ color:'#fca5a5', margin:0 }}>{subError}</p>}
+          {subError && <p style={{ color:'#fca5a5', margin: '0 0 0.75rem' }}>{subError}</p>}
           <div className="form-group">
             <label className="form-label">Title *</label>
             <input
@@ -862,18 +912,6 @@ export default function ContestDetailPage() {
               {submitting ? 'Submitting…' : 'Submit Entry'}
             </button>
           </div>
-        </div>
-      )}
-
-      {subSuccess && (
-        <div style={{ padding:'1rem 1.25rem', borderRadius:'12px', background:'rgba(134,239,172,0.1)', border:'1px solid rgba(134,239,172,0.3)', color:'#86efac', marginBottom:'1.5rem' }}>
-          ✓ Your entry has been submitted! Good luck.
-        </div>
-      )}
-
-      {!user && (
-        <div style={{ padding:'1rem', borderRadius:'12px', background:'rgba(110,168,255,0.08)', border:'1px solid rgba(110,168,255,0.2)', color:'var(--accent-blue)', marginBottom:'1.5rem', textAlign:'center' }}>
-          Log in to submit your entry.
         </div>
       )}
 
@@ -1137,3 +1175,31 @@ export default function ContestDetailPage() {
     </div>
   );
 }
+
+/* ── Shared style constants ───────────────────────────────────────────────── */
+const entryGateStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '1rem',
+  flexWrap: 'wrap',
+  padding: '1.25rem 1.5rem',
+  borderRadius: '14px',
+  background: 'linear-gradient(135deg, rgba(167,139,250,0.07), rgba(245,166,35,0.07))',
+  border: '1px solid rgba(167,139,250,0.2)',
+  marginBottom: '1.75rem',
+};
+
+const upgradeBtn = {
+  display: 'inline-block',
+  padding: '0.6rem 1.25rem',
+  borderRadius: '10px',
+  background: 'rgba(167,139,250,0.15)',
+  border: '1px solid rgba(167,139,250,0.35)',
+  color: '#a78bfa',
+  fontWeight: 700,
+  fontSize: '0.875rem',
+  textDecoration: 'none',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+};

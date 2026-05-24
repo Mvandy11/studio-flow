@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../hooks/useAuth';
+import { useMembership } from '../../modules/memberships/useMembership';
+import { isCreatorAdmin } from '../../lib/roles';
 
 const STATUS_COLORS = {
   active:    { bg: 'rgba(96,165,250,0.12)',  color: '#60a5fa',  border: 'rgba(96,165,250,0.25)'  },
@@ -11,6 +14,11 @@ const STATUS_COLORS = {
 };
 
 export default function MyContestEntriesPage() {
+  const { role }   = useAuth();
+  const { tier }   = useMembership();
+  const isAdmin    = isCreatorAdmin(role);
+  const isEligible = isAdmin || tier === 'member_30' || tier === 'creator_50';
+
   const [entries,  setEntries]  = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
@@ -63,10 +71,26 @@ export default function MyContestEntriesPage() {
 
   return (
     <div style={S.page}>
-      <div style={{ marginBottom: '1.75rem' }}>
-        <h1 style={S.title}>🏆 My Contest Entries</h1>
-        <p style={S.sub}>{entries.length} submission{entries.length !== 1 ? 's' : ''} · {totalVotes} total votes</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={S.title}>🏆 My Contest Entries</h1>
+          <p style={S.sub}>{entries.length} submission{entries.length !== 1 ? 's' : ''} · {totalVotes} total votes</p>
+        </div>
+        <Link to="/contests" style={S.outlineBtn}>Browse Contests →</Link>
       </div>
+
+      {/* Free-tier reward eligibility notice */}
+      {user && !isEligible && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', padding: '1rem 1.25rem', borderRadius: '12px', background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.2)', marginBottom: '1.5rem' }}>
+          <div>
+            <p style={{ fontWeight: 700, margin: '0 0 0.2rem', fontSize: '0.9rem', color: '#fbbf24' }}>⚠️ Not eligible for contest rewards</p>
+            <p style={{ color: 'rgba(200,200,215,0.5)', fontSize: '0.8rem', margin: 0 }}>Upgrade to a membership to compete for prizes and win rewards.</p>
+          </div>
+          <Link to="/membership" style={{ display: 'inline-block', padding: '0.5rem 1.1rem', borderRadius: '9px', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', flexShrink: 0 }}>
+            Upgrade →
+          </Link>
+        </div>
+      )}
 
       {error && <p style={{ color: '#fca5a5', marginBottom: '1rem' }}>{error}</p>}
 
