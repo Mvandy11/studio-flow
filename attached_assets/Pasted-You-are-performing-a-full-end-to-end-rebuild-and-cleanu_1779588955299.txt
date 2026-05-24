@@ -1,0 +1,183 @@
+You are performing a full, end-to-end rebuild and cleanup of the Studio Flow
+2.0 codebase. Your goal is to deliver a fully functional, launch-ready
+platform with a clean, organized file structure, correct routing, correct
+backend logic, and correct frontend wiring. You must also validate and
+preserve the user’s most recent manual changes, ensuring they are correct,
+clean, and integrated into the final structure.
+
+────────────────────────────────────────
+0. VALIDATION OF EXISTING CHANGES
+────────────────────────────────────────
+
+Before making any changes, scan the project for the following files the user
+recently created manually:
+
+- /creator/new-event.jsx
+- /creator/events.jsx
+- /event/[id].jsx
+
+Validate that:
+
+- The folder structure is correct (event/[id].jsx must be inside a folder)
+- The code compiles
+- The imports are correct
+- The Supabase client is correctly referenced
+- The pages follow Next.js routing rules
+- No duplicate or conflicting versions exist
+
+If any issues are found, fix them cleanly and integrate them into the final
+structure.
+
+────────────────────────────────────────
+1. CLEAN + REORGANIZE FRONTEND FILE STRUCTURE
+────────────────────────────────────────
+
+Reorganize the frontend into a clean, modern Next.js structure:
+
+/pages
+    /membership
+        index.jsx
+        success.jsx
+    /events
+        index.jsx
+        [category].jsx
+    /event
+        [id].jsx
+    /creator
+        dashboard.jsx
+        new-event.jsx
+        events.jsx
+        donations.jsx
+        revenue.jsx
+    /contests
+        index.jsx
+        my-entries.jsx
+    /donate
+        success.jsx
+
+/components
+    Nav.jsx
+    Sidebar.jsx
+    EventCard.jsx
+    CategoryCard.jsx
+    CreatorStats.jsx
+
+/lib
+    supabaseClient.js
+
+Remove all legacy pages:
+- event requests
+- creator applications
+- old membership pages
+- old contest pages
+- old navigation components
+- unused components
+
+────────────────────────────────────────
+2. FRONTEND FUNCTIONALITY IMPLEMENTATION
+────────────────────────────────────────
+
+Implement or fix the following pages:
+
+A) Membership
+- /membership (pricing + tiers)
+- /membership/success (activates membership via POST /api/membership/activate)
+
+B) Events
+- /events (category grid)
+- /events/[category] (list events by category)
+- /event/[id] (event detail page with video, thumbnail, donation button)
+
+C) Creator Tools
+- /creator/new-event (upload thumbnail + video)
+- /creator/events (list creator’s events)
+- /creator/dashboard (stats + quick actions)
+- /creator/donations (list donations)
+- /creator/revenue (revenue pool earnings)
+
+D) Contests
+- /contests (list contests)
+- /contests/my-entries (user’s entries)
+- Contest entry button only for member_30 or creator_50
+
+E) Donations
+- /donate/success (records donation)
+
+F) Navigation
+- Free: Home, Events, Categories, Contests, Membership
+- Member: Home, Events, Categories, Contests, Dashboard
+- Creator: Home, Events, Categories, Create Event, My Events, Dashboard, Contests
+
+────────────────────────────────────────
+3. BACKEND REBUILD + CLEANUP
+────────────────────────────────────────
+
+Remove all legacy backend logic:
+- Stripe SDK
+- Webhooks
+- Subscription sync
+- Creator applications
+- Event requests
+- Old contest logic
+- Native modules (ffmpeg, sharp, etc.)
+
+Ensure backend uses:
+- Express or Next.js API routes
+- Supabase client only
+- No native dependencies
+
+Implement backend routes:
+
+POST /api/membership/activate
+POST /api/events/create
+GET /api/events/list
+GET /api/events/:id
+POST /api/donations/record
+POST /api/contests/enter
+
+Ensure all routes:
+- Validate user auth
+- Validate membership tier
+- Insert correct data into Supabase
+
+────────────────────────────────────────
+4. DATABASE SYNC (Supabase)
+────────────────────────────────────────
+
+Ensure the following tables exist and match schema:
+
+profiles
+event_slots
+donations
+revenue_pool
+revenue_pool_entries
+contest_entries
+
+Ensure RLS policies:
+- Public read for events
+- Insert/update/delete only by creator
+- Contest entry only for member_30 or creator_50
+- Donations insert allowed for authenticated users
+
+────────────────────────────────────────
+5. FINAL INTEGRATION + LAUNCH READINESS
+────────────────────────────────────────
+
+After rebuilding:
+
+- Ensure all pages compile
+- Ensure all routes work
+- Ensure membership activation works
+- Ensure event creation works
+- Ensure event detail works
+- Ensure category pages show events
+- Ensure contests work
+- Ensure donations work
+- Ensure revenue pool updates
+- Ensure navigation updates based on tier
+- Ensure no old logic remains
+- Ensure the user’s recent manual changes are preserved and integrated
+
+Deliver a fully functional, launch-ready Studio Flow 2.0.
+
+Make all changes now.
