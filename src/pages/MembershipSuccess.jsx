@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../lib/supabaseClient";
 
 export default function MembershipSuccess() {
   const [status, setStatus] = useState("activating"); 
@@ -100,4 +100,3 @@ export default function MembershipSuccess() {
     </div>
   );
 }
-
