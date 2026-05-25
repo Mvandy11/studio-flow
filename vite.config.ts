@@ -11,6 +11,11 @@ export default defineConfig({
     },
   },
 
+  build: {
+    outDir: "dist/public",
+    emptyOutDir: true,
+  },
+
   server: {
     host: "0.0.0.0",
     port: 5173,

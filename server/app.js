@@ -7,7 +7,7 @@ import { requestLogger } from './middleware/logger.js';
 import { logError } from './utils/logError.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DIST_DIR  = join(__dirname, '..', 'dist');
+const DIST_DIR  = join(__dirname, '..', 'dist', 'public');
 
 import aiRoutes                  from './routes/ai/index.js';
 import authProfileRouter         from './routes/authProfile.js';
