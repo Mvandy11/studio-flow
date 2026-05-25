@@ -26,7 +26,9 @@ export default function MembershipSuccess() {
         }
 
         // 3. Call backend with Authorization header
-        const res = await fetch("/api/membership/activate", {
+        const API_URL = "https://www.studioflow.club/api";
+
+        const res = await fetch(`${API_URL}/membership/activate`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
