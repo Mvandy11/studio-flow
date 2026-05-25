@@ -1,87 +1,104 @@
-/**
- * Membership Activation
- * Mounted at /api/membership by app.js.
- *
- * POST /api/membership/activate
- *   Body: { tier: "member_30" | "creator_50" }
- *   Auth: Bearer token required
- *
- *   Called by the frontend success page after a Stripe Payment Link
- *   redirects back with ?tier=<tier> in the URL.
- *
- *   Updates profiles:
- *     membership_active       boolean
- *     membership_tier         text  ('free' | 'member_30' | 'creator_50')
- *     membership_started_at   timestamptz
- */
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-import { Router } from 'express';
-import supabase from '../supabase/supabaseClient.js';        // ⭐ FIXED — use client for auth
-import supabaseAdmin from '../supabase/supabaseAdmin.js';    // still used for DB writes
-import { logError } from '../utils/logError.js';
+export default function MembershipSuccess() {
+  const [status, setStatus] = useState("activating");
+  const [message, setMessage] = useState("");
 
-const router = Router();
+  useEffect(() => {
+    const activate = async () => {
+      try {
+        // 1. Refresh Supabase session after Stripe redirect
+        const { data: { session } } = await supabase.auth.getSession();
 
-const VALID_TIERS = new Set(['member_30', 'creator_50']);
+        if (!session) {
+          setStatus("error");
+          setMessage("No Supabase session found. Please log in again.");
+          return;
+        }
 
-// ── POST /api/membership/activate ──────────────────────────────────────────
-router.post('/activate', async (req, res) => {
-  try {
-    // Auth
-    const authHeader = req.headers.authorization || '';
-    const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
-    if (!jwt) return res.status(401).json({ error: 'Authentication required.' });
+        // 2. Extract tier from URL
+        const tier = new URLSearchParams(window.location.search).get("tier");
+        if (!tier) {
+          setStatus("error");
+          setMessage("Missing membership tier in redirect URL.");
+          return;
+        }
 
-    // ⭐ FIXED — decode user using client auth, not admin
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(jwt);
-    if (authErr || !user) {
-      return res.status(401).json({ error: 'Invalid or expired token.' });
-    }
+        // 3. Call backend activation endpoint
+        const API_URL = "https://studio-flow-backend.onrender.com/api";
 
-    const { tier } = req.body || {};
+        const res = await fetch(`${API_URL}/membership/activate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ tier })
+        });
 
-    let payload;
+        // 4. Handle non‑JSON responses (HTML error pages)
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          setStatus("error");
+          setMessage("Server returned an unexpected response.");
+          console.error("HTML response:", text);
+          return;
+        }
 
-    if (tier && VALID_TIERS.has(tier)) {
-      payload = {
-        membership_active:     true,
-        membership_tier:       tier,
-        membership_started_at: new Date().toISOString(),
-        subscription_active:   true, // backward compatibility
-      };
-    } else {
-      // No tier or unknown tier → reset to free
-      payload = {
-        membership_active: false,
-        membership_tier:   'free',
-      };
-    }
+        // 5. Handle backend errors
+        if (!res.ok) {
+          setStatus("error");
+          setMessage(data.error || "Activation failed.");
+          return;
+        }
 
-    // Update profile using admin client
-    const { error: updateErr } = await supabaseAdmin
-      .from('profiles')
-      .update(payload)
-      .eq('id', user.id);
+        // 6. Success!
+        setStatus("success");
+        setMessage("Your membership is now active!");
 
-    if (updateErr) throw updateErr;
+      } catch (err) {
+        console.error(err);
+        setStatus("error");
+        setMessage("Unexpected error during activation.");
+      }
+    };
 
-    // Add revenue pool entry for creator_50
-    if (tier === 'creator_50') {
-      await supabaseAdmin.from('revenue_pool_entries').insert({
-        creator_id: user.id,
-        amount:     25,
-        source:     'subscription',
-      });
-    }
+    activate();
+  }, []);
 
-    console.log(`[membership/activate] ✅ user=${user.id} tier=${tier ?? '(none → free)'}`);
-    res.json({ success: true, tier: payload.membership_tier });
-
-  } catch (err) {
-    console.error('[membership/activate] error:', err.message);
-    await logError(err, '/api/membership/activate');
-    res.status(500).json({ error: err.message });
+  // UI STATES
+  if (status === "activating") {
+    return (
+      <div className="activation-loading">
+        <h2>Activating your membership...</h2>
+        <p>Just a moment while we set up your access.</p>
+      </div>
+    );
   }
-});
 
-export default router;
+  if (status === "success") {
+    return (
+      <div className="activation-success">
+        <h2>Membership Activated 🎉</h2>
+        <p>{message}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="activation-error">
+      <h2>Activation Failed</h2>
+      <p>{message}</p>
+      <button onClick={() => window.location.reload()}>
+        Retry Activation
+      </button>
+      <button onClick={() => (window.location.href = "/membership")}>
+        Return to Membership Page
+      </button>
+    </div>
+  );
+}
