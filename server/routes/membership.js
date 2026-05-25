@@ -16,7 +16,8 @@
  */
 
 import { Router } from 'express';
-import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import supabase from '../supabase/supabaseClient.js';        // ⭐ FIXED — use client for auth
+import supabaseAdmin from '../supabase/supabaseAdmin.js';    // still used for DB writes
 import { logError } from '../utils/logError.js';
 
 const router = Router();
@@ -31,8 +32,11 @@ router.post('/activate', async (req, res) => {
     const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
     if (!jwt) return res.status(401).json({ error: 'Authentication required.' });
 
-    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(jwt);
-    if (authErr || !user) return res.status(401).json({ error: 'Invalid or expired token.' });
+    // ⭐ FIXED — decode user using client auth, not admin
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(jwt);
+    if (authErr || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token.' });
+    }
 
     const { tier } = req.body || {};
 
@@ -43,8 +47,7 @@ router.post('/activate', async (req, res) => {
         membership_active:     true,
         membership_tier:       tier,
         membership_started_at: new Date().toISOString(),
-        // keep subscription_active in sync for backward compat
-        subscription_active:   true,
+        subscription_active:   true, // backward compatibility
       };
     } else {
       // No tier or unknown tier → reset to free
@@ -54,6 +57,7 @@ router.post('/activate', async (req, res) => {
       };
     }
 
+    // Update profile using admin client
     const { error: updateErr } = await supabaseAdmin
       .from('profiles')
       .update(payload)
@@ -61,7 +65,7 @@ router.post('/activate', async (req, res) => {
 
     if (updateErr) throw updateErr;
 
-    // When creator_50 activates, contribute $25 to the revenue pool
+    // Add revenue pool entry for creator_50
     if (tier === 'creator_50') {
       await supabaseAdmin.from('revenue_pool_entries').insert({
         creator_id: user.id,
@@ -72,6 +76,7 @@ router.post('/activate', async (req, res) => {
 
     console.log(`[membership/activate] ✅ user=${user.id} tier=${tier ?? '(none → free)'}`);
     res.json({ success: true, tier: payload.membership_tier });
+
   } catch (err) {
     console.error('[membership/activate] error:', err.message);
     await logError(err, '/api/membership/activate');
