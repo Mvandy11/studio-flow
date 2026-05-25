@@ -1,7 +1,13 @@
 import express from 'express';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 import { requestLogger } from './middleware/logger.js';
 import { logError } from './utils/logError.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DIST_DIR  = join(__dirname, '..', 'dist');
 
 import aiRoutes                  from './routes/ai/index.js';
 import authProfileRouter         from './routes/authProfile.js';
@@ -97,11 +103,21 @@ app.get('/api/health', (_req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// 7. 404
+// 7. Serve built React frontend in production
+//    (only when the dist/ folder exists — dev uses Vite directly)
 // ─────────────────────────────────────────────────────────────
-app.use((_req, res) => {
-  res.status(404).json({ error: 'Not found' });
-});
+if (existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+  // React Router catch-all — must come last so /api/* routes above win
+  app.get('*', (_req, res) => {
+    res.sendFile(join(DIST_DIR, 'index.html'));
+  });
+} else {
+  // Dev fallback 404
+  app.use((_req, res) => {
+    res.status(404).json({ error: 'Not found' });
+  });
+}
 
 // ─────────────────────────────────────────────────────────────
 // 8. Global error handler — logs full stack, returns JSON
