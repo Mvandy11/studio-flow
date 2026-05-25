@@ -15,6 +15,16 @@ export default function ProfilePage() {
   if (loading) return <div className="cinematic-hero">Loading profile...</div>;
   if (!profile) return <div className="cinematic-hero">No profile found.</div>;
 
+  // --- MEMBERSHIP LABEL LOGIC -----------------------------------------------
+  function getMembershipLabel() {
+    if (profile.membership_active) {
+      if (profile.membership_tier === 'creator_50') return 'Creator Member';
+      if (profile.membership_tier === 'member_30') return 'Member';
+    }
+    return 'Free Member';
+  }
+
+  // --- FORM HANDLERS ---------------------------------------------------------
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
@@ -30,7 +40,22 @@ export default function ProfilePage() {
         name={profile.display_name}
         bio={profile.bio}
         avatar={profile.avatar_url}
+        membershipLabel={getMembershipLabel()}   // ⭐ NEW
       />
+
+      {/* Membership Status Display */}
+      <div
+        style={{
+          marginTop: '1rem',
+          padding: '1rem',
+          background: '#111',
+          borderRadius: '8px',
+          color: '#fff',
+          fontSize: '1.1rem',
+        }}
+      >
+        <strong>Membership:</strong> {getMembershipLabel()}
+      </div>
 
       <button
         className="cinematic-button-accent cinematic-hover"
