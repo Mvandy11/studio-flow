@@ -40,6 +40,3 @@ export default function ProfileHeader({ name, bio, avatar, membershipLabel }) {
     </div>
   );
 }
-
-  );
-}
