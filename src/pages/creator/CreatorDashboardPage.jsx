@@ -2,25 +2,30 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
-import { useMembership } from '../../modules/memberships/useMembership';
+import { useProfile } from '../../hooks/useProfile';   // ⭐ NEW
 import { isCreatorAdmin } from '../../lib/roles';
 
 export default function CreatorDashboardPage() {
   const { role } = useAuth();
-  const { tier, loading: memberLoading } = useMembership();
+  const { profile, loading: profileLoading } = useProfile();   // ⭐ NEW
 
-  const isAdmin   = isCreatorAdmin(role);
-  const isCreator = tier === 'creator_50' || isAdmin;
+  const isAdmin = isCreatorAdmin(role);
 
-  const [stats,        setStats]        = useState(null);
+  // ⭐ Correct creator logic using new membership fields
+  const isCreator =
+    (profile?.membership_active && profile?.membership_tier === 'creator_50') ||
+    isAdmin;
+
+  const [stats, setStats] = useState(null);
   const [recentEvents, setRecentEvents] = useState([]);
-  const [loading,      setLoading]      = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (memberLoading) return;
+    if (profileLoading) return;
     if (!isCreator) { setLoading(false); return; }
     loadStats();
-  }, [isCreator, memberLoading]);
+  }, [isCreator, profileLoading]);
+
 
   async function loadStats() {
     setLoading(true);
