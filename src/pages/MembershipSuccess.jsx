@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 export default function MembershipSuccess() {
-  const [status, setStatus] = useState("activating"); 
+  const [status, setStatus] = useState("activating");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function MembershipSuccess() {
         }
 
         // 3. Call backend with Authorization header
-        const API_URL = "https://www.studioflow.club/api";
+        const API_URL = "https://studio-flow-backend.onrender.com/api";
 
         const res = await fetch(`${API_URL}/membership/activate`, {
           method: "POST",
