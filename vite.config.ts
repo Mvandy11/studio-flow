@@ -5,26 +5,19 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
 
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
+  // ⭐ Ensure Vite copies everything from /public into dist/public
+  publicDir: "public",
 
   build: {
+    // ⭐ Your build output is going to dist/public — keep this consistent
     outDir: "dist/public",
     emptyOutDir: true,
   },
 
-  server: {
-    host: "0.0.0.0",
-    port: 5173,
-    allowedHosts: [".replit.dev"],
-    proxy: {
-      "/api": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-      },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
     },
   },
 });
+
