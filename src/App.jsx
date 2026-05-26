@@ -96,19 +96,20 @@ export default function App() {
           <Route path="/contests/my-entries" element={<MyContestEntriesPage />} />
 
           {/* ── AI Tools ── */}
-          <Route path="/tools" element={<Tools />} />
-          <Route path="/tools/denoise" element={<DenoiseToolPage />} />
-          <Route path="/tools/upscale" element={<UpscalePage />} />
-          <Route path="/tools/enhance" element={<EnhancePage />} />
+          <Route path="/ai-tools"        element={<Navigate to="/tools" replace />} /> {/* ← FIX: was missing, nav link now resolves */}
+          <Route path="/tools"           element={<Tools />} />
+          <Route path="/tools/denoise"   element={<DenoiseToolPage />} />
+          <Route path="/tools/upscale"   element={<UpscalePage />} />
+          <Route path="/tools/enhance"   element={<EnhancePage />} />
 
           {/* ── Contests ── */}
-          <Route path="/contests" element={<ContestsPage />} />
+          <Route path="/contests"        element={<ContestsPage />} />
           <Route path="/contests/create" element={<CreateContestPage />} />
-          <Route path="/contests/:id" element={<ContestDetailPage />} />
+          <Route path="/contests/:id"    element={<ContestDetailPage />} />
 
           {/* ── Academy ── */}
           <Route path="/creator-academy" element={<CreatorAcademy />} />
-          <Route path="/academy" element={<CreatorAcademy />} />
+          <Route path="/academy"         element={<CreatorAcademy />} />
 
           {/* ── Community ── */}
           <Route path="/announcements" element={<AnnouncementsPage />} />
@@ -124,25 +125,25 @@ export default function App() {
           <Route path="/membership"             element={<MembershipPage />} />
           <Route path="/membership/success"     element={<MembershipSuccess />} />
           <Route path="/admin/event-requests"   element={<Navigate to="/admin" replace />} />
-          <Route path="/admin/winners"            element={<AdminWinnersDashboard />} />
-          <Route path="/admin/analytics"         element={<AdminAnalyticsDashboard />} />
-          <Route path="/admin/errors"            element={<AdminErrorsDashboard />} />
+          <Route path="/admin/winners"          element={<AdminWinnersDashboard />} />
+          <Route path="/admin/analytics"        element={<AdminAnalyticsDashboard />} />
+          <Route path="/admin/errors"           element={<AdminErrorsDashboard />} />
 
           {/* ── Account ── */}
-          <Route path="/earnings" element={<EarningsDashboard />} />
-          <Route path="/settings/payouts" element={<PayoutSettings />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/earnings"          element={<EarningsDashboard />} />
+          <Route path="/settings/payouts"  element={<PayoutSettings />} />
+          <Route path="/admin"             element={<AdminDashboard />} />
 
           {/* ── Stripe callbacks ── */}
-          <Route path="/success" element={<Success />} />
-          <Route path="/cancel" element={<Cancel />} />
-          <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/success"          element={<Success />} />
+          <Route path="/cancel"           element={<Cancel />} />
+          <Route path="/payment/success"  element={<PaymentSuccess />} />
 
           {/* ── Dev Mode routes (mock data, no real Supabase) ── */}
-          <Route path="/dev" element={<Dashboard />} />
-          <Route path="/dev/feed" element={<DevFeed />} />
-          <Route path="/dev/session/:id/edit" element={<DevSessionEditor />} />
-          <Route path="/dev/chat/:sessionId" element={<DevChat />} />
+          <Route path="/dev"                    element={<Dashboard />} />
+          <Route path="/dev/feed"               element={<DevFeed />} />
+          <Route path="/dev/session/:id/edit"   element={<DevSessionEditor />} />
+          <Route path="/dev/chat/:sessionId"    element={<DevChat />} />
         </Routes>
       </Layout>
     </BrowserRouter>
