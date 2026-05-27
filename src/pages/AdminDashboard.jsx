@@ -66,6 +66,9 @@ export default function AdminDashboard() {
   // Monthly subscription history (last 6 months)
   const [subHistory, setSubHistory] = useState([]);
 
+  // Membership tier breakdown
+  const [tierCounts, setTierCounts] = useState({ member_30: 0, creator_50: 0 });
+
   // Announcement form
   const [showAnnForm, setShowAnnForm] = useState(false);
   const [editingAnn,  setEditingAnn]  = useState(null);
@@ -205,6 +208,20 @@ export default function AdminDashboard() {
     } catch (err) {
       console.warn('[AdminDashboard] loadAll error:', err?.message);
     }
+
+    // Membership tier breakdown
+    try {
+      const { data: tierData } = await supabase
+        .from('profiles')
+        .select('membership_tier')
+        .not('membership_tier', 'is', null)
+        .neq('membership_tier', 'free');
+      if (tierData) {
+        const member30Count  = tierData.filter((p) => p.membership_tier === 'member_30').length;
+        const creator50Count = tierData.filter((p) => p.membership_tier === 'creator_50').length;
+        setTierCounts({ member_30: member30Count, creator_50: creator50Count });
+      }
+    } catch (_) {}
 
     setContests(c);
     setContestDash([]);
@@ -543,6 +560,27 @@ export default function AdminDashboard() {
                 {subHistory.every((r) => r.newSubs === 0 && r.cancelled === 0) && (
                   <p className="admin-empty" style={{ marginTop: '0.5rem' }}>No subscription activity yet — data appears here once Stripe payments start flowing.</p>
                 )}
+              </div>
+            </div>
+
+            {/* ── Membership Tier Breakdown ── */}
+            <div>
+              <div className="admin-section-header" style={{ marginBottom: '0.75rem' }}>
+                <h2 className="admin-section-title">Membership Tiers</h2>
+              </div>
+              <div className="membership-stats" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <div className="stat" style={{ flex: 1, minWidth: '140px', background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
+                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(200,200,215,0.5)' }}>$30 Members</h3>
+                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-gold, #f5a623)' }}>{tierCounts.member_30}</p>
+                </div>
+                <div className="stat" style={{ flex: 1, minWidth: '140px', background: 'rgba(192,132,252,0.07)', border: '1px solid rgba(192,132,252,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
+                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(200,200,215,0.5)' }}>$50 Creator Members</h3>
+                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#c084fc' }}>{tierCounts.creator_50}</p>
+                </div>
+                <div className="stat" style={{ flex: 1, minWidth: '140px', background: 'rgba(134,239,172,0.07)', border: '1px solid rgba(134,239,172,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
+                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(200,200,215,0.5)' }}>Total Members</h3>
+                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#86efac' }}>{tierCounts.member_30 + tierCounts.creator_50}</p>
+                </div>
               </div>
             </div>
 

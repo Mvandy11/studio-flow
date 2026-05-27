@@ -13,6 +13,10 @@
  *     membership_active       boolean
  *     membership_tier         text  ('free' | 'member_30' | 'creator_50')
  *     membership_started_at   timestamptz
+ *
+ *   Inserts pool contribution records:
+ *     reward_pool_contributions
+ *     event_creator_pool_contributions
  */
 
 import { Router } from 'express';
@@ -22,6 +26,11 @@ import { logError } from '../utils/logError.js';
 const router = Router();
 
 const VALID_TIERS = new Set(['member_30', 'creator_50']);
+
+const POOL_CONTRIBUTIONS = {
+  member_30:  { rewardPool: 10, eventCreatorPool: 0  },
+  creator_50: { rewardPool: 10, eventCreatorPool: 15 },
+};
 
 // ── POST /api/membership/activate ──────────────────────────────────────────
 router.post('/activate', async (req, res) => {
@@ -43,11 +52,9 @@ router.post('/activate', async (req, res) => {
         membership_active:     true,
         membership_tier:       tier,
         membership_started_at: new Date().toISOString(),
-        // keep subscription_active in sync for backward compat
         subscription_active:   true,
       };
     } else {
-      // No tier or unknown tier → reset to free
       payload = {
         membership_active: false,
         membership_tier:   'free',
@@ -61,19 +68,27 @@ router.post('/activate', async (req, res) => {
 
     if (updateErr) throw updateErr;
 
-    // When creator_50 activates, contribute $25 to the revenue pool
-    if (tier === 'creator_50') {
-      await supabaseAdmin.from('revenue_pool_entries').insert({
-        creator_id: user.id,
-        amount:     25,
-        source:     'subscription',
-      });
+    // Pool contributions
+    if (tier && VALID_TIERS.has(tier)) {
+      const { rewardPool, eventCreatorPool } = POOL_CONTRIBUTIONS[tier];
+
+      await supabaseAdmin.from('reward_pool_contributions').insert({
+        user_id: user.id,
+        amount:  rewardPool,
+        tier,
+      }).maybeSingle();
+
+      if (eventCreatorPool > 0) {
+        await supabaseAdmin.from('event_creator_pool_contributions').insert({
+          user_id: user.id,
+          amount:  eventCreatorPool,
+          tier,
+        }).maybeSingle();
+      }
     }
 
-    console.log(`[membership/activate] ✅ user=${user.id} tier=${tier ?? '(none → free)'}`);
     res.json({ success: true, tier: payload.membership_tier });
   } catch (err) {
-    console.error('[membership/activate] error:', err.message);
     await logError(err, '/api/membership/activate');
     res.status(500).json({ error: err.message });
   }
