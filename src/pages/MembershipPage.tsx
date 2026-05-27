@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMembership } from '../modules/memberships';
+import { useMembership } from '../hooks/useMembership';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabaseClient';
 
