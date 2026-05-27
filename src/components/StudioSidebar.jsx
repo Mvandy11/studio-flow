@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useProfile } from '../../hooks/useProfile';
+import useProfile from '../hooks/useProfile';
+
 
 export default function StudioSidebar({ current, onSelect }) {
   const { profile } = useProfile();
