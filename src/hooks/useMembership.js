@@ -50,7 +50,10 @@ export function useMembership() {
 
         if (!jwt) { if (!cancelled) reset(); return; }
 
-        const res = await fetch('/api/auth/membership', {
+        // ── FIX: prefix with VITE_API_BASE_URL so the request reaches
+        //         the Render backend, not the Netlify CDN ──────────────
+        const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+        const res = await fetch(`${BASE}/api/auth/membership`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
 
@@ -112,3 +115,4 @@ export function useMembership() {
     expiresAt,
   };
 }
+

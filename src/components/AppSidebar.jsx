@@ -1,19 +1,29 @@
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
-import { useMembership } from '../modules/memberships/useMembership';
+import { useProfile } from '../hooks/useProfile';
 
 const DONATION_URL = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
 
 export default function AppSidebar({ open, onClose }) {
   const { user, role, logout } = useAuth();
-  const { tier }               = useMembership();
-  const initial                = user?.email?.[0]?.toUpperCase() ?? '?';
+  const { profile } = useProfile();
 
-  const isAdmin     = isCreatorAdmin(role);
-  const isCreator50 = isAdmin || tier === 'creator_50';
-  const isMember30  = !isCreator50 && tier === 'member_30';
-  const isFree      = !isCreator50 && !isMember30;
+  const initial = user?.email?.[0]?.toUpperCase() ?? '?';
+
+  const isAdmin = isCreatorAdmin(role);
+
+  // ⭐ Correct membership logic (new system)
+  const isCreator50 =
+    isAdmin ||
+    (profile?.membership_active && profile?.membership_tier === 'creator_50');
+
+  const isMember30 =
+    !isCreator50 &&
+    profile?.membership_active &&
+    profile?.membership_tier === 'member_30';
+
+  const isFree = !isCreator50 && !isMember30;
 
   function NavItem({ to, icon, label, end }) {
     return (
@@ -89,30 +99,34 @@ export default function AppSidebar({ open, onClose }) {
 
         <div className="app-sidebar__divider" />
 
-        {/* ── Account — tier-aware ── */}
+        {/* ── Account — NEW membership logic ── */}
         <div className="app-sidebar__section-label">Account</div>
         <nav className="app-sidebar__nav">
 
-          {/* Free: Membership upgrade prompt */}
+          {/* Free */}
           {isFree && (
-            <NavItem to="/membership"   icon="⭐" label="Membership" />
+            <NavItem to="/membership" icon="⭐" label="Membership" />
           )}
 
-          {/* Member: Membership dashboard + Contest Entries */}
-          {isMember30 && <>
-            <NavItem to="/membership"          icon="🌟" label="Dashboard" />
-            <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
-          </>}
+          {/* Member */}
+          {isMember30 && (
+            <>
+              <NavItem to="/membership"          icon="🌟" label="Dashboard" />
+              <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
+            </>
+          )}
 
-          {/* Creator: Full creator suite */}
-          {isCreator50 && <>
-            <NavItem to="/creator/dashboard"   icon="🎬" label="Creator Dashboard" />
-            <NavItem to="/creator/new-event"   icon="➕" label="Create Event" />
-            <NavItem to="/creator/events"      icon="📋" label="My Events" />
-            <NavItem to="/creator/donations"   icon="💛" label="Donations" />
-            <NavItem to="/creator/revenue"     icon="📈" label="Revenue Pool" />
-            <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
-          </>}
+          {/* Creator */}
+          {isCreator50 && (
+            <>
+              <NavItem to="/creator/dashboard"   icon="🎬" label="Creator Dashboard" />
+              <NavItem to="/creator/new-event"   icon="➕" label="Create Event" />
+              <NavItem to="/creator/events"      icon="📋" label="My Events" />
+              <NavItem to="/creator/donations"   icon="💛" label="Donations" />
+              <NavItem to="/creator/revenue"     icon="📈" label="Revenue Pool" />
+              <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
+            </>
+          )}
 
           <NavItem to="/earnings" icon="◎"  label="Earnings" />
           <NavItem to="/profile"  icon="◉"  label="Profile" />
@@ -163,9 +177,27 @@ export default function AppSidebar({ open, onClose }) {
             <div className="app-sidebar__avatar">{initial}</div>
             <div className="app-sidebar__user-info">
               <div className="app-sidebar__user-email">{user.email}</div>
-              {isCreator50 && <div style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 600, marginTop: '2px' }}>🎬 Creator</div>}
-              {isMember30  && <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600, marginTop: '2px' }}>🌟 Member</div>}
+
+              {/* ⭐ Correct membership badges */}
+              {profile?.membership_active && profile?.membership_tier === 'creator_50' && (
+                <div style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 600, marginTop: '2px' }}>
+                  🎬 Creator Member
+                </div>
+              )}
+
+              {profile?.membership_active && profile?.membership_tier === 'member_30' && (
+                <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600, marginTop: '2px' }}>
+                  🌟 Member
+                </div>
+              )}
+
+              {!profile?.membership_active && (
+                <div style={{ fontSize: '0.68rem', color: '#999', fontWeight: 600, marginTop: '2px' }}>
+                  Free Member
+                </div>
+              )}
             </div>
+
             <button
               className="app-sidebar__logout"
               onClick={() => { logout(); onClose?.(); }}

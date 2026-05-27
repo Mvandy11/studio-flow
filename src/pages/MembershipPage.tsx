@@ -59,7 +59,11 @@ export default function MembershipPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('You must be logged in.');
-      const res = await fetch('/api/stripe/create-portal-session', {
+
+      // ── FIX: prefix with VITE_API_BASE_URL so the request reaches
+      //         the Render backend, not the Netlify CDN ──────────────
+      const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+      const res = await fetch(`${BASE}/api/stripe/create-portal-session`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -306,3 +310,4 @@ export default function MembershipPage() {
     </div>
   );
 }
+

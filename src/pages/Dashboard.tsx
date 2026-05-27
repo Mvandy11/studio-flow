@@ -4,13 +4,15 @@ import { useSessions, useCreateSession } from '../hooks/useSessions';
 import { useStudioFlowStore } from '../context/useStudioFlowStore';
 import SessionCard from '../components/SessionCard';
 import type { Session } from '../mock/seed';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 type StatusGroup = { label: string; statuses: Session['status'][] };
 
 const GROUPS: StatusGroup[] = [
   { label: '🔴 Live Now',  statuses: ['live'] },
   { label: '📅 Scheduled', statuses: ['scheduled'] },
-  { label: '✅ Published',  statuses: ['published'] },
+  { label: '✅ Published', statuses: ['published'] },
   { label: '✎ Drafts',     statuses: ['draft'] },
 ];
 
@@ -28,6 +30,44 @@ export default function Dashboard() {
     published: mySessions.filter((s) => s.status === 'published').length,
     drafts:    mySessions.filter((s) => s.status === 'draft').length,
   };
+
+  // ⭐ Membership tallies
+  const [memberTallies, setMemberTallies] = useState({
+    creatorCount: 0,
+    memberCount: 0,
+    freeCount: 0,
+  });
+
+  async function loadMemberTallies() {
+    const { count: creatorCount } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('membership_active', true)
+      .eq('membership_tier', 'creator_50');
+
+    const { count: memberCount } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('membership_active', true)
+      .eq('membership_tier', 'member_30');
+
+    const { count: freeCount } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('membership_active', false);
+
+    setMemberTallies({ creatorCount, memberCount, freeCount });
+  }
+
+  useEffect(() => {
+    loadMemberTallies();
+
+    const interval = setInterval(() => {
+      loadMemberTallies();
+    }, 15000); // auto-refresh every 15 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   function handleCreate() {
     createSession(
@@ -64,7 +104,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* ── Stats panel ── */}
+      {/* ── Session Stats ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '2rem' }}>
         {([
           { label: 'Total',     value: stats.total,     color: '#a78bfa' },
@@ -85,6 +125,36 @@ export default function Dashboard() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ── Membership Stats ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '2rem' }}>
+        <div className="cinematic-card" style={{ padding: '1rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#a78bfa' }}>
+            {memberTallies.creatorCount}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: '#666', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: '0.2rem' }}>
+            Creator Members
+          </div>
+        </div>
+
+        <div className="cinematic-card" style={{ padding: '1rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#60a5fa' }}>
+            {memberTallies.memberCount}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: '#666', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: '0.2rem' }}>
+            Members
+          </div>
+        </div>
+
+        <div className="cinematic-card" style={{ padding: '1rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#999' }}>
+            {memberTallies.freeCount}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: '#666', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: '0.2rem' }}>
+            Free Users
+          </div>
+        </div>
       </div>
 
       {/* ── All creators' sessions grouped by status ── */}

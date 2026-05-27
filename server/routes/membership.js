@@ -20,6 +20,7 @@
  */
 
 import { Router } from 'express';
+import supabase from '../supabase/supabaseClient.js';
 import supabaseAdmin from '../supabase/supabaseAdmin.js';
 import { logError } from '../utils/logError.js';
 
@@ -35,12 +36,11 @@ const POOL_CONTRIBUTIONS = {
 // ── POST /api/membership/activate ──────────────────────────────────────────
 router.post('/activate', async (req, res) => {
   try {
-    // Auth
     const authHeader = req.headers.authorization || '';
     const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
     if (!jwt) return res.status(401).json({ error: 'Authentication required.' });
 
-    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(jwt);
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(jwt);
     if (authErr || !user) return res.status(401).json({ error: 'Invalid or expired token.' });
 
     const { tier } = req.body || {};
@@ -52,7 +52,7 @@ router.post('/activate', async (req, res) => {
         membership_active:     true,
         membership_tier:       tier,
         membership_started_at: new Date().toISOString(),
-        subscription_active:   true,
+        subscription_active:   true, // backward compatibility
       };
     } else {
       payload = {

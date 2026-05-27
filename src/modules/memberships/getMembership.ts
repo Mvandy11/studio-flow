@@ -14,7 +14,10 @@ export async function getMembership(userId: string): Promise<ProfileSubscription
     const jwt = session?.access_token;
     if (!jwt) return null;
 
-    const res = await fetch('/api/auth/membership', {
+    // ── FIX: prefix with VITE_API_BASE_URL so the request reaches
+    //         the Render backend, not the Netlify CDN ──────────────
+    const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+    const res = await fetch(`${BASE}/api/auth/membership`, {
       headers: { Authorization: `Bearer ${jwt}` },
     });
 
