@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
-import { useMembership } from '../../modules/memberships/useMembership';
+import { useMembership } from '../../hooks/useMembership';
 import { supabase } from '../../lib/supabaseClient';
 import { api } from '../../lib/api.js';
 import '../../styles/contests.css';
