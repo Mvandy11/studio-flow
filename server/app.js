@@ -21,7 +21,9 @@ import submissionsRouter         from './routes/submissions.js';
 import eventSlotsRouter          from './routes/eventSlots.js';
 import customEventRequestsRouter from './routes/customEventRequests.js';
 import adminApprovalRouter       from './routes/adminApproval.js';
-import adminRevenueRouter        from './routes/adminRevenue.js';  // ← NEW
+import adminRevenueRouter        from './routes/adminRevenue.js';
+import adminPayoutRouter         from './routes/adminPayout.js';         // ← NEW
+import stripeConnectRouter       from './routes/stripeConnect.js';        // ← NEW
 import slotCreationRouter        from './routes/slotCreation.js';
 import eventsRouter              from './routes/events.js';
 import testWinnerPullRouter      from './routes/testWinnerPull.js';
@@ -71,6 +73,7 @@ app.use('/api/announcements',         announcementsRouter);
 app.use('/api/custom-events',         customEventsRouter);
 app.use('/api/payments',              paymentsRouter);
 app.use('/api/stripe',                stripePortalRouter);
+app.use('/api/stripe-connect',        stripeConnectRouter);              // ← NEW
 app.use('/api/membership',            membershipRouter);
 app.use('/api/creator/events',        creatorEventsRouter);
 app.use('/api/revenue-pool',          revenuePoolRouter);
@@ -80,7 +83,8 @@ app.use('/api/event-slots',           eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);
 app.use('/api/admin/analytics',       analyticsRouter);
 app.use('/api/admin/winners',         adminWinnersRouter);
-app.use('/api/admin',                 adminRevenueRouter);   // ← NEW — must come before adminApprovalRouter
+app.use('/api/admin',                 adminPayoutRouter);                // ← NEW — before adminRevenueRouter & adminApprovalRouter
+app.use('/api/admin',                 adminRevenueRouter);
 app.use('/api/admin',                 adminApprovalRouter);
 app.use('/api/slots',                 slotCreationRouter);
 app.use('/api/events',                eventsRouter);
@@ -133,4 +137,5 @@ app.use((err, req, res, _next) => {
 });
 
 export default app;
+
 
