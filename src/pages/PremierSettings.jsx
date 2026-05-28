@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';   // ← NEW
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
 
@@ -19,9 +20,9 @@ const METHOD_OPTIONS = [
   },
   {
     value: 'stripe', label: 'Stripe Connect', icon: '🔵',
-    placeholder: null, // handled by onboarding flow, not manual input
+    placeholder: null,
     hint: null,
-    validate: () => true, // validation handled by connect status check
+    validate: () => true,
   },
   {
     value: 'cashapp', label: 'CashApp', icon: '💚',
@@ -33,6 +34,7 @@ const METHOD_OPTIONS = [
 
 export default function PremierSettings() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();   // ← NEW
 
   // ── General state ──────────────────────────────────────────
   const [loading, setLoading]     = useState(true);
@@ -51,6 +53,7 @@ export default function PremierSettings() {
   const [connectStatus, setConnectStatus] = useState({ connected: false, onboarded: false, accountId: null });
   const [connecting, setConnecting]       = useState(false);
   const [connectErr, setConnectErr]       = useState('');
+  const [connectBanner, setConnectBanner] = useState(null); // ← NEW: 'success' | 'refresh' | null
 
   // ── Load saved settings on mount ──────────────────────────
   useEffect(() => {
@@ -71,12 +74,10 @@ export default function PremierSettings() {
         setCashapp(data.cashapp || '');
         const fieldMap = { paypal: data.paypal, venmo: data.venmo, cashapp: data.cashapp, stripe: '' };
         setAccount(fieldMap[m] || '');
-
-        // Restore connect status from DB
         setConnectStatus({
-          connected:  !!data.stripe_connect_id,
-          onboarded:  data.stripe_connect_onboarded ?? false,
-          accountId:  data.stripe_connect_id ?? null,
+          connected: !!data.stripe_connect_id,
+          onboarded: data.stripe_connect_onboarded ?? false,
+          accountId: data.stripe_connect_id ?? null,
         });
       }
       setLoading(false);
@@ -84,7 +85,57 @@ export default function PremierSettings() {
     load();
   }, [user]);
 
-  // ── Re-check Stripe Connect status when user switches to Stripe tab ──
+  // ── Handle ?connect=success / ?connect=refresh on return ── // ← NEW
+  useEffect(() => {
+    if (!user || loading) return;
+    const connectParam = searchParams.get('connect');
+    if (!connectParam) return;
+
+    // Clean the URL immediately so refresh doesn't re-trigger
+    setSearchParams({}, { replace: true });
+
+    if (connectParam === 'refresh') {
+      // Stripe said the link expired — restart onboarding automatically
+      setMethod('stripe');
+      setConnectBanner('refresh');
+      startStripeConnect();
+      return;
+    }
+
+    if (connectParam === 'success') {
+      setMethod('stripe');
+      setConnectBanner('verifying');
+
+      // Call /complete to verify the account and mark onboarded in DB
+      (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) { setConnectBanner('error'); return; }
+
+          const res = await fetch(`${BASE}/api/stripe-connect/complete`, {
+            method:  'POST',
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const body = await res.json();
+
+          if (res.ok && body.onboarded) {
+            setConnectStatus({ connected: true, onboarded: true, accountId: body.accountId });
+            setConnectBanner('success');
+          } else {
+            // Stripe account exists but isn't fully verified yet
+            setConnectBanner('pending');
+            setConnectStatus((prev) => ({ ...prev, connected: true, onboarded: false }));
+          }
+        } catch (err) {
+          console.error('[stripe-connect/complete]', err.message);
+          setConnectBanner('error');
+        }
+      })();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]);
+
+  // ── Re-check Stripe Connect status when switching to Stripe tab ──
   useEffect(() => {
     if (!user || method !== 'stripe') return;
     async function checkConnect() {
@@ -94,13 +145,8 @@ export default function PremierSettings() {
         const res = await fetch(`${BASE}/api/stripe-connect/status`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        if (res.ok) {
-          const body = await res.json();
-          setConnectStatus(body);
-        }
-      } catch (_) {
-        // non-blocking — cached DB value still shows
-      }
+        if (res.ok) setConnectStatus(await res.json());
+      } catch (_) {}
     }
     checkConnect();
   }, [user, method]);
@@ -126,13 +172,12 @@ export default function PremierSettings() {
       if (!session) { setConnectErr('Please log in again.'); setConnecting(false); return; }
 
       const res = await fetch(`${BASE}/api/stripe-connect/onboard`, {
-        method: 'POST',
+        method:  'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const body = await res.json();
 
       if (body.url) {
-        // Save stripe as selected method before redirecting
         await supabase
           .from('creator_settings')
           .upsert({ creator_id: user.id, payout_method: 'stripe' }, { onConflict: 'creator_id' });
@@ -149,12 +194,8 @@ export default function PremierSettings() {
 
   // ── Save non-Stripe payout settings ───────────────────────
   async function saveSettings() {
-    // For Stripe, saving is handled via the connect flow — just set method
     if (method === 'stripe') {
-      if (!connectStatus.onboarded) {
-        setValErr('Please complete Stripe Connect onboarding before saving.');
-        return;
-      }
+      if (!connectStatus.onboarded) { setValErr('Please complete Stripe Connect onboarding before saving.'); return; }
       setSaving(true);
       const { error } = await supabase
         .from('creator_settings')
@@ -174,7 +215,6 @@ export default function PremierSettings() {
     setSaving(true);
     setSaved(false);
 
-    // Mirror into named state so switching tabs preserves values
     if (method === 'paypal')  setPaypal(account.trim());
     if (method === 'venmo')   setVenmo(account.trim());
     if (method === 'cashapp') setCashapp(account.trim());
@@ -209,6 +249,15 @@ export default function PremierSettings() {
   const selectedOpt = METHOD_OPTIONS.find((o) => o.value === method);
   const isStripe    = method === 'stripe';
 
+  // ── Banner config ← NEW ────────────────────────────────────
+  const bannerConfig = {
+    success:    { bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.35)',  color: '#6ee7b7', text: '✅ Stripe Connect active! Your account is verified and ready to receive payouts.' },
+    pending:    { bg: 'rgba(245,166,35,0.08)', border: 'rgba(245,166,35,0.3)',   color: '#fbbf24', text: '⏳ Almost there — Stripe is still verifying your account. Check back in a few minutes.' },
+    verifying:  { bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.25)',  color: '#93c5fd', text: '🔄 Verifying your Stripe account…' },
+    refresh:    { bg: 'rgba(245,166,35,0.08)', border: 'rgba(245,166,35,0.3)',   color: '#fbbf24', text: '🔄 Your onboarding link expired — restarting…' },
+    error:      { bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',    color: '#fca5a5', text: '❌ Could not verify your Stripe account. Please try connecting again.' },
+  }[connectBanner] ?? null;
+
   return (
     <div className="cinematic-card-xl" style={{ padding: '2rem', maxWidth: '560px' }}>
       <h1 className="cinematic-title">Payout Settings</h1>
@@ -216,7 +265,23 @@ export default function PremierSettings() {
         Choose how you want to receive your earnings from Studio Flow.
       </p>
 
-      {/* ── Method selector tabs ─────────────────────────────── */}
+      {/* ── Return banner ← NEW ───────────────────────────────── */}
+      {bannerConfig && (
+        <div style={{
+          marginBottom: '1.25rem',
+          padding: '0.85rem 1rem',
+          borderRadius: '10px',
+          background: bannerConfig.bg,
+          border: `1px solid ${bannerConfig.border}`,
+          color: bannerConfig.color,
+          fontSize: '0.85rem',
+          fontWeight: 500,
+        }}>
+          {bannerConfig.text}
+        </div>
+      )}
+
+      {/* ── Method selector tabs ──────────────────────────────── */}
       <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
         {METHOD_OPTIONS.map((opt) => (
           <button
@@ -238,7 +303,7 @@ export default function PremierSettings() {
         ))}
       </div>
 
-      {/* ── Stripe Connect panel (replaces text input for Stripe) ── */}
+      {/* ── Stripe Connect panel ──────────────────────────────── */}
       {isStripe ? (
         <div style={{
           marginBottom: '1.5rem',
@@ -278,18 +343,11 @@ export default function PremierSettings() {
                 onClick={startStripeConnect}
                 disabled={connecting}
                 style={{
-                  padding: '0.65rem 1.4rem',
-                  borderRadius: '10px',
+                  padding: '0.65rem 1.4rem', borderRadius: '10px',
                   background: connecting ? 'rgba(96,165,250,0.3)' : 'rgba(96,165,250,0.85)',
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: '0.88rem',
-                  border: 'none',
-                  cursor: connecting ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
+                  color: '#fff', fontWeight: 700, fontSize: '0.88rem',
+                  border: 'none', cursor: connecting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '0.5rem',
                 }}
               >
                 🔵 {connecting ? 'Opening Stripe…' : 'Connect Stripe Account'}
@@ -320,7 +378,7 @@ export default function PremierSettings() {
         </div>
       )}
 
-      {/* ── Validation error ────────────────────────────────── */}
+      {/* ── Validation error ──────────────────────────────────── */}
       {valErr && (
         <p style={{ fontSize: '0.8rem', color: '#fca5a5', marginBottom: '0.75rem' }}>{valErr}</p>
       )}
@@ -337,7 +395,7 @@ export default function PremierSettings() {
         </button>
       )}
 
-      {/* ── Success confirmation ────────────────────────────── */}
+      {/* ── Success confirmation ───────────────────────────────── */}
       {saved && (
         <p style={{ fontSize: '0.85rem', color: '#86efac', marginTop: '0.75rem' }}>
           ✅ Payout settings saved.
