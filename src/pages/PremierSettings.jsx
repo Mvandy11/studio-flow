@@ -113,11 +113,15 @@ export default function PremierSettings() {
       cashapp:  method === 'cashapp'  ? account.trim() : cashapp,
     };
 
-    const { error } = await supabase.from('creator_settings').upsert(payload);
-    setSaving(false);
-    if (!error) setSaved(true);
-  }
-
+   const { error } = await supabase.from('creator_settings').upsert(payload, {
+  onConflict: 'creator_id',    // ensures true upsert on the PK
+});
+setSaving(false);
+if (error) {
+  setValErr(`Save failed: ${error.message}`);
+} else {
+  setSaved(true);
+}
   if (loading) return <div className="cinematic-title">Loading…</div>;
 
   if (!user) return (
