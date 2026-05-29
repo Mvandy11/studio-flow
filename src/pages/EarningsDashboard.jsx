@@ -57,7 +57,7 @@ export default function EarningsDashboard() {
         .limit(100),
       supabase
         .from('creator_settings')
-        .select('payout_method, paypal, cashapp, venmo, stripe, custom_url')
+        .select('payout_method, paypal, cashapp, venmo, stripe_connect_id, stripe_connect_onboarded, custom_url')
         .eq('creator_id', user.id)
         .maybeSingle(),
       supabase
