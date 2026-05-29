@@ -133,9 +133,12 @@ export default function EarningsDashboard() {
 
   const METHOD_LABELS = { paypal: 'PayPal', venmo: 'Venmo', stripe: 'Stripe Connect', cashapp: 'CashApp', bank: 'Bank Transfer' };
   const payoutMethodLabel = settings?.payout_method
-    ? METHOD_LABELS[settings.payout_method] ?? settings.payout_method
-    : null;
-
+    const stripeReady = settings?.stripe_connect_onboarded;
+const payoutMethodLabel = settings?.payout_method
+  ? (settings.payout_method === 'stripe' && !stripeReady)
+    ? null  // treat unboarded Stripe as not configured
+    : METHOD_LABELS[settings.payout_method] ?? settings.payout_method
+  : null;
   if (authLoading || loading) return (
     <div className="earnings-page" style={{ alignItems: 'center', justifyContent: 'center' }}>
       <div className="cinematic-spinner" />
