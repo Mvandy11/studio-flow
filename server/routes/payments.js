@@ -71,19 +71,16 @@ router.post('/stripe-webhook', async (req, res) => {
       }
 
       // ── Stripe Connect transfer succeeded ────────────────────
-      case 'transfer.paid': {
-        const transfer = event.data.object;
-        await handleTransferPaid(transfer);
-        break;
-      }
-
-      // ── Stripe Connect transfer failed ───────────────────────
-      case 'transfer.failed': {
-        const transfer = event.data.object;
-        await handleTransferFailed(transfer);
-        break;
-      }
-
+case 'transfer.created': {
+  const transfer = event.data.object;
+  await handleTransferPaid(transfer);
+  break;
+}
+case 'transfer.reversed': {
+  const transfer = event.data.object;
+  await handleTransferFailed(transfer);
+  break;
+}
       default:
         // Acknowledge but don't act on unhandled events
         console.log(`[webhook] Unhandled event type: ${event.type}`);
