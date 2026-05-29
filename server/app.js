@@ -56,7 +56,19 @@ app.use(requestLogger);
 
 // ─────────────────────────────────────────────────────────────
 // 3. Body parsers
+//    Stripe webhooks need raw bytes for signature verification —
+//    mount express.raw() on webhook paths BEFORE express.json().
 // ─────────────────────────────────────────────────────────────
+app.use(
+  [
+    '/api/payments/subscription-webhook',
+    '/api/payments/donation-webhook',
+    '/api/payments/event-webhook',
+    '/api/payments/stripe-webhook',
+  ],
+  express.raw({ type: 'application/json' })
+);
+
 app.use(express.json({ limit: '6mb' }));
 app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 
