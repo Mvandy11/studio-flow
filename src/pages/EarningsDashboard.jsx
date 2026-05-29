@@ -133,8 +133,6 @@ export default function EarningsDashboard() {
 
   const METHOD_LABELS = { paypal: 'PayPal', venmo: 'Venmo', stripe: 'Stripe Connect', cashapp: 'CashApp', bank: 'Bank Transfer' };
   const payoutMethodLabel = settings?.payout_method
-    const stripeReady = settings?.stripe_connect_onboarded;
-const payoutMethodLabel = settings?.payout_method
   ? (settings.payout_method === 'stripe' && !stripeReady)
     ? null  // treat unboarded Stripe as not configured
     : METHOD_LABELS[settings.payout_method] ?? settings.payout_method
