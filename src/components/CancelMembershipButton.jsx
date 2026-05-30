@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
 
 const API = import.meta.env.VITE_API_BASE_URL || '';
 
-export default function CancelMembershipButton({ memberTier }) {
-  const navigate = useNavigate();
+export default function CancelMembershipButton({ memberTier, onCancelled }) {
   const [step, setStep]     = useState('idle');   // idle | confirm | loading | done | error
   const [errMsg, setErrMsg] = useState('');
 
@@ -24,8 +22,10 @@ export default function CancelMembershipButton({ memberTier }) {
 
       if (res.ok) {
         setStep('done');
-        await supabase.auth.refreshSession();
-        setTimeout(() => navigate('/'), 2500);
+        // ── Force immediate re-fetch of membership state ──────────────
+        if (typeof onCancelled === 'function') {
+          onCancelled();
+        }
       } else {
         setErrMsg(body.error || 'Cancellation failed. Please contact support.');
         setStep('error');
@@ -43,7 +43,7 @@ export default function CancelMembershipButton({ memberTier }) {
       background: 'rgba(134,239,172,0.07)', border: '1px solid rgba(134,239,172,0.2)',
       color: '#86efac', fontSize: '0.875rem',
     }}>
-      ✅ Your membership has been cancelled. Redirecting you now…
+      ✅ Your membership has been cancelled. Your account has been updated to Free.
     </div>
   );
 
@@ -57,7 +57,7 @@ export default function CancelMembershipButton({ memberTier }) {
         Cancel your membership?
       </p>
       <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: 'rgba(200,200,215,0.5)', lineHeight: 1.5 }}>
-        You'll lose access to all creator features immediately. This action cannot be undone —
+        You'll lose access to all creator features immediately. This cannot be undone —
         you'll need to subscribe again to regain access.
       </p>
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
