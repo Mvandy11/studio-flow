@@ -3,9 +3,10 @@
  *
  * Uses Stripe Payment Links for collection.
  * Webhook at /api/payments/stripe-webhook handles:
- *   - checkout.session.completed  → record membership/event earnings in Supabase
- *   - transfer.created            → confirm payout_logs row as completed
- *   - transfer.reversed           → mark payout_logs row as failed, revert earnings to 'requested'
+ *   - checkout.session.completed     → record membership/event earnings in Supabase
+ *   - transfer.created               → confirm payout_logs row as completed
+ *   - transfer.reversed              → mark payout_logs row as failed, revert earnings to 'requested'
+ *   - customer.subscription.deleted  → auto-deactivate membership on Stripe-side cancellation
  */
 
 import express from 'express';
@@ -15,9 +16,8 @@ import { logError } from '../utils/logError.js';
 import { donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
 const router = express.Router();
-const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-01-28.clover' }); // ← FIXED
+const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-01-28.clover' });
 
-// Webhook secret from Stripe dashboard → Webhooks → your endpoint → Signing secret
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
 // ─────────────────────────────────────────────────────────────
@@ -39,7 +39,6 @@ async function requireAuth(req, res) {
 
 // ─────────────────────────────────────────────────────────────
 // UNIFIED STRIPE WEBHOOK
-// Handles: checkout.session.completed, transfer.created, transfer.reversed
 // ─────────────────────────────────────────────────────────────
 router.post('/stripe-webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -69,17 +68,24 @@ router.post('/stripe-webhook', async (req, res) => {
         break;
       }
 
-      // ── Stripe Connect transfer created (success) ─────────────
+      // ── Connect transfer created (success) ────────────────────
       case 'transfer.created': {
         const transfer = event.data.object;
         await handleTransferPaid(transfer);
         break;
       }
 
-      // ── Stripe Connect transfer reversed (failure) ────────────
+      // ── Connect transfer reversed (failure) ───────────────────
       case 'transfer.reversed': {
         const transfer = event.data.object;
         await handleTransferFailed(transfer);
+        break;
+      }
+
+      // ── Stripe-side subscription cancellation ─────────────────
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        await handleSubscriptionDeleted(subscription);
         break;
       }
 
@@ -97,13 +103,12 @@ router.post('/stripe-webhook', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // Handler: checkout.session.completed
-// Records earnings for membership payments and event ticket sales.
 // ─────────────────────────────────────────────────────────────
 async function handleCheckoutCompleted(session) {
-  const amountTotal = (session.amount_total ?? 0) / 100; // cents → dollars
+  const amountTotal = (session.amount_total ?? 0) / 100;
   const refId       = session.client_reference_id;
   const metadata    = session.metadata || {};
-  const mode        = session.mode; // 'payment' | 'subscription'
+  const mode        = session.mode;
 
   console.log(`[webhook/checkout] amount=$${amountTotal}, refId=${refId}, mode=${mode}`);
 
@@ -130,7 +135,7 @@ async function handleCheckoutCompleted(session) {
     return;
   }
 
-  // ── Event ticket payment: record earnings for creator ─────────
+  // ── Event ticket payment ──────────────────────────────────────
   if (refId && metadata.creator_id) {
     const creatorId = metadata.creator_id;
 
@@ -183,8 +188,7 @@ async function handleCheckoutCompleted(session) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Handler: transfer.created
-// Confirms a Connect transfer went through — updates payout_logs.
+// Handler: transfer.created — confirms payout_logs
 // ─────────────────────────────────────────────────────────────
 async function handleTransferPaid(transfer) {
   console.log(`[webhook/transfer.created] transfer ${transfer.id} confirmed`);
@@ -218,12 +222,10 @@ async function handleTransferPaid(transfer) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Handler: transfer.reversed
-// Marks payout_logs as failed and reverts earnings to 'requested'
-// so the admin can retry the payout.
+// Handler: transfer.reversed — marks failed, reverts earnings
 // ─────────────────────────────────────────────────────────────
 async function handleTransferFailed(transfer) {
-  const failureMsg = transfer.reversal?.description || transfer.description || 'Transfer reversed'; // ← FIXED
+  const failureMsg = transfer.reversal?.description || transfer.description || 'Transfer reversed';
 
   console.error(`[webhook/transfer.reversed] transfer ${transfer.id} reversed: ${failureMsg}`);
 
@@ -258,6 +260,49 @@ async function handleTransferFailed(transfer) {
     `[webhook/transfer.reversed] payout_log ${logRow.id} marked failed. ` +
     `Reverted ${reverted?.length ?? 0} earnings rows back to 'requested'.`
   );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Handler: customer.subscription.deleted
+// Auto-fires when Stripe cancels a subscription (failed payment,
+// admin cancel, or member cancels via Stripe portal).
+// ─────────────────────────────────────────────────────────────
+async function handleSubscriptionDeleted(subscription) {
+  const customerId = subscription.customer;
+  console.log(`[webhook/subscription.deleted] customer ${customerId} subscription cancelled`);
+
+  if (!customerId) return;
+
+  // Find profile by stripe_customer_id
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, email, username, membership_tier')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle();
+
+  if (!profile) {
+    console.warn(`[webhook/subscription.deleted] No profile found for customer ${customerId}`);
+    return;
+  }
+
+  // Only update if still active — prevents double-processing manual cancels
+  const { data: updated } = await supabaseAdmin
+    .from('profiles')
+    .update({
+      membership_active:       false,
+      membership_tier:         'free',
+      subscription_active:     false,
+      membership_cancelled_at: new Date().toISOString(),
+    })
+    .eq('id', profile.id)
+    .eq('membership_active', true)
+    .select('id');
+
+  if (updated?.length) {
+    console.log(`[webhook/subscription.deleted] Auto-cancelled membership for ${profile.email}`);
+  } else {
+    console.log(`[webhook/subscription.deleted] ${profile.email} already inactive — skipped`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -321,5 +366,6 @@ router.post('/create-event-payment', async (req, res) => {
 });
 
 export default router;
+
 
 
