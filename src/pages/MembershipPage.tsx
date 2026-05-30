@@ -65,7 +65,10 @@ const PERKS_50 = [
 
 export default function MembershipPage() {
   const { user, loading: authLoading } = useAuth();
-  const { membership, loading, hasAccess, tier } = useMembership();
+
+  // ── Pull refetch out of useMembership so we can pass it to CancelMembershipButton ──
+  const { membership, loading, hasAccess, tier, refetch } = useMembership();
+
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError]     = useState('');
 
@@ -177,8 +180,8 @@ export default function MembershipPage() {
               </p>
             </div>
 
-            {/* Cancel Membership button */}
-            <CancelMembershipButton memberTier={tier} />
+            {/* Cancel Membership — passes refetch so UI updates instantly */}
+            <CancelMembershipButton memberTier={tier} onCancelled={refetch} />
 
           </div>
         )}
@@ -222,7 +225,11 @@ export default function MembershipPage() {
             <ul style={{ margin: '0 0 1rem', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
               {PERKS_30.map((p) => <li key={p} style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)' }}>{p}</li>)}
             </ul>
-            <a href={STRIPE_MEMBER_30} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textAlign: 'center', padding: '0.65rem', borderRadius: '10px', background: 'rgba(96,165,250,0.2)', border: '1px solid rgba(96,165,250,0.35)', color: '#60a5fa', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>
+            <a
+              href={`${STRIPE_MEMBER_30}?client_reference_id=${user.id}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: 'block', textAlign: 'center', padding: '0.65rem', borderRadius: '10px', background: 'rgba(96,165,250,0.2)', border: '1px solid rgba(96,165,250,0.35)', color: '#60a5fa', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}
+            >
               Join for $30/month
             </a>
           </div>
@@ -242,7 +249,11 @@ export default function MembershipPage() {
             <ul style={{ margin: '0 0 1rem', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
               {PERKS_50.map((p) => <li key={p} style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)' }}>{p}</li>)}
             </ul>
-            <a href={STRIPE_CREATOR_50} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textAlign: 'center', padding: '0.65rem', borderRadius: '10px', background: 'rgba(167,139,250,0.2)', border: '1px solid rgba(167,139,250,0.4)', color: '#a78bfa', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>
+            <a
+              href={`${STRIPE_CREATOR_50}?client_reference_id=${user.id}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: 'block', textAlign: 'center', padding: '0.65rem', borderRadius: '10px', background: 'rgba(167,139,250,0.2)', border: '1px solid rgba(167,139,250,0.4)', color: '#a78bfa', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}
+            >
               Join for $50/month
             </a>
           </div>
@@ -257,7 +268,11 @@ export default function MembershipPage() {
           <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
             Unlock event creation, live streaming, donations, and AI tools.
           </p>
-          <a href={STRIPE_CREATOR_50} target="_blank" rel="noopener noreferrer" style={{ color: '#a78bfa', fontSize: '0.85rem', fontWeight: 600 }}>
+          <a
+            href={`${STRIPE_CREATOR_50}?client_reference_id=${user.id}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{ color: '#a78bfa', fontSize: '0.85rem', fontWeight: 600 }}
+          >
             Upgrade now →
           </a>
         </div>
