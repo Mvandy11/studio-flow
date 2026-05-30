@@ -4,8 +4,8 @@
  * Uses Stripe Payment Links for collection.
  * Webhook at /api/payments/stripe-webhook handles:
  *   - checkout.session.completed  → record membership/event earnings in Supabase
- *   - transfer.paid               → confirm payout_logs row as completed
- *   - transfer.failed             → mark payout_logs row as failed, revert earnings to 'requested'
+ *   - transfer.created            → confirm payout_logs row as completed
+ *   - transfer.reversed           → mark payout_logs row as failed, revert earnings to 'requested'
  */
 
 import express from 'express';
@@ -15,7 +15,7 @@ import { logError } from '../utils/logError.js';
 import { donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 
 const router = express.Router();
-const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-01-28.clover' }); // ← FIXED
 
 // Webhook secret from Stripe dashboard → Webhooks → your endpoint → Signing secret
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
@@ -39,10 +39,9 @@ async function requireAuth(req, res) {
 
 // ─────────────────────────────────────────────────────────────
 // UNIFIED STRIPE WEBHOOK
-// Handles: checkout.session.completed, transfer.paid, transfer.failed
+// Handles: checkout.session.completed, transfer.created, transfer.reversed
 // ─────────────────────────────────────────────────────────────
 router.post('/stripe-webhook', async (req, res) => {
-  // Verify signature
   const sig = req.headers['stripe-signature'];
   if (!WEBHOOK_SECRET) {
     console.warn('[webhook] STRIPE_WEBHOOK_SECRET not set — skipping verification.');
@@ -70,26 +69,27 @@ router.post('/stripe-webhook', async (req, res) => {
         break;
       }
 
-      // ── Stripe Connect transfer succeeded ────────────────────
-case 'transfer.created': {
-  const transfer = event.data.object;
-  await handleTransferPaid(transfer);
-  break;
-}
-case 'transfer.reversed': {
-  const transfer = event.data.object;
-  await handleTransferFailed(transfer);
-  break;
-}
+      // ── Stripe Connect transfer created (success) ─────────────
+      case 'transfer.created': {
+        const transfer = event.data.object;
+        await handleTransferPaid(transfer);
+        break;
+      }
+
+      // ── Stripe Connect transfer reversed (failure) ────────────
+      case 'transfer.reversed': {
+        const transfer = event.data.object;
+        await handleTransferFailed(transfer);
+        break;
+      }
+
       default:
-        // Acknowledge but don't act on unhandled events
         console.log(`[webhook] Unhandled event type: ${event.type}`);
     }
   } catch (err) {
     console.error(`[webhook] Handler error for ${event.type}:`, err.message);
     logError(err, `/webhook/${event.type}`).catch(() => {});
-    // Still return 200 — Stripe retries on non-2xx responses.
-    // We log internally rather than letting Stripe spam retries.
+    // Return 200 — Stripe retries on non-2xx. We log internally instead.
   }
 
   return res.json({ received: true });
@@ -100,18 +100,15 @@ case 'transfer.reversed': {
 // Records earnings for membership payments and event ticket sales.
 // ─────────────────────────────────────────────────────────────
 async function handleCheckoutCompleted(session) {
-  const amountTotal  = (session.amount_total ?? 0) / 100;   // cents → dollars
-  const customerId   = session.customer;
-  const refId        = session.client_reference_id;          // set by frontend on event payments
-  const metadata     = session.metadata || {};
-  const mode         = session.mode;                         // 'payment' | 'subscription'
+  const amountTotal = (session.amount_total ?? 0) / 100; // cents → dollars
+  const refId       = session.client_reference_id;
+  const metadata    = session.metadata || {};
+  const mode        = session.mode; // 'payment' | 'subscription'
 
   console.log(`[webhook/checkout] amount=$${amountTotal}, refId=${refId}, mode=${mode}`);
 
-  // ── Membership payment: activate subscription + pool contribution ──
+  // ── Membership payment ────────────────────────────────────────
   if (mode === 'subscription' || metadata.type === 'membership') {
-    // The frontend /membership/activate handles profile updates.
-    // Here we just ensure the revenue_pool row is written if it isn't.
     if (amountTotal > 0) {
       const { data: existing } = await supabaseAdmin
         .from('revenue_pool')
@@ -133,11 +130,10 @@ async function handleCheckoutCompleted(session) {
     return;
   }
 
-  // ── Event ticket payment: record earnings for creator ──────────────
+  // ── Event ticket payment: record earnings for creator ─────────
   if (refId && metadata.creator_id) {
     const creatorId = metadata.creator_id;
 
-    // Idempotency check — don't double-record
     const { data: existing } = await supabaseAdmin
       .from('earnings')
       .select('id')
@@ -163,7 +159,7 @@ async function handleCheckoutCompleted(session) {
     return;
   }
 
-  // ── Donation: revenue_pool row (donations router handles the donations table) ──
+  // ── Donation ──────────────────────────────────────────────────
   if (metadata.type === 'donation') {
     const { data: existing } = await supabaseAdmin
       .from('revenue_pool')
@@ -187,13 +183,12 @@ async function handleCheckoutCompleted(session) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Handler: transfer.paid
-// Confirms a Connect transfer succeeded — updates payout_logs.
+// Handler: transfer.created
+// Confirms a Connect transfer went through — updates payout_logs.
 // ─────────────────────────────────────────────────────────────
 async function handleTransferPaid(transfer) {
-  console.log(`[webhook/transfer.paid] transfer ${transfer.id} succeeded`);
+  console.log(`[webhook/transfer.created] transfer ${transfer.id} confirmed`);
 
-  // Find the payout_log row that references this transfer
   const { data: logRow } = await supabaseAdmin
     .from('payout_logs')
     .select('id, user_id, status')
@@ -201,12 +196,12 @@ async function handleTransferPaid(transfer) {
     .maybeSingle();
 
   if (!logRow) {
-    console.warn(`[webhook/transfer.paid] No payout_log found for transfer ${transfer.id}`);
+    console.warn(`[webhook/transfer.created] No payout_log found for transfer ${transfer.id}`);
     return;
   }
 
   if (logRow.status === 'completed') {
-    console.log(`[webhook/transfer.paid] payout_log ${logRow.id} already marked completed — skipping`);
+    console.log(`[webhook/transfer.created] payout_log ${logRow.id} already completed — skipping`);
     return;
   }
 
@@ -214,24 +209,24 @@ async function handleTransferPaid(transfer) {
     .from('payout_logs')
     .update({
       status:     'completed',
-      notes:      `Stripe transfer ${transfer.id} confirmed paid`,
+      notes:      `Stripe transfer ${transfer.id} confirmed created`,
       updated_at: new Date().toISOString(),
     })
     .eq('id', logRow.id);
 
-  console.log(`[webhook/transfer.paid] payout_log ${logRow.id} confirmed completed`);
+  console.log(`[webhook/transfer.created] payout_log ${logRow.id} marked completed`);
 }
 
 // ─────────────────────────────────────────────────────────────
-// Handler: transfer.failed
+// Handler: transfer.reversed
 // Marks payout_logs as failed and reverts earnings to 'requested'
 // so the admin can retry the payout.
 // ─────────────────────────────────────────────────────────────
 async function handleTransferFailed(transfer) {
-  const failureMsg = transfer.failure_message || 'Unknown failure';
-  console.error(`[webhook/transfer.failed] transfer ${transfer.id} FAILED: ${failureMsg}`);
+  const failureMsg = transfer.reversal?.description || transfer.description || 'Transfer reversed'; // ← FIXED
 
-  // Find the payout_log row
+  console.error(`[webhook/transfer.reversed] transfer ${transfer.id} reversed: ${failureMsg}`);
+
   const { data: logRow } = await supabaseAdmin
     .from('payout_logs')
     .select('id, user_id')
@@ -239,21 +234,19 @@ async function handleTransferFailed(transfer) {
     .maybeSingle();
 
   if (!logRow) {
-    console.warn(`[webhook/transfer.failed] No payout_log found for transfer ${transfer.id}`);
+    console.warn(`[webhook/transfer.reversed] No payout_log found for transfer ${transfer.id}`);
     return;
   }
 
-  // Mark the payout log as failed
   await supabaseAdmin
     .from('payout_logs')
     .update({
       status:     'failed',
-      notes:      `Stripe transfer ${transfer.id} FAILED: ${failureMsg}`,
+      notes:      `Stripe transfer ${transfer.id} reversed: ${failureMsg}`,
       updated_at: new Date().toISOString(),
     })
     .eq('id', logRow.id);
 
-  // Revert earnings from 'paid' back to 'requested' so admin can retry
   const { data: reverted } = await supabaseAdmin
     .from('earnings')
     .update({ status: 'requested' })
@@ -262,17 +255,16 @@ async function handleTransferFailed(transfer) {
     .select('id');
 
   console.error(
-    `[webhook/transfer.failed] payout_log ${logRow.id} marked failed. ` +
+    `[webhook/transfer.reversed] payout_log ${logRow.id} marked failed. ` +
     `Reverted ${reverted?.length ?? 0} earnings rows back to 'requested'.`
   );
 }
 
 // ─────────────────────────────────────────────────────────────
-// Legacy no-op stubs (kept so existing Stripe webhook configs
-// still acknowledge without errors during transition)
+// Legacy no-op stubs
 // ─────────────────────────────────────────────────────────────
 router.post('/subscription-webhook', (req, res) => {
-  console.log('[payments] subscription-webhook → forwarded, handled by /stripe-webhook');
+  console.log('[payments] subscription-webhook → handled by /stripe-webhook');
   res.json({ received: true });
 });
 
@@ -329,4 +321,5 @@ router.post('/create-event-payment', async (req, res) => {
 });
 
 export default router;
+
 
