@@ -109,11 +109,29 @@ async function handleCheckoutCompleted(session) {
   const refId       = session.client_reference_id;
   const metadata    = session.metadata || {};
   const mode        = session.mode;
+  const customerId  = session.customer; // ← Stripe customer ID
 
-  console.log(`[webhook/checkout] amount=$${amountTotal}, refId=${refId}, mode=${mode}`);
+  console.log(`[webhook/checkout] amount=$${amountTotal}, refId=${refId}, mode=${mode}, customer=${customerId}`);
 
   // ── Membership payment ────────────────────────────────────────
   if (mode === 'subscription' || metadata.type === 'membership') {
+
+    // Save stripe_customer_id to the profile so subscription.deleted
+    // can find the right user later
+    if (customerId && refId) {
+      const { error: cidErr } = await supabaseAdmin
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', refId)
+        .is('stripe_customer_id', null); // only write if not already set
+
+      if (cidErr) {
+        console.warn(`[webhook/checkout] Could not save stripe_customer_id: ${cidErr.message}`);
+      } else {
+        console.log(`[webhook/checkout] stripe_customer_id ${customerId} saved to profile ${refId}`);
+      }
+    }
+
     if (amountTotal > 0) {
       const { data: existing } = await supabaseAdmin
         .from('revenue_pool')
@@ -273,7 +291,6 @@ async function handleSubscriptionDeleted(subscription) {
 
   if (!customerId) return;
 
-  // Find profile by stripe_customer_id
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, email, username, membership_tier')
@@ -366,6 +383,4 @@ router.post('/create-event-payment', async (req, res) => {
 });
 
 export default router;
-
-
 
