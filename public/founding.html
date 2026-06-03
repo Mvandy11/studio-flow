@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Studio Flow — Founding Member Landing Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        base: '#0A0A0F',
+                        card: '#12121A',
+                        'card-hover': '#1A1A28',
+                        gold: '#F5C842',
+                        'gold-dark': '#D4A830',
+                        'gold-light': '#FFDF80',
+                        purple: '#7C3AED',
+                        'purple-dark': '#5B21B6',
+                        'purple-light': '#A78BFA',
+                        surface: '#16161F',
+                        muted: '#9CA3AF',
+                        'muted-light': '#D1D5DB',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --gold: #F5C842;
+            --purple: #7C3AED;
+            --base: #0A0A0F;
+            --card: #12121A;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--base);
+            color: #E5E7EB;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--purple), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gold-gradient-text {
+            background: linear-gradient(135deg, var(--gold), #FFDF80);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold), #D4A830);
+            color: #0A0A0F;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 24px rgba(245, 200, 66, 0.25);
+        }
+        .btn-gold:hover {
+            box-shadow: 0 8px 40px rgba(245, 200, 66, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-ghost {
+            border: 1.5px solid rgba(245, 200, 66, 0.4);
+            color: var(--gold);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-ghost:hover {
+            border-color: var(--gold);
+            background: rgba(245, 200, 66, 0.08);
+        }
+
+        .card-glow {
+            transition: all 0.4s ease;
+            border: 1px solid rgba(124, 58, 237, 0.1);
+        }
+        .card-glow:hover {
+            border-color: rgba(124, 58, 237, 0.3);
+            box-shadow: 0 8px 40px rgba(124, 58, 237, 0.12);
+            transform: translateY(-4px);
+        }
+
+        /* Animated gradient orb */
+        .orb-container { position: relative; width: 100%; height: 100%; min-height: 320px; }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: orbFloat 6s ease-in-out infinite;
+        }
+        .orb-1 {
+            width: 280px; height: 280px;
+            background: radial-gradient(circle, rgba(124,58,237,0.6), transparent 70%);
+            top: 10%; left: 10%;
+            animation-delay: 0s;
+        }
+        .orb-2 {
+            width: 220px; height: 220px;
+            background: radial-gradient(circle, rgba(245,200,66,0.5), transparent 70%);
+            top: 30%; left: 40%;
+            animation-delay: -2s;
+        }
+        .orb-3 {
+            width: 180px; height: 180px;
+            background: radial-gradient(circle, rgba(124,58,237,0.4), transparent 70%);
+            top: 50%; left: 20%;
+            animation-delay: -4s;
+        }
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -20px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+
+        /* Pulse animation */
+        .pulse-dot {
+            width: 8px; height: 8px;
+            background: #EF4444;
+            border-radius: 50%;
+            position: relative;
+        }
+        .pulse-dot::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.4);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.8); opacity: 0; }
+        }
+
+        /* FAQ accordion */
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s ease; }
+        .faq-answer.open { max-height: 300px; }
+        .faq-chevron { transition: transform 0.3s ease; }
+        .faq-chevron.open { transform: rotate(180deg); }
+
+        /* Fade-in animation */
+        .fade-section { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+        .fade-section.visible { opacity: 1; transform: translateY(0); }
+
+        /* Counter animation */
+        .counter-num { font-variant-numeric: tabular-nums; }
+
+        /* Confetti canvas */
+        #confetti-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Plan toggle */
+        .plan-option { transition: all 0.3s ease; cursor: pointer; }
+        .plan-option.active-plan {
+            background: rgba(245, 200, 66, 0.15);
+            border-color: var(--gold);
+        }
+
+        /* Stars */
+        .star { color: var(--gold); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--base); }
+        ::-webkit-scrollbar-thumb { background: #2A2A3A; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3A3A4A; }
+
+        /* Noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+        body > * { position: relative; z-index: 1; }
+
+        /* Pricing card highlight */
+        .pricing-highlight {
+            background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(245,200,66,0.08));
+            border: 1.5px solid rgba(245, 200, 66, 0.3);
+        }
+        .pricing-highlight::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1.5px;
+            background: linear-gradient(135deg, var(--purple), var(--gold));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        /* Loading spinner for submit button */
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.85;
+        }
+        .btn-loading .btn-text {
+            visibility: hidden;
+        }
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            top: 50%;
+            left: 50%;
+            margin-top: -11px;
+            margin-left: -11px;
+            border: 3px solid rgba(10,10,15,0.25);
+            border-top-color: #0A0A0F;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body data-id="0" class="min-h-screen">
+
+    <app-icon data-id="1" hidden data-icon="audio-lines" data-palette="Yellow"></app-icon>
+
+    <canvas data-id="2" id="confetti-canvas"></canvas>
+
+    <!-- ===== STICKY NAV ===== -->
+    <header data-id="3" id="navbar-a1b2" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" style="background: rgba(10,10,15,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <div data-id="4" class="max-w-7xl mx-auto flex items-center justify-between px-5 py-3.5 md:px-8">
+            <a data-id="5" href="#" class="flex items-center gap-2">
+                <div data-id="6" class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, var(--purple), var(--gold));">
+                    <i data-id="7" data-lucide="audio-lines" class="w-4 h-4 text-white"></i>
+                </div>
+                <span data-id="8" class="text-xl font-bold gold-gradient-text">Studio Flow</span>
+            </a>
+
+            <!-- Desktop nav -->
+            <nav data-id="9" class="hidden md:flex items-center gap-8">
+                <a data-id="10" href="#features" class="text-sm text-muted hover:text-white transition-colors">Features</a>
+                <a data-id="11" href="#pricing" class="text-sm text-muted hover:text-white transition-colors">Perks</a>
+                <a data-id="12" href="#faq" class="text-sm text-muted hover:text-white transition-colors">FAQ</a>
+                <a data-id="13" href="#signup" class="btn-gold px-5 py-2.5 rounded-full text-sm inline-flex items-center gap-1.5">
+                    Claim Your Spot <i data-id="14" data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </nav>
+
+            <!-- Mobile menu button -->
+            <button data-id="15" id="mobile-menu-btn-c3d4" class="md:hidden p-2 text-muted-light" aria-label="Open menu">
+                <i data-id="16" data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile nav overlay -->
+    <nav data-id="17" id="mobile-menu-e5f6" class="hidden fixed inset-0 z-[60] flex flex-col" style="background: rgba(10,10,15,0.98); backdrop-filter: blur(20px);">
+        <div data-id="18" class="flex items-center justify-between px-5 py-3.5">
+            <span data-id="19" class="text-xl font-bold gold-gradient-text">Studio Flow</span>
+            <button data-id="20" id="mobile-menu-close-g7h8" class="p-2 text-muted-light" aria-label="Close menu">
+                <i data-id="21" data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <div data-id="22" class="flex flex-col items-center justify-center flex-1 gap-8">
+            <a data-id="23" href="#features" class="text-2xl font-semibold text-white mobile-nav-link">Features</a>
+            <a data-id="24" href="#pricing" class="text-2xl font-semibold text-white mobile-nav-link">Perks</a>
+            <a data-id="25" href="#faq" class="text-2xl font-semibold text-white mobile-nav-link">FAQ</a>
+            <a data-id="26" href="#signup" class="btn-gold px-8 py-3 rounded-full text-lg inline-flex items-center gap-2 mobile-nav-link mt-4">
+                Claim Your Spot <i data-id="27" data-lucide="arrow-right" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </nav>
+
+    <main data-id="28">
+        <!-- ===== HERO SECTION ===== -->
+        <section data-id="29" id="hero-i9j0" class="relative min-h-screen flex items-center pt-20 pb-16 overflow-hidden">
+            <!-- Background gradient blurs -->
+            <div data-id="30" class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] opacity-20" style="background: radial-gradient(ellipse, rgba(124,58,237,0.4), transparent 70%);"></div>
+
+            <div data-id="31" class="max-w-7xl mx-auto px-5 md:px-8 w-full">
+                <div data-id="32" class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                    <!-- Left content -->
+                    <div data-id="33" class="text-center lg:text-left">
+                        <!-- Eyebrow -->
+                        <div data-id="34" class="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style="background: rgba(245,200,66,0.1); border: 1px solid rgba(245,200,66,0.2);">
+                            <span data-id="35" class="text-sm">🔥</span>
+                            <span data-id="36" class="text-sm font-medium text-gold">Only 50 spots available — <span data-id="37" id="claimed-count-k1l2" class="font-bold">23</span> claimed</span>
+                        </div>
+
+                        <!-- H1 -->
+                        <h1 data-id="38" id="hero-heading-m3n4" class="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-white mb-6">
+                            Be the First to Shape<br data-id="39" />
+                            <span data-id="40" class="gradient-text">Studio Flow</span>
+                        </h1>
+
+                        <!-- Subhead -->
+                        <p data-id="41" id="hero-sub-o5p6" class="text-base md:text-lg text-muted leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8">
+                            Join as a Founding Member and lock in lifetime pricing, direct product input, and a badge that proves you were here first.
+                        </p>
+
+                        <!-- CTAs -->
+                        <div data-id="42" class="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start mb-10">
+                            <a data-id="43" href="#signup" class="btn-gold px-8 py-3.5 rounded-full text-base inline-flex items-center gap-2 min-h-[48px]">
+                                Claim Your Founding Spot <i data-id="44" data-lucide="arrow-right" class="w-5 h-5"></i>
+                            </a>
+                            <a data-id="45" href="#features" class="btn-ghost px-8 py-3.5 rounded-full text-base inline-flex items-center gap-2 min-h-[48px]">
+                                See What You Get
+                            </a>
+                        </div>
+
+                        <!-- Live counter -->
+                        <div data-id="46" class="inline-flex items-center gap-3 px-5 py-3 rounded-xl" style="background: rgba(18,18,26,0.8); border: 1px solid rgba(255,255,255,0.06);">
+                            <div data-id="47" class="pulse-dot"></div>
+                            <span data-id="48" class="text-sm font-medium text-muted-light">
+                                <span data-id="49" id="spots-counter-q7r8" class="text-white font-bold counter-num text-lg">27</span>
+                                spots remaining
+                            </span>
+                            <span data-id="50" class="text-xs text-muted uppercase tracking-wider font-medium">Live</span>
+                        </div>
+                    </div>
+
+                    <!-- Right orb visual -->
+                    <div data-id="51" class="hidden lg:block">
+                        <div data-id="52" class="orb-container">
+                            <div data-id="53" class="orb orb-1"></div>
+                            <div data-id="54" class="orb orb-2"></div>
+                            <div data-id="55" class="orb orb-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SOCIAL PROOF BAR ===== -->
+        <section data-id="56" id="social-proof-s9t0" class="py-12 border-t border-b" style="border-color: rgba(255,255,255,0.05); background: rgba(18,18,26,0.4);">
+            <div data-id="57" class="max-w-7xl mx-auto px-5 md:px-8">
+                <div data-id="58" class="flex flex-col sm:flex-row items-center justify-center gap-5">
+                    <div data-id="59" class="flex items-center -space-x-3">
+                        <div data-id="60" class="w-10 h-10 rounded-full bg-purple flex items-center justify-center text-white text-sm font-bold ring-2 ring-base">JR</div>
+                        <div data-id="61" class="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-base text-sm font-bold ring-2 ring-base">AL</div>
+                        <div data-id="62" class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-base" style="background: #10B981;">MK</div>
+                        <div data-id="63" class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-base" style="background: #3B82F6;">TS</div>
+                        <div data-id="64" class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-base" style="background: #EC4899;">RD</div>
+                    </div>
+                    <p data-id="65" class="text-sm text-muted">
+                        Join <span data-id="66" class="text-white font-semibold" id="social-count-u1v2">23</span> creators who already claimed their spot
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== FEATURES SECTION ===== -->
+        <section data-id="67" id="features" class="py-20 md:py-28 fade-section">
+            <div data-id="68" class="max-w-7xl mx-auto px-5 md:px-8">
+                <!-- Section header -->
+                <div data-id="69" class="text-center mb-16">
+                    <span data-id="70" class="inline-block text-sm font-semibold text-gold uppercase tracking-widest mb-4">Member Perks</span>
+                    <h2 data-id="71" id="features-heading-w3x4" class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-4">
+                        Why Founding Members <span data-id="72" class="gradient-text">Win</span>
+                    </h2>
+                    <p data-id="73" class="text-muted text-base md:text-lg max-w-2xl mx-auto">
+                        Exclusive advantages that reward you for believing early.
+                    </p>
+                </div>
+
+                <!-- Feature cards grid -->
+                <div data-id="74" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+                    <!-- Card 1 -->
+                    <div data-id="75" class="card-glow bg-card rounded-2xl p-6 md:p-8">
+                        <div data-id="76" class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background: rgba(245,200,66,0.12);">
+                            <i data-id="77" data-lucide="lock" class="w-6 h-6 text-gold"></i>
+                        </div>
+                        <h3 data-id="78" class="text-lg font-bold text-white mb-2">Lifetime Rate Lock</h3>
+                        <p data-id="79" class="text-muted text-sm leading-relaxed">Pay today's price forever, even as we raise rates. Your subscription never increases.</p>
+                    </div>
+                    <!-- Card 2 -->
+                    <div data-id="80" class="card-glow bg-card rounded-2xl p-6 md:p-8">
+                        <div data-id="81" class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background: rgba(124,58,237,0.12);">
+                            <i data-id="82" data-lucide="award" class="w-6 h-6 text-purple-light"></i>
+                        </div>
+                        <h3 data-id="83" class="text-lg font-bold text-white mb-2">Founding Member Badge</h3>
+                        <p data-id="84" class="text-muted text-sm leading-relaxed">Permanent badge on your profile and posts. Show the world you were here from day one.</p>
+                    </div>
+                    <!-- Card 3 -->
+                    <div data-id="85" class="card-glow bg-card rounded-2xl p-6 md:p-8">
+                        <div data-id="86" class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background: rgba(245,200,66,0.12);">
+                            <i data-id="87" data-lucide="mic" class="w-6 h-6 text-gold"></i>
+                        </div>
+                        <h3 data-id="88" class="text-lg font-bold text-white mb-2">Direct Product Input</h3>
+                        <p data-id="89" class="text-muted text-sm leading-relaxed">Monthly calls with the team to shape the roadmap. Your voice directly drives what we build.</p>
+                    </div>
+                    <!-- Card 4 -->
+                    <div data-id="90" class="card-glow bg-card rounded-2xl p-6 md:p-8">
+                        <div data-id="91" class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background: rgba(124,58,237,0.12);">
+                            <i data-id="92" data-lucide="zap" class="w-6 h-6 text-purple-light"></i>
+                        </div>
+                        <h3 data-id="93" class="text-lg font-bold text-white mb-2">Early Access</h3>
+                        <p data-id="94" class="text-muted text-sm leading-relaxed">Every new feature before the public. Be the first to test, explore, and master new tools.</p>
+                    </div>
+                    <!-- Card 5 -->
+                    <div data-id="95" class="card-glow bg-card rounded-2xl p-6 md:p-8">
+                        <div data-id="96" class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background: rgba(245,200,66,0.12);">
+                            <i data-id="97" data-lucide="message-circle" class="w-6 h-6 text-gold"></i>
+                        </div>
+                        <h3 data-id="98" class="text-lg font-bold text-white mb-2">Private Community</h3>
+                        <p data-id="99" class="text-muted text-sm leading-relaxed">Exclusive Slack channel with the core team and fellow founding members. Network, collaborate, grow.</p>
+                    </div>
+                    <!-- Card 6 -->
+                    <div data-id="100" class="card-glow bg-card rounded-2xl p-6 md:p-8">
+                        <div data-id="101" class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background: rgba(124,58,237,0.12);">
+                            <i data-id="102" data-lucide="trending-up" class="w-6 h-6 text-purple-light"></i>
+                        </div>
+                        <h3 data-id="103" class="text-lg font-bold text-white mb-2">Revenue Share Boost</h3>
+                        <p data-id="104" class="text-muted text-sm leading-relaxed">5% higher revenue share than standard members. Keep more of what you earn — forever.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== PRICING SECTION ===== -->
+        <section data-id="105" id="pricing" class="py-20 md:py-28 fade-section" style="background: rgba(18,18,26,0.4);">
+            <div data-id="106" class="max-w-7xl mx-auto px-5 md:px-8">
+                <div data-id="107" class="text-center mb-16">
+                    <span data-id="108" class="inline-block text-sm font-semibold text-gold uppercase tracking-widest mb-4">Pricing</span>
+                    <h2 data-id="109" id="pricing-heading-y5z6" class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-4">
+                        Lock In Your Rate <span data-id="110" class="gradient-text">Before It's Gone</span>
+                    </h2>
+                    <p data-id="111" class="text-muted text-base md:text-lg max-w-2xl mx-auto">
+                        Price locks the moment you join. Renews at the same rate forever.
+                    </p>
+                </div>
+
+                <!-- Plan toggle -->
+                <div data-id="112" class="flex items-center justify-center gap-3 mb-12">
+                    <span data-id="113" id="toggle-monthly-label-a2b3" class="text-sm font-medium text-muted">Monthly</span>
+                    <button data-id="114" id="plan-toggle-c4d5" class="relative w-14 h-7 rounded-full transition-colors duration-300" style="background: rgba(124,58,237,0.4);" aria-label="Toggle annual plan">
+                        <div data-id="115" id="toggle-knob-e6f7" class="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300"></div>
+                    </button>
+                    <span data-id="116" id="toggle-annual-label-g8h9" class="text-sm font-bold text-gold">Annual <span data-id="117" class="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full ml-1">Save $99</span></span>
+                </div>
+
+                <div data-id="118" class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                    <!-- Founding Member Plan -->
+                    <div data-id="119" class="pricing-highlight relative bg-card rounded-2xl p-8 md:p-10 flex flex-col">
+                        <div data-id="120" class="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                            <span data-id="121" class="inline-flex items-center gap-1.5 bg-gold text-base text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
+                                <i data-id="122" data-lucide="crown" class="w-3.5 h-3.5"></i>Founding Member
+                            </span>
+                        </div>
+                        <div data-id="123" class="mt-4 mb-6">
+                            <div data-id="124" class="flex items-baseline gap-1 justify-center md:justify-start">
+                                <span data-id="125" class="text-5xl font-extrabold text-white counter-num" id="price-display-i0j1">$249</span>
+                                <span data-id="126" class="text-muted text-lg" id="price-period-k2l3">/year</span>
+                            </div>
+                            <p data-id="127" class="text-sm text-muted mt-2" id="price-note-m4n5">That's just $20.75/mo — billed annually</p>
+                        </div>
+                        <ul data-id="128" class="space-y-3 mb-8 flex-1">
+                            <li data-id="129" class="flex items-start gap-3 text-sm text-muted-light"><i data-id="130" data-lucide="check" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>Lifetime rate lock</li>
+                            <li data-id="131" class="flex items-start gap-3 text-sm text-muted-light"><i data-id="132" data-lucide="check" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>Founding Member badge</li>
+                            <li data-id="133" class="flex items-start gap-3 text-sm text-muted-light"><i data-id="134" data-lucide="check" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>Monthly product input calls</li>
+                            <li data-id="135" class="flex items-start gap-3 text-sm text-muted-light"><i data-id="136" data-lucide="check" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>Early access to all features</li>
+                            <li data-id="137" class="flex items-start gap-3 text-sm text-muted-light"><i data-id="138" data-lucide="check" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>Private Slack community</li>
+                            <li data-id="139" class="flex items-start gap-3 text-sm text-muted-light"><i data-id="140" data-lucide="check" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>+5% revenue share boost</li>
+                        </ul>
+                        <a data-id="141" href="#signup" class="btn-gold w-full py-3.5 rounded-xl text-center text-base inline-flex items-center justify-center gap-2">
+                            Claim Your Spot <i data-id="142" data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+
+                    <!-- Standard Plan (Coming Soon) -->
+                    <div data-id="143" class="bg-card rounded-2xl p-8 md:p-10 flex flex-col opacity-50 relative overflow-hidden" style="border: 1px solid rgba(255,255,255,0.05);">
+                        <div data-id="144" class="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                            <span data-id="145" class="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider" style="background: rgba(255,255,255,0.1); color: #9CA3AF;">Coming Soon</span>
+                        </div>
+                        <div data-id="146" class="mt-4 mb-6">
+                            <div data-id="147" class="flex items-baseline gap-1 justify-center md:justify-start">
+                                <span data-id="148" class="text-5xl font-extrabold text-muted counter-num">$49</span>
+                                <span data-id="149" class="text-muted text-lg">/mo</span>
+                            </div>
+                            <p data-id="150" class="text-sm text-muted mt-2">Standard pricing after launch</p>
+                        </div>
+                        <ul data-id="151" class="space-y-3 mb-8 flex-1">
+                            <li data-id="152" class="flex items-start gap-3 text-sm text-muted"><i data-id="153" data-lucide="check" class="w-5 h-5 text-muted flex-shrink-0 mt-0.5"></i>All core features</li>
+                            <li data-id="154" class="flex items-start gap-3 text-sm text-muted"><i data-id="155" data-lucide="x" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: #4B5563;"></i><span data-id="156" class="line-through">Founding badge</span></li>
+                            <li data-id="157" class="flex items-start gap-3 text-sm text-muted"><i data-id="158" data-lucide="x" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: #4B5563;"></i><span data-id="159" class="line-through">Product input calls</span></li>
+                            <li data-id="160" class="flex items-start gap-3 text-sm text-muted"><i data-id="161" data-lucide="x" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: #4B5563;"></i><span data-id="162" class="line-through">Early access</span></li>
+                            <li data-id="163" class="flex items-start gap-3 text-sm text-muted"><i data-id="164" data-lucide="x" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: #4B5563;"></i><span data-id="165" class="line-through">Private community</span></li>
+                            <li data-id="166" class="flex items-start gap-3 text-sm text-muted"><i data-id="167" data-lucide="x" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: #4B5563;"></i><span data-id="168" class="line-through">Revenue share boost</span></li>
+                        </ul>
+                        <div data-id="169" class="w-full py-3.5 rounded-xl text-center text-base text-muted cursor-not-allowed" style="background: rgba(255,255,255,0.05);">
+                            Not Yet Available
+                        </div>
+                        <!-- Savings callout -->
+                        <div data-id="170" class="mt-4 text-center">
+                            <span data-id="171" class="text-xs text-muted">You'd pay <span data-id="172" class="text-white font-semibold line-through">$588/yr</span> — Founders save <span data-id="173" class="text-gold font-bold">$339/yr</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== TESTIMONIALS ===== -->
+        <section data-id="174" id="testimonials-o6p7" class="py-20 md:py-28 fade-section">
+            <div data-id="175" class="max-w-7xl mx-auto px-5 md:px-8">
+                <div data-id="176" class="text-center mb-16">
+                    <span data-id="177" class="inline-block text-sm font-semibold text-gold uppercase tracking-widest mb-4">Early Voices</span>
+                    <h2 data-id="178" class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-4">
+                        Creators Who Got In <span data-id="179" class="gradient-text">First</span>
+                    </h2>
+                </div>
+
+                <div data-id="180" class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                    <!-- Testimonial 1 -->
+                    <div data-id="181" class="bg-card rounded-2xl p-6 md:p-8 card-glow">
+                        <div data-id="182" class="flex items-center gap-1 mb-4">
+                            <i data-id="183" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="184" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="185" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="186" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="187" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                        </div>
+                        <p data-id="188" class="text-sm text-muted-light leading-relaxed mb-6">"I've been looking for a platform that actually understands independent musicians. Studio Flow feels like it was built for us. The founding rate is a no-brainer."</p>
+                        <div data-id="189" class="flex items-center gap-3">
+                            <div data-id="190" class="w-10 h-10 rounded-full bg-purple flex items-center justify-center text-white text-sm font-bold">JR</div>
+                            <div data-id="191">
+                                <p data-id="192" class="text-sm font-semibold text-white">Jordan Rivera</p>
+                                <p data-id="193" class="text-xs text-muted">Musician &amp; Producer</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Testimonial 2 -->
+                    <div data-id="194" class="bg-card rounded-2xl p-6 md:p-8 card-glow">
+                        <div data-id="195" class="flex items-center gap-1 mb-4">
+                            <i data-id="196" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="197" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="198" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="199" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="200" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                        </div>
+                        <p data-id="201" class="text-sm text-muted-light leading-relaxed mb-6">"The direct product input is what sold me. I'm literally shaping the tools I'll use daily. Plus, locking in at $29/mo while it lasts? Easy."</p>
+                        <div data-id="202" class="flex items-center gap-3">
+                            <div data-id="203" class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background: #10B981;">AL</div>
+                            <div data-id="204">
+                                <p data-id="205" class="text-sm font-semibold text-white">Aisha Lee</p>
+                                <p data-id="206" class="text-xs text-muted">Portrait Photographer</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Testimonial 3 -->
+                    <div data-id="207" class="bg-card rounded-2xl p-6 md:p-8 card-glow">
+                        <div data-id="208" class="flex items-center gap-1 mb-4">
+                            <i data-id="209" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="210" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="211" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="212" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                            <i data-id="213" data-lucide="star" class="w-4 h-4 star fill-current"></i>
+                        </div>
+                        <p data-id="214" class="text-sm text-muted-light leading-relaxed mb-6">"Finally — one place for my studio, my earnings, and my audience. The founding member community already feels like family. Don't sleep on this."</p>
+                        <div data-id="215" class="flex items-center gap-3">
+                            <div data-id="216" class="w-10 h-10 rounded-full flex items-center justify-center text-base text-sm font-bold" style="background: #F59E0B;">MK</div>
+                            <div data-id="217">
+                                <p data-id="218" class="text-sm font-semibold text-white">Marcus Kim</p>
+                                <p data-id="219" class="text-xs text-muted">Indie Filmmaker</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== FAQ SECTION ===== -->
+        <section data-id="220" id="faq" class="py-20 md:py-28 fade-section" style="background: rgba(18,18,26,0.4);">
+            <div data-id="221" class="max-w-3xl mx-auto px-5 md:px-8">
+                <div data-id="222" class="text-center mb-16">
+                    <span data-id="223" class="inline-block text-sm font-semibold text-gold uppercase tracking-widest mb-4">FAQ</span>
+                    <h2 data-id="224" class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-4">
+                        Got Questions? <span data-id="225" class="gradient-text">We've Got Answers</span>
+                    </h2>
+                </div>
+
+                <div data-id="226" class="space-y-3">
+                    <!-- FAQ 1 -->
+                    <div data-id="227" class="faq-item bg-card rounded-xl overflow-hidden" style="border: 1px solid rgba(255,255,255,0.05);">
+                        <button data-id="228" class="faq-trigger w-full flex items-center justify-between px-6 py-5 text-left min-h-[56px]">
+                            <span data-id="229" class="text-base font-semibold text-white pr-4">What is a Founding Member?</span>
+                            <i data-id="230" data-lucide="chevron-down" class="w-5 h-5 text-muted faq-chevron flex-shrink-0"></i>
+                        </button>
+                        <div data-id="231" class="faq-answer px-6">
+                            <p data-id="232" class="text-sm text-muted leading-relaxed pb-5">A Founding Member is one of the first 50 creators to join Studio Flow. You get permanent perks — lifetime pricing, a unique badge, direct access to the product team, early feature access, a private community, and a boosted revenue share — locked in forever.</p>
+                        </div>
+                    </div>
+                    <!-- FAQ 2 -->
+                    <div data-id="233" class="faq-item bg-card rounded-xl overflow-hidden" style="border: 1px solid rgba(255,255,255,0.05);">
+                        <button data-id="234" class="faq-trigger w-full flex items-center justify-between px-6 py-5 text-left min-h-[56px]">
+                            <span data-id="235" class="text-base font-semibold text-white pr-4">Can I cancel anytime?</span>
+                            <i data-id="236" data-lucide="chevron-down" class="w-5 h-5 text-muted faq-chevron flex-shrink-0"></i>
+                        </button>
+                        <div data-id="237" class="faq-answer px-6">
+                            <p data-id="238" class="text-sm text-muted leading-relaxed pb-5">Absolutely. There are no contracts or lock-ins. Cancel anytime from your dashboard. If you re-subscribe later, your founding perks and rate lock remain — they're tied to your account permanently.</p>
+                        </div>
+                    </div>
+                    <!-- FAQ 3 -->
+                    <div data-id="239" class="faq-item bg-card rounded-xl overflow-hidden" style="border: 1px solid rgba(255,255,255,0.05);">
+                        <button data-id="240" class="faq-trigger w-full flex items-center justify-between px-6 py-5 text-left min-h-[56px]">
+                            <span data-id="241" class="text-base font-semibold text-white pr-4">When does the price increase?</span>
+                            <i data-id="242" data-lucide="chevron-down" class="w-5 h-5 text-muted faq-chevron flex-shrink-0"></i>
+                        </button>
+                        <div data-id="243" class="faq-answer px-6">
+                            <p data-id="244" class="text-sm text-muted leading-relaxed pb-5">Standard pricing ($49/mo) takes effect once all 50 founding spots are filled or at our public launch — whichever comes first. As a Founding Member, your rate never changes regardless of future price increases.</p>
+                        </div>
+                    </div>
+                    <!-- FAQ 4 -->
+                    <div data-id="245" class="faq-item bg-card rounded-xl overflow-hidden" style="border: 1px solid rgba(255,255,255,0.05);">
+                        <button data-id="246" class="faq-trigger w-full flex items-center justify-between px-6 py-5 text-left min-h-[56px]">
+                            <span data-id="247" class="text-base font-semibold text-white pr-4">What if all 50 spots fill up?</span>
+                            <i data-id="248" data-lucide="chevron-down" class="w-5 h-5 text-muted faq-chevron flex-shrink-0"></i>
+                        </button>
+                        <div data-id="249" class="faq-answer px-6">
+                            <p data-id="250" class="text-sm text-muted leading-relaxed pb-5">Once all 50 spots are claimed, the Founding Member tier closes permanently. You'll be able to join as a Standard member at the regular rate, but the exclusive perks and pricing are gone for good. We won't extend or reopen the tier.</p>
+                        </div>
+                    </div>
+                    <!-- FAQ 5 -->
+                    <div data-id="251" class="faq-item bg-card rounded-xl overflow-hidden" style="border: 1px solid rgba(255,255,255,0.05);">
+                        <button data-id="252" class="faq-trigger w-full flex items-center justify-between px-6 py-5 text-left min-h-[56px]">
+                            <span data-id="253" class="text-base font-semibold text-white pr-4">Do I get access immediately?</span>
+                            <i data-id="254" data-lucide="chevron-down" class="w-5 h-5 text-muted faq-chevron flex-shrink-0"></i>
+                        </button>
+                        <div data-id="255" class="faq-answer px-6">
+                            <p data-id="256" class="text-sm text-muted leading-relaxed pb-5">Yes! Once you claim your spot and complete checkout, you get instant access to the platform, the private Slack community, and your Founding Member badge. No waiting, no queues.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SIGNUP FORM SECTION ===== -->
+        <section data-id="257" id="signup" class="py-20 md:py-28 fade-section">
+            <div data-id="258" class="max-w-xl mx-auto px-5 md:px-8">
+                <div data-id="259" class="text-center mb-12">
+                    <span data-id="260" class="inline-block text-sm font-semibold text-gold uppercase tracking-widest mb-4">Reserve Your Spot</span>
+                    <h2 data-id="261" class="text-3xl md:text-4xl font-extrabold text-white mb-4">
+                        Secure Your Spot in <span data-id="262" class="gradient-text">30 Seconds</span>
+                    </h2>
+                    <p data-id="263" class="text-muted text-base">Fill out the form below. We'll send you checkout details.</p>
+                </div>
+
+                <!-- Form card -->
+                <div data-id="264" id="form-card-q8r9" class="bg-card rounded-2xl p-6 md:p-10" style="border: 1px solid rgba(255,255,255,0.06);">
+                    <!-- Form -->
+                    <form data-id="265" id="signup-form-s0t1" class="space-y-5" novalidate>
+                        <!-- Name field -->
+                        <div data-id="266">
+                            <label data-id="267" for="name-input-u2v3" class="block text-sm font-medium text-muted-light mb-2">Full Name</label>
+                            <input data-id="268" id="name-input-u2v3" type="text" placeholder="e.g. Jordan Rivera" required
+                                class="w-full px-4 py-3.5 rounded-xl bg-surface text-white placeholder-muted text-base outline-none focus:ring-2 focus:ring-gold/50 transition-all" style="border: 1px solid rgba(255,255,255,0.08);" />
+                            <p data-id="269" id="name-error-w4x5" class="hidden text-xs text-red-400 mt-1.5 ml-1">Please enter your name</p>
+                        </div>
+                        <!-- Email field -->
+                        <div data-id="270">
+                            <label data-id="271" for="email-input-y6z7" class="block text-sm font-medium text-muted-light mb-2">Email Address</label>
+                            <input data-id="272" id="email-input-y6z7" type="email" placeholder="you@example.com" required
+                                class="w-full px-4 py-3.5 rounded-xl bg-surface text-white placeholder-muted text-base outline-none focus:ring-2 focus:ring-gold/50 transition-all" style="border: 1px solid rgba(255,255,255,0.08);" />
+                            <p data-id="273" id="email-error-a8b9" class="hidden text-xs text-red-400 mt-1.5 ml-1">Please enter a valid email</p>
+                        </div>
+                        <!-- Plan selector -->
+                        <div data-id="274">
+                            <label data-id="275" class="block text-sm font-medium text-muted-light mb-3">Choose Your Plan</label>
+                            <div data-id="276" class="grid grid-cols-2 gap-3">
+                                <div data-id="277" id="plan-monthly-c0d1" class="plan-option rounded-xl p-4 text-center cursor-pointer" style="border: 1.5px solid rgba(255,255,255,0.08); background: rgba(22,22,31,0.6);">
+                                    <p data-id="278" class="text-sm font-semibold text-white mb-0.5">Monthly</p>
+                                    <p data-id="279" class="text-lg font-bold text-white">$29<span data-id="280" class="text-sm text-muted font-normal">/mo</span></p>
+                                </div>
+                                <div data-id="281" id="plan-annual-e2f3" class="plan-option active-plan rounded-xl p-4 text-center cursor-pointer relative" style="border: 1.5px solid var(--gold); background: rgba(245,200,66,0.08);">
+                                    <div data-id="282" class="absolute -top-2.5 right-3">
+                                        <span data-id="283" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gold text-base uppercase tracking-wider">Best Value</span>
+                                    </div>
+                                    <p data-id="284" class="text-sm font-semibold text-white mb-0.5">Annual</p>
+                                    <p data-id="285" class="text-lg font-bold text-white">$249<span data-id="286" class="text-sm text-muted font-normal">/yr</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Submit -->
+                        <button data-id="287" id="submit-btn-g4h5" type="submit" class="w-full py-4 rounded-xl text-base font-bold inline-flex items-center justify-center gap-2 transition-all min-h-[52px]" style="background: linear-gradient(135deg, var(--gold), #D4A830); color: #0A0A0F; box-shadow: 0 4px 24px rgba(245,200,66,0.25);">
+                            <span data-id="288" class="btn-text inline-flex items-center gap-2">Claim My Founding Spot <i data-id="289" data-lucide="arrow-right" class="w-5 h-5"></i></span>
+                        </button>
+                        <!-- Submit error message -->
+                        <p data-id="290" id="submit-error-msg" class="hidden text-sm text-red-400 text-center mt-2"></p>
+                    </form>
+
+                    <!-- Trust signals -->
+                    <div data-id="291" class="mt-5 space-y-2 text-center">
+                        <p data-id="292" class="text-xs text-muted inline-flex items-center justify-center gap-1.5">
+                            <i data-id="293" data-lucide="lock" class="w-3.5 h-3.5"></i>
+                            No credit card required to reserve. We'll send checkout details.
+                        </p>
+                        <p data-id="294" class="text-xs text-muted">Your info is safe. We never share your data.</p>
+                    </div>
+
+                    <!-- Success state (hidden initially) -->
+                    <div data-id="295" id="success-state-i6j7" class="hidden text-center py-8">
+                        <div data-id="296" class="text-5xl mb-4">🎉</div>
+                        <h3 data-id="297" class="text-2xl font-bold text-white mb-2">You're on the list!</h3>
+                        <p data-id="298" class="text-muted text-base mb-1">Check your inbox for next steps.</p>
+                        <p data-id="299" id="success-name-k8l9" class="text-sm text-gold font-medium"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer data-id="300" id="footer-m0n1" class="py-10" style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(18,18,26,0.6);">
+        <div data-id="301" class="max-w-7xl mx-auto px-5 md:px-8">
+            <div data-id="302" class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div data-id="303" class="flex items-center gap-4">
+                    <span data-id="304" class="text-sm text-muted">Studio Flow © 2026</span>
+                    <span data-id="305" class="text-muted">·</span>
+                    <a data-id="306" href="#" class="text-sm text-muted hover:text-white transition-colors">Privacy</a>
+                    <a data-id="307" href="#" class="text-sm text-muted hover:text-white transition-colors">Terms</a>
+                    <a data-id="308" href="#" class="text-sm text-muted hover:text-white transition-colors">Contact</a>
+                </div>
+                <div data-id="309" class="flex items-center gap-2">
+                    <div data-id="310" class="pulse-dot" style="width:6px;height:6px;"></div>
+                    <span data-id="311" class="text-sm text-muted">Only <span data-id="312" class="text-gold font-semibold" id="footer-spots-o2p3">27</span> founding member spots remain.</span>
+                </div>
+            </div>
+            <div data-id="313" class="text-center mt-6">
+                <p data-id="314" class="text-xs text-muted/60">Made by Copilot</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // =============================================
+        // ICONS — Progressive enhancement
+        // =============================================
+        if (typeof lucide !== "undefined" && typeof lucide.createIcons === "function") {
+            lucide.createIcons();
+        }
+
+        // =============================================
+        // MOBILE MENU
+        // =============================================
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn-c3d4');
+        const mobileMenu = document.getElementById('mobile-menu-e5f6');
+        const mobileMenuClose = document.getElementById('mobile-menu-close-g7h8');
+        const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+
+        function openMobileMenu() {
+            mobileMenu.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeMobileMenu() {
+            mobileMenu.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        mobileMenuBtn.addEventListener('click', openMobileMenu);
+        mobileMenuClose.addEventListener('click', closeMobileMenu);
+        mobileNavLinks.forEach(link => {
+            link.addEventListener('click', closeMobileMenu);
+        });
+
+        // =============================================
+        // FAQ ACCORDION
+        // =============================================
+        document.querySelectorAll('.faq-trigger').forEach(trigger => {
+            trigger.addEventListener('click', () => {
+                const item = trigger.closest('.faq-item');
+                const answer = item.querySelector('.faq-answer');
+                const chevron = item.querySelector('.faq-chevron');
+                const isOpen = answer.classList.contains('open');
+
+                // Close all
+                document.querySelectorAll('.faq-answer').forEach(a => a.classList.remove('open'));
+                document.querySelectorAll('.faq-chevron').forEach(c => c.classList.remove('open'));
+
+                // Open clicked if it was closed
+                if (!isOpen) {
+                    answer.classList.add('open');
+                    chevron.classList.add('open');
+                }
+            });
+        });
+
+        // =============================================
+        // PLAN TOGGLE (Pricing Section)
+        // =============================================
+        let isAnnual = true;
+        const planToggle = document.getElementById('plan-toggle-c4d5');
+        const toggleKnob = document.getElementById('toggle-knob-e6f7');
+        const priceDisplay = document.getElementById('price-display-i0j1');
+        const pricePeriod = document.getElementById('price-period-k2l3');
+        const priceNote = document.getElementById('price-note-m4n5');
+        const toggleMonthlyLabel = document.getElementById('toggle-monthly-label-a2b3');
+        const toggleAnnualLabel = document.getElementById('toggle-annual-label-g8h9');
+
+        function updatePricingDisplay() {
+            if (isAnnual) {
+                priceDisplay.textContent = '$249';
+                pricePeriod.textContent = '/year';
+                priceNote.textContent = "That's just $20.75/mo — billed annually";
+                toggleKnob.style.transform = 'translateX(28px)';
+                planToggle.style.background = 'linear-gradient(135deg, var(--purple), var(--gold))';
+                toggleMonthlyLabel.classList.remove('text-white', 'font-bold');
+                toggleMonthlyLabel.classList.add('text-muted', 'font-medium');
+            } else {
+                priceDisplay.textContent = '$29';
+                pricePeriod.textContent = '/mo';
+                priceNote.textContent = 'Billed monthly — switch to annual and save $99';
+                toggleKnob.style.transform = 'translateX(0)';
+                planToggle.style.background = 'rgba(124,58,237,0.4)';
+                toggleMonthlyLabel.classList.add('text-white', 'font-bold');
+                toggleMonthlyLabel.classList.remove('text-muted', 'font-medium');
+            }
+        }
+
+        planToggle.addEventListener('click', () => {
+            isAnnual = !isAnnual;
+            updatePricingDisplay();
+        });
+        updatePricingDisplay();
+
+        // =============================================
+        // FORM PLAN SELECTOR
+        // =============================================
+        let selectedPlan = 'annual';
+        const planMonthly = document.getElementById('plan-monthly-c0d1');
+        const planAnnual = document.getElementById('plan-annual-e2f3');
+
+        function updateFormPlan(plan) {
+            selectedPlan = plan;
+            if (plan === 'annual') {
+                planAnnual.classList.add('active-plan');
+                planAnnual.style.borderColor = 'var(--gold)';
+                planAnnual.style.background = 'rgba(245,200,66,0.08)';
+                planMonthly.classList.remove('active-plan');
+                planMonthly.style.borderColor = 'rgba(255,255,255,0.08)';
+                planMonthly.style.background = 'rgba(22,22,31,0.6)';
+            } else {
+                planMonthly.classList.add('active-plan');
+                planMonthly.style.borderColor = 'var(--gold)';
+                planMonthly.style.background = 'rgba(245,200,66,0.08)';
+                planAnnual.classList.remove('active-plan');
+                planAnnual.style.borderColor = 'rgba(255,255,255,0.08)';
+                planAnnual.style.background = 'rgba(22,22,31,0.6)';
+            }
+        }
+
+        planMonthly.addEventListener('click', () => updateFormPlan('monthly'));
+        planAnnual.addEventListener('click', () => updateFormPlan('annual'));
+
+        // =============================================
+        // FORM VALIDATION & SUBMISSION
+        // =============================================
+        const form = document.getElementById('signup-form-s0t1');
+        const nameInput = document.getElementById('name-input-u2v3');
+        const emailInput = document.getElementById('email-input-y6z7');
+        const nameError = document.getElementById('name-error-w4x5');
+        const emailError = document.getElementById('email-error-a8b9');
+        const successState = document.getElementById('success-state-i6j7');
+        const successName = document.getElementById('success-name-k8l9');
+        const formCard = document.getElementById('form-card-q8r9');
+        const submitBtn = document.getElementById('submit-btn-g4h5');
+        const submitErrorMsg = document.getElementById('submit-error-msg');
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function showError(input, errorEl) {
+            input.style.borderColor = '#EF4444';
+            input.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.15)';
+            errorEl.classList.remove('hidden');
+        }
+        function clearError(input, errorEl) {
+            input.style.borderColor = 'rgba(255,255,255,0.08)';
+            input.style.boxShadow = 'none';
+            errorEl.classList.add('hidden');
+        }
+
+        function setSubmitLoading(loading) {
+            if (loading) {
+                submitBtn.classList.add('btn-loading');
+                submitBtn.disabled = true;
+            } else {
+                submitBtn.classList.remove('btn-loading');
+                submitBtn.disabled = false;
+            }
+        }
+
+        function showSubmitError(message) {
+            submitErrorMsg.textContent = message;
+            submitErrorMsg.classList.remove('hidden');
+        }
+
+        function hideSubmitError() {
+            submitErrorMsg.classList.add('hidden');
+            submitErrorMsg.textContent = '';
+        }
+
+        nameInput.addEventListener('input', () => clearError(nameInput, nameError));
+        emailInput.addEventListener('input', () => clearError(emailInput, emailError));
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let valid = true;
+
+            hideSubmitError();
+
+            if (!nameInput.value.trim()) {
+                showError(nameInput, nameError);
+                valid = false;
+            }
+            if (!validateEmail(emailInput.value.trim())) {
+                showError(emailInput, emailError);
+                valid = false;
+            }
+
+            if (valid) {
+                // Show loading state
+                setSubmitLoading(true);
+
+                try {
+                    const response = await fetch('https://studioflow.club/.netlify/functions/subscribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            name: nameInput.value.trim(),
+                            email: emailInput.value.trim(),
+                            plan: selectedPlan,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        let errorMessage = 'Something went wrong. Please try again.';
+                        try {
+                            const errorData = await response.json();
+                            if (errorData && errorData.message) {
+                                errorMessage = errorData.message;
+                            }
+                        } catch (_) {
+                            // Use default error message
+                        }
+                        throw new Error(errorMessage);
+                    }
+
+                    // Success — hide form, show success state
+                    setSubmitLoading(false);
+                    form.classList.add('hidden');
+                    formCard.querySelector('.mt-5').classList.add('hidden');
+                    successName.textContent = 'Welcome aboard, ' + nameInput.value.trim().split(' ')[0] + '! 🚀';
+                    successState.classList.remove('hidden');
+
+                    // Trigger confetti
+                    launchConfetti();
+
+                    // Decrease spot count
+                    decrementSpot();
+                } catch (err) {
+                    // Error — re-enable button and show error message
+                    setSubmitLoading(false);
+                    showSubmitError(err.message || 'Something went wrong. Please try again.');
+                }
+            }
+        });
+
+        // =============================================
+        // CONFETTI ANIMATION (Canvas-based)
+        // =============================================
+        const confettiCanvas = document.getElementById('confetti-canvas');
+        const ctx = confettiCanvas.getContext('2d');
+        let confettiParticles = [];
+        let confettiAnimating = false;
+
+        function resizeConfettiCanvas() {
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+        }
+        resizeConfettiCanvas();
+        window.addEventListener('resize', resizeConfettiCanvas);
+
+        function createConfettiParticle() {
+            const colors = ['#F5C842', '#7C3AED', '#A78BFA', '#FFDF80', '#EC4899', '#10B981', '#3B82F6', '#F59E0B'];
+            return {
+                x: Math.random() * confettiCanvas.width,
+                y: confettiCanvas.height * -0.1 - Math.random() * confettiCanvas.height * 0.3,
+                w: Math.random() * 10 + 5,
+                h: Math.random() * 6 + 3,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vx: (Math.random() - 0.5) * 4,
+                vy: Math.random() * 3 + 2,
+                rotation: Math.random() * 360,
+                rotationSpeed: (Math.random() - 0.5) * 10,
+                opacity: 1,
+            };
+        }
+
+        function launchConfetti() {
+            confettiParticles = [];
+            for (let i = 0; i < 150; i++) {
+                confettiParticles.push(createConfettiParticle());
+            }
+            if (!confettiAnimating) {
+                confettiAnimating = true;
+                animateConfetti();
+            }
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            let alive = false;
+
+            confettiParticles.forEach(p => {
+                if (p.opacity <= 0) return;
+                alive = true;
+
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.05;
+                p.rotation += p.rotationSpeed;
+
+                if (p.y > confettiCanvas.height * 0.7) {
+                    p.opacity -= 0.02;
+                }
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.rotation * Math.PI) / 180);
+                ctx.globalAlpha = Math.max(0, p.opacity);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                ctx.restore();
+            });
+
+            if (alive) {
+                requestAnimationFrame(animateConfetti);
+            } else {
+                confettiAnimating = false;
+                ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            }
+        }
+
+        // =============================================
+        // SPOT COUNTER — Ticks down every 45s
+        // =============================================
+        let spotsRemaining = 27;
+        const spotsCounter = document.getElementById('spots-counter-q7r8');
+        const claimedCount = document.getElementById('claimed-count-k1l2');
+        const socialCount = document.getElementById('social-count-u1v2');
+        const footerSpots = document.getElementById('footer-spots-o2p3');
+
+        function updateAllCounters() {
+            spotsCounter.textContent = spotsRemaining;
+            claimedCount.textContent = 50 - spotsRemaining;
+            socialCount.textContent = 50 - spotsRemaining;
+            footerSpots.textContent = spotsRemaining;
+        }
+
+        function decrementSpot() {
+            if (spotsRemaining > 1) {
+                spotsRemaining--;
+                updateAllCounters();
+            }
+        }
+
+        // Auto decrement every 45 seconds
+        setInterval(() => {
+            if (spotsRemaining > 5) {
+                decrementSpot();
+            }
+        }, 45000);
+
+        // =============================================
+        // INTERSECTION OBSERVER — Fade-in animations
+        // =============================================
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+        document.querySelectorAll('.fade-section').forEach(section => {
+            fadeObserver.observe(section);
+        });
+
+        // =============================================
+        // NAVBAR SCROLL EFFECT
+        // =============================================
+        const navbar = document.getElementById('navbar-a1b2');
+        let lastScroll = 0;
+
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.scrollY;
+            if (currentScroll > 80) {
+                navbar.style.borderBottomColor = 'rgba(255,255,255,0.08)';
+            } else {
+                navbar.style.borderBottomColor = 'rgba(255,255,255,0.05)';
+            }
+            lastScroll = currentScroll;
+        });
+    </script>
+</body>
+</html>
