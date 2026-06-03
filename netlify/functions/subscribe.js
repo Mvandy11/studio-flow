@@ -1,7 +1,3 @@
-const { Resend } = require('resend');
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -13,8 +9,13 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing fields' }) };
   }
 
-  try {
-    await resend.emails.send({
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
       from: 'Michael @ Studio Flow <michael@studioflow.club>',
       to: email,
       subject: "You're in — Welcome to Studio Flow, Founding Member 🎉",
@@ -24,16 +25,13 @@ exports.handler = async (event) => {
         <p>We'll be in touch soon with everything you need to get started.</p>
         <p>— Michael</p>
       `,
-    });
+    }),
+  });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true }),
-    };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
-    };
+  if (!res.ok) {
+    const error = await res.text();
+    return { statusCode: 500, body: JSON.stringify({ error }) };
   }
+
+  return { statusCode: 200, body: JSON.stringify({ success: true }) };
 };
