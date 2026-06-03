@@ -57,7 +57,7 @@ export default function EarningsDashboard() {
         .limit(100),
       supabase
         .from('creator_settings')
-        .select('payout_method, paypal, cashapp, venmo, stripe, custom_url')
+        .select('payout_method, paypal, cashapp, venmo, stripe_connect_id, stripe_connect_onboarded, custom_url')
         .eq('creator_id', user.id)
         .maybeSingle(),
       supabase
@@ -133,9 +133,10 @@ export default function EarningsDashboard() {
 
   const METHOD_LABELS = { paypal: 'PayPal', venmo: 'Venmo', stripe: 'Stripe Connect', cashapp: 'CashApp', bank: 'Bank Transfer' };
   const payoutMethodLabel = settings?.payout_method
-    ? METHOD_LABELS[settings.payout_method] ?? settings.payout_method
-    : null;
-
+  ? (settings.payout_method === 'stripe' && !stripeReady)
+    ? null  // treat unboarded Stripe as not configured
+    : METHOD_LABELS[settings.payout_method] ?? settings.payout_method
+  : null;
   if (authLoading || loading) return (
     <div className="earnings-page" style={{ alignItems: 'center', justifyContent: 'center' }}>
       <div className="cinematic-spinner" />

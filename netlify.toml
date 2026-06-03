@@ -1,7 +1,6 @@
 [build]
-  command = "pnpm install && pnpm run build"
+  command = "pnpm install --no-frozen-lockfile && pnpm run build"
   publish = "dist/public"
-
 [build.environment]
   NODE_VERSION        = "22"
   NETLIFY_USE_PNPM    = "true"

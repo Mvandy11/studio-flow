@@ -21,23 +21,26 @@ import submissionsRouter         from './routes/submissions.js';
 import eventSlotsRouter          from './routes/eventSlots.js';
 import customEventRequestsRouter from './routes/customEventRequests.js';
 import adminApprovalRouter       from './routes/adminApproval.js';
+import adminRevenueRouter        from './routes/adminRevenue.js';
+import adminPayoutRouter         from './routes/adminPayout.js';         // ← NEW
+import stripeConnectRouter       from './routes/stripeConnect.js';        // ← NEW
 import slotCreationRouter        from './routes/slotCreation.js';
 import eventsRouter              from './routes/events.js';
 import testWinnerPullRouter      from './routes/testWinnerPull.js';
 import analyticsRouter           from './routes/analytics.js';
 import adminWinnersRouter        from './routes/adminWinners.js';
 import freeChatRouter            from './routes/freeChat.js';
-import commentsRouter           from './routes/comments.js';
-import contestCommentsRouter    from './routes/contestComments.js';
-import liveEventsRouter         from './routes/liveEvents.js';
-import liveChatRouter           from './routes/liveChat.js';
-import recordedEventsRouter     from './routes/recordedEvents.js';
+import commentsRouter            from './routes/comments.js';
+import contestCommentsRouter     from './routes/contestComments.js';
+import liveEventsRouter          from './routes/liveEvents.js';
+import liveChatRouter            from './routes/liveChat.js';
+import recordedEventsRouter      from './routes/recordedEvents.js';
 import uploadRecordedVideoRouter from './routes/uploadRecordedVideo.js';
-import stripePortalRouter       from './routes/stripePortal.js';
-import membershipRouter         from './routes/membership.js';
-import creatorEventsRouter      from './routes/creatorEvents.js';
-import revenuePoolRouter        from './routes/revenuePool.js';
-import donationsRouter          from './routes/donations.js';
+import stripePortalRouter        from './routes/stripePortal.js';
+import membershipRouter          from './routes/membership.js';
+import creatorEventsRouter       from './routes/creatorEvents.js';
+import revenuePoolRouter         from './routes/revenuePool.js';
+import donationsRouter           from './routes/donations.js';
 
 const app = express();
 
@@ -53,7 +56,19 @@ app.use(requestLogger);
 
 // ─────────────────────────────────────────────────────────────
 // 3. Body parsers
+//    Stripe webhooks need raw bytes for signature verification —
+//    mount express.raw() on webhook paths BEFORE express.json().
 // ─────────────────────────────────────────────────────────────
+app.use(
+  [
+    '/api/payments/subscription-webhook',
+    '/api/payments/donation-webhook',
+    '/api/payments/event-webhook',
+    '/api/payments/stripe-webhook',
+  ],
+  express.raw({ type: 'application/json' })
+);
+
 app.use(express.json({ limit: '6mb' }));
 app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 
@@ -70,6 +85,7 @@ app.use('/api/announcements',         announcementsRouter);
 app.use('/api/custom-events',         customEventsRouter);
 app.use('/api/payments',              paymentsRouter);
 app.use('/api/stripe',                stripePortalRouter);
+app.use('/api/stripe-connect',        stripeConnectRouter);              // ← NEW
 app.use('/api/membership',            membershipRouter);
 app.use('/api/creator/events',        creatorEventsRouter);
 app.use('/api/revenue-pool',          revenuePoolRouter);
@@ -79,6 +95,8 @@ app.use('/api/event-slots',           eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);
 app.use('/api/admin/analytics',       analyticsRouter);
 app.use('/api/admin/winners',         adminWinnersRouter);
+app.use('/api/admin',                 adminPayoutRouter);                // ← NEW — before adminRevenueRouter & adminApprovalRouter
+app.use('/api/admin',                 adminRevenueRouter);
 app.use('/api/admin',                 adminApprovalRouter);
 app.use('/api/slots',                 slotCreationRouter);
 app.use('/api/events',                eventsRouter);
@@ -86,9 +104,9 @@ app.use('/api/test-winner-pull',      testWinnerPullRouter);
 app.use('/api/live',                  liveEventsRouter);
 app.use('/api/live',                  liveChatRouter);
 app.use('/api/slot',                  recordedEventsRouter);
-app.use('/api/events',               uploadRecordedVideoRouter);
+app.use('/api/events',                uploadRecordedVideoRouter);
 app.use('/api/free-chat',             freeChatRouter);
-app.use('/api/comments',             commentsRouter);
+app.use('/api/comments',              commentsRouter);
 
 // ─────────────────────────────────────────────────────────────
 // 6. Health check
@@ -131,3 +149,5 @@ app.use((err, req, res, _next) => {
 });
 
 export default app;
+
+

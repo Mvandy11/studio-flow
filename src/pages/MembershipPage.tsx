@@ -1,18 +1,34 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMembership } from '../modules/memberships';
+import { useMembership } from '../hooks/useMembership';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabaseClient';
+import CancelMembershipButton from '../components/CancelMembershipButton';
 
-// ── Stripe Payment Links ────────────────────────────────────────────────────
+// ── Stripe Payment Links ───────────────────────────────────────────────────
 const STRIPE_MEMBER_30  = 'https://buy.stripe.com/7sYdRb2yx3JS1wwacZb7y0o';
 const STRIPE_CREATOR_50 = 'https://buy.stripe.com/cNi6oJ1utcgo3EE4SFb7y0u';
 const STRIPE_DONATION   = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
 
 const TIER_META: Record<string, { label: string; color: string; border: string; bg: string }> = {
-  member_30:  { label: '$30 Member',  color: '#60a5fa', border: 'rgba(96,165,250,0.4)',   bg: 'rgba(96,165,250,0.1)'  },
-  creator_50: { label: '$50 Creator', color: '#a78bfa', border: 'rgba(167,139,250,0.4)',  bg: 'rgba(167,139,250,0.1)' },
-  free:       { label: 'Free',        color: 'rgba(200,200,215,0.45)', border: 'rgba(200,200,215,0.15)', bg: 'rgba(255,255,255,0.03)' },
+  member_30: {
+    label: '$30 Member',
+    color: '#60a5fa',
+    border: 'rgba(96,165,250,0.4)',
+    bg: 'rgba(96,165,250,0.1)',
+  },
+  creator_50: {
+    label: '$50 Creator',
+    color: '#a78bfa',
+    border: 'rgba(167,139,250,0.4)',
+    bg: 'rgba(167,139,250,0.1)',
+  },
+  free: {
+    label: 'Free',
+    color: 'rgba(200,200,215,0.45)',
+    border: 'rgba(200,200,215,0.15)',
+    bg: 'rgba(255,255,255,0.03)',
+  },
 };
 
 function TierBadge({ tier }: { tier: string }) {
@@ -49,9 +65,12 @@ const PERKS_50 = [
 
 export default function MembershipPage() {
   const { user, loading: authLoading } = useAuth();
-  const { membership, loading, hasAccess, tier } = useMembership();
+
+  // ── Pull refetch out of useMembership so we can pass it to CancelMembershipButton ──
+  const { membership, loading, hasAccess, tier, refetch } = useMembership();
+
   const [portalLoading, setPortalLoading] = useState(false);
-  const [portalError,   setPortalError]   = useState('');
+  const [portalError, setPortalError]     = useState('');
 
   async function handleManageSubscription() {
     setPortalLoading(true);
@@ -59,12 +78,9 @@ export default function MembershipPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('You must be logged in.');
-
-      // ── FIX: prefix with VITE_API_BASE_URL so the request reaches
-      //         the Render backend, not the Netlify CDN ──────────────
       const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
-      const res = await fetch(`${BASE}/api/stripe/create-portal-session`, {
-        method: 'POST',
+      const res  = await fetch(`${BASE}/api/stripe/create-portal-session`, {
+        method:  'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const json = await res.json();
@@ -93,16 +109,15 @@ export default function MembershipPage() {
     );
   }
 
-  const periodEnd = membership?.current_period_end
+  const periodEnd  = membership?.current_period_end
     ? new Date(membership.current_period_end).toLocaleDateString()
     : null;
-
   const tierMeta = TIER_META[tier] ?? TIER_META.free;
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto', padding: '1.5rem 1rem' }}>
 
-      {/* ── Header ── */}
+      {/* ── Header ───────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>🌟 Membership</h1>
         <p style={{ color: 'var(--text-muted, #888)', marginTop: '0.4rem', fontSize: '0.9rem' }}>
@@ -110,7 +125,7 @@ export default function MembershipPage() {
         </p>
       </div>
 
-      {/* ── Status card ── */}
+      {/* ── Status card ──────────────────────────────────────────────── */}
       <div style={{
         background: 'var(--surface, #1a1a2e)',
         border: '1px solid var(--border, #2a2a40)',
@@ -119,7 +134,9 @@ export default function MembershipPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: '0.25rem' }}>
-              {tier === 'creator_50' ? '🎬 Creator Member' : tier === 'member_30' ? '🌟 Studio Member' : 'Studio Flow Account'}
+              {tier === 'creator_50' ? '🎬 Creator Member'
+                : tier === 'member_30' ? '🌟 Studio Member'
+                : 'Studio Flow Account'}
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #888)' }}>{user.email}</div>
           </div>
@@ -138,26 +155,34 @@ export default function MembershipPage() {
           </div>
         )}
 
-        {/* Manage button — active members only */}
+        {/* ── Manage + Cancel — active members only ─────────────────── */}
         {hasAccess && (
-          <div>
-            <button
-              onClick={handleManageSubscription}
-              disabled={portalLoading}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                padding: '0.55rem 1.2rem', borderRadius: '10px',
-                border: `1px solid ${tierMeta.border}`,
-                background: portalLoading ? 'rgba(255,255,255,0.03)' : tierMeta.bg,
-                color: tierMeta.color, fontWeight: 700, fontSize: '0.875rem',
-                cursor: portalLoading ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {portalLoading ? '…' : '⚙ Manage Subscription'}
-            </button>
-            <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted, #888)' }}>
-              Update payment method · Cancel · View invoices
-            </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+            {/* Manage Subscription button */}
+            <div>
+              <button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.55rem 1.2rem', borderRadius: '10px',
+                  border: `1px solid ${tierMeta.border}`,
+                  background: portalLoading ? 'rgba(255,255,255,0.03)' : tierMeta.bg,
+                  color: tierMeta.color, fontWeight: 700, fontSize: '0.875rem',
+                  cursor: portalLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {portalLoading ? '…' : '⚙ Manage Subscription'}
+              </button>
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted, #888)' }}>
+                Update payment method · View invoices
+              </p>
+            </div>
+
+            {/* Cancel Membership — passes refetch so UI updates instantly */}
+            <CancelMembershipButton memberTier={tier} onCancelled={refetch} />
+
           </div>
         )}
 
@@ -166,7 +191,7 @@ export default function MembershipPage() {
         )}
       </div>
 
-      {/* ── Active member perks ── */}
+      {/* ── Active member perks ───────────────────────────────────────── */}
       {hasAccess && (
         <div style={{
           padding: '1.25rem', borderRadius: '12px',
@@ -184,15 +209,12 @@ export default function MembershipPage() {
         </div>
       )}
 
-      {/* ── Upgrade tiers (free users or upgrade prompts) ── */}
+      {/* ── Upgrade tiers (free users) ────────────────────────────────── */}
       {!hasAccess && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
 
-          {/* $30 Member tier */}
-          <div style={{
-            background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.2)',
-            borderRadius: '14px', padding: '1.5rem',
-          }}>
+          {/* $30 Member */}
+          <div style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: '14px', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <div>
                 <span style={{ fontWeight: 700, fontSize: '1rem', color: '#60a5fa' }}>🌟 Studio Member</span>
@@ -204,31 +226,17 @@ export default function MembershipPage() {
               {PERKS_30.map((p) => <li key={p} style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)' }}>{p}</li>)}
             </ul>
             <a
-              href={STRIPE_MEMBER_30}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'block', textAlign: 'center', padding: '0.65rem',
-                borderRadius: '10px', background: 'rgba(96,165,250,0.2)',
-                border: '1px solid rgba(96,165,250,0.35)', color: '#60a5fa',
-                fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none',
-              }}
+              href={`${STRIPE_MEMBER_30}?client_reference_id=${user.id}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: 'block', textAlign: 'center', padding: '0.65rem', borderRadius: '10px', background: 'rgba(96,165,250,0.2)', border: '1px solid rgba(96,165,250,0.35)', color: '#60a5fa', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}
             >
               Join for $30/month
             </a>
           </div>
 
-          {/* $50 Creator tier */}
-          <div style={{
-            background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.25)',
-            borderRadius: '14px', padding: '1.5rem', position: 'relative',
-          }}>
-            <div style={{
-              position: 'absolute', top: '-10px', right: '1rem',
-              background: '#a78bfa', color: '#000', fontSize: '0.68rem',
-              fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '999px',
-              letterSpacing: '0.05em', textTransform: 'uppercase',
-            }}>
+          {/* $50 Creator */}
+          <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.25)', borderRadius: '14px', padding: '1.5rem', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: '-10px', right: '1rem', background: '#a78bfa', color: '#000', fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '999px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
               Best Value
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -242,44 +250,40 @@ export default function MembershipPage() {
               {PERKS_50.map((p) => <li key={p} style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)' }}>{p}</li>)}
             </ul>
             <a
-              href={STRIPE_CREATOR_50}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'block', textAlign: 'center', padding: '0.65rem',
-                borderRadius: '10px', background: 'rgba(167,139,250,0.2)',
-                border: '1px solid rgba(167,139,250,0.4)', color: '#a78bfa',
-                fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none',
-              }}
+              href={`${STRIPE_CREATOR_50}?client_reference_id=${user.id}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: 'block', textAlign: 'center', padding: '0.65rem', borderRadius: '10px', background: 'rgba(167,139,250,0.2)', border: '1px solid rgba(167,139,250,0.4)', color: '#a78bfa', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}
             >
               Join for $50/month
             </a>
           </div>
+
         </div>
       )}
 
-      {/* Upgrade prompt for $30 members wanting Creator */}
+      {/* ── Upgrade prompt for $30 members ───────────────────────────── */}
       {hasAccess && tier === 'member_30' && (
-        <div style={{
-          background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)',
-          borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem',
-        }}>
+        <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem' }}>
           <p style={{ margin: '0 0 0.5rem', fontWeight: 700, color: '#a78bfa' }}>🎬 Upgrade to Creator ($50/mo)</p>
           <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
             Unlock event creation, live streaming, donations, and AI tools.
           </p>
-          <a href={STRIPE_CREATOR_50} target="_blank" rel="noopener noreferrer"
-            style={{ color: '#a78bfa', fontSize: '0.85rem', fontWeight: 600 }}>
+          <a
+            href={`${STRIPE_CREATOR_50}?client_reference_id=${user.id}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{ color: '#a78bfa', fontSize: '0.85rem', fontWeight: 600 }}
+          >
             Upgrade now →
           </a>
         </div>
       )}
 
-      {/* ── Donation ── */}
+      {/* ── Donation ──────────────────────────────────────────────────── */}
       <div style={{
         background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)',
         borderRadius: '12px', padding: '1.1rem 1.25rem', marginBottom: '1.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: '0.75rem',
       }}>
         <div>
           <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#f5a623' }}>💛 Support Studio Flow</p>
@@ -287,27 +291,22 @@ export default function MembershipPage() {
             One-time donation — any amount appreciated
           </p>
         </div>
-        <a href={STRIPE_DONATION} target="_blank" rel="noopener noreferrer"
-          style={{
-            padding: '0.5rem 1.1rem', borderRadius: '8px',
-            background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)',
-            color: '#f5a623', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none',
-          }}>
+        <a href={STRIPE_DONATION} target="_blank" rel="noopener noreferrer" style={{ padding: '0.5rem 1.1rem', borderRadius: '8px', background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', color: '#f5a623', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
           Donate
         </a>
       </div>
 
-      {/* ── Footer links ── */}
+      {/* ── Footer links ──────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-muted, #888)', flexWrap: 'wrap' }}>
-        <Link to="/contests" style={{ color: 'inherit' }}>Browse Contests</Link>
+        <Link to="/contests"  style={{ color: 'inherit' }}>Browse Contests</Link>
         <Link to="/free-chat" style={{ color: 'inherit' }}>Free Chat</Link>
-        <Link to="/events" style={{ color: 'inherit' }}>Explore Events</Link>
+        <Link to="/events"    style={{ color: 'inherit' }}>Explore Events</Link>
       </div>
 
       <p style={{ fontSize: '0.72rem', color: 'var(--text-muted, #888)', marginTop: '1.5rem' }}>
-        Payments processed securely by Stripe. Cancel anytime from the Stripe portal.
+        Payments processed securely by Stripe. Cancel anytime using the button above.
       </p>
+
     </div>
   );
 }
-
