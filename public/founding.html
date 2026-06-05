@@ -678,69 +678,20 @@
 
         <!-- ===== SIGNUP FORM SECTION ===== -->
         <section data-id="259" id="signup" class="py-20 md:py-28 fade-section">
-            <div data-id="260" class="max-w-xl mx-auto px-5 md:px-8">
+            <div data-id="260" class="max-w-xl mx-auto px-5 md:px-8 text-center">
                 <div data-id="261" class="text-center mb-12">
                     <span data-id="262" class="inline-block text-sm font-semibold text-gold uppercase tracking-widest mb-4">Reserve Your Spot</span>
                     <h2 data-id="263" class="text-3xl md:text-4xl font-extrabold text-white mb-4">
                         Secure Your Spot in <span data-id="264" class="gradient-text">30 Seconds</span>
                     </h2>
-                    <p data-id="265" class="text-muted text-base">Fill out the form below. We'll send you checkout details.</p>
+                    <p data-id="265" class="text-muted text-base">Click below to go directly to checkout and lock in your founding rate.</p>
                 </div>
 
-                <!-- Form card -->
-                <div data-id="266" id="form-card-q8r9" class="bg-card rounded-2xl p-6 md:p-10" style="border: 1px solid rgba(255,255,255,0.06);">
-                    <!-- Form -->
-                    <form data-id="267" id="signup-form-s0t1" class="space-y-5" novalidate>
-                        <!-- Name field -->
-                        <div data-id="268">
-                            <label data-id="269" for="name-input-u2v3" class="block text-sm font-medium text-muted-light mb-2">Full Name</label>
-                            <input data-id="270" id="name-input-u2v3" type="text" placeholder="e.g. Jordan Rivera" required
-                                class="w-full px-4 py-3.5 rounded-xl bg-surface text-white placeholder-muted text-base outline-none focus:ring-2 focus:ring-gold/50 transition-all" style="border: 1px solid rgba(255,255,255,0.08);" />
-                            <p data-id="271" id="name-error-w4x5" class="hidden text-xs text-red-400 mt-1.5 ml-1">Please enter your name</p>
-                        </div>
-                        <!-- Email field -->
-                        <div data-id="272">
-                            <label data-id="273" for="email-input-y6z7" class="block text-sm font-medium text-muted-light mb-2">Email Address</label>
-                            <input data-id="274" id="email-input-y6z7" type="email" placeholder="you@example.com" required
-                                class="w-full px-4 py-3.5 rounded-xl bg-surface text-white placeholder-muted text-base outline-none focus:ring-2 focus:ring-gold/50 transition-all" style="border: 1px solid rgba(255,255,255,0.08);" />
-                            <p data-id="275" id="email-error-a8b9" class="hidden text-xs text-red-400 mt-1.5 ml-1">Please enter a valid email</p>
-                        </div>
-                        <!-- Plan display -->
-                        <div data-id="276">
-                            <label data-id="277" class="block text-sm font-medium text-muted-light mb-3">Your Plan</label>
-                            <div data-id="278" class="rounded-xl p-4 text-center" style="border: 1.5px solid var(--gold); background: rgba(245,200,66,0.08);">
-                                <div data-id="279" class="absolute -top-2.5 right-3 relative inline-block mb-1">
-                                    <span data-id="280" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gold text-base uppercase tracking-wider">Founding Rate</span>
-                                </div>
-                                <p data-id="281" class="text-sm font-semibold text-white mb-0.5">Founding Member — Monthly</p>
-                                <p data-id="282" class="text-lg font-bold text-white">$25<span data-id="283" class="text-sm text-muted font-normal">/mo</span> <span data-id="284" class="text-xs text-muted font-normal">+ tax</span></p>
-                            </div>
-                        </div>
-                        <!-- Submit -->
-                        <button data-id="285" id="submit-btn-g4h5" type="submit" class="w-full py-4 rounded-xl text-base font-bold inline-flex items-center justify-center gap-2 transition-all min-h-[52px]" style="background: linear-gradient(135deg, var(--gold), #D4A830); color: #0A0A0F; box-shadow: 0 4px 24px rgba(245,200,66,0.25);">
-                            <span data-id="286" class="btn-text inline-flex items-center gap-2">Claim My Founding Spot <i data-id="287" data-lucide="arrow-right" class="w-5 h-5"></i></span>
-                        </button>
-                        <!-- Submit error message -->
-                        <p data-id="288" id="submit-error-msg" class="hidden text-sm text-red-400 text-center mt-2"></p>
-                    </form>
+                <a href="https://buy.stripe.com/cNi4gB8WV3JS4II3OBb7y0v" target="_blank" class="btn-gold px-10 py-4 rounded-full text-lg inline-flex items-center justify-center gap-2 min-h-[56px]">
+                    Claim My Founding Seat <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
 
-                    <!-- Trust signals -->
-                    <div data-id="289" class="mt-5 space-y-2 text-center">
-                        <p data-id="290" class="text-xs text-muted inline-flex items-center justify-center gap-1.5">
-                            <i data-id="291" data-lucide="lock" class="w-3.5 h-3.5"></i>
-                            No credit card required to reserve. We'll send checkout details.
-                        </p>
-                        <p data-id="292" class="text-xs text-muted">Your info is safe. We never share your data.</p>
-                    </div>
-
-                    <!-- Success state (hidden initially) -->
-                    <div data-id="293" id="success-state-i6j7" class="hidden text-center py-8">
-                        <div data-id="294" class="text-5xl mb-4">🎉</div>
-                        <h3 data-id="295" class="text-2xl font-bold text-white mb-2">You're on the list!</h3>
-                        <p data-id="296" class="text-muted text-base mb-1">Check your inbox for next steps.</p>
-                        <p data-id="297" id="success-name-k8l9" class="text-sm text-gold font-medium"></p>
-                    </div>
-                </div>
+                <p class="text-xs text-muted mt-5">By joining, you agree to the <a href="#" class="underline hover:text-white transition-colors">Terms</a> and <a href="#" class="underline hover:text-white transition-colors">Privacy Policy</a>.</p>
             </div>
         </section>
     </main>
