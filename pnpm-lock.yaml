@@ -142,6 +142,9 @@ importers:
       resend:
         specifier: ^6.12.4
         version: 6.12.4
+      stripe:
+        specifier: ^14.25.0
+        version: 14.25.0
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(immer@11.1.8)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
@@ -247,6 +250,9 @@ importers:
       replicate:
         specifier: ^1.4.0
         version: 1.4.0
+      stripe:
+        specifier: ^14.25.0
+        version: 14.25.0
       uuid:
         specifier: ^10.0.0
         version: 10.0.0
@@ -1425,7 +1431,7 @@ packages:
     engines: {node: '>=6.0.0'}
 
   npm-run-path@6.0.0:
-    resolution: {integrity: sha512-9qny7Z9DsQU8Ou39ERsPU4OZQlSTP47ShQzuKZ6PRXpYLtIFgl/DEBYEXKlvcEa+9tHVcK8CF81Y2V72qaZhWA==}
+    resolution: {integrity: sha512-9qny7Z9DsQU8Ou39ERsPU4OZQlSTP47ShQzuKZ6PRXpYLtIFgl/DEBYEXKlvcEa+9tHVcK8CF81Y2V72qaZhWA==, tarball: https://registry.npmjs.org/npm-run-path/-/npm-run-path-6.0.0.tgz}
     engines: {node: '>=18'}
 
   object-assign@4.1.1:
@@ -1798,6 +1804,10 @@ packages:
   strip-final-newline@4.0.0:
     resolution: {integrity: sha512-aulFJcD6YK8V1G7iRB5tigAP4TsHBZZrOV8pjV++zdUwmeV8uzbY7yn6h9MswN62adStNZFuCIx4haBnRuMDaw==}
     engines: {node: '>=18'}
+
+  stripe@14.25.0:
+    resolution: {integrity: sha512-wQS3GNMofCXwH8TSje8E1SE8zr6ODiGtHQgPtO95p9Mb4FhKC9jvXR2NUTpZ9ZINlckJcFidCmaTFV4P6vsb9g==}
+    engines: {node: '>=12.*'}
 
   tailwindcss@4.2.4:
     resolution: {integrity: sha512-HhKppgO81FQof5m6TEnuBWCZGgfRAWbaeOaGT00KOy/Pf/j6oUihdvBpA7ltCeAvZpFhW3j0PTclkxsd4IXYDA==}
@@ -3606,6 +3616,11 @@ snapshots:
       ansi-regex: 5.0.1
 
   strip-final-newline@4.0.0: {}
+
+  stripe@14.25.0:
+    dependencies:
+      '@types/node': 25.6.0
+      qs: 6.15.1
 
   tailwindcss@4.2.4: {}
 
