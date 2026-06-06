@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.4",
+    "stripe": "^14.25.0",
     "@tanstack/react-query": "catalog:",
     "date-fns": "^4.1.0",
     "hls.js": "^1.6.16",
