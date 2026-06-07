@@ -823,69 +823,11 @@
         nameInput.addEventListener('input', () => clearError(nameInput, nameError));
         emailInput.addEventListener('input', () => clearError(emailInput, emailError));
 
-        form.addEventListener('submit', async (e) => {
+        form && form.addEventListener('submit', (e) => {
             e.preventDefault();
-            let valid = true;
-
-            hideSubmitError();
-
-            if (!nameInput.value.trim()) {
-                showError(nameInput, nameError);
-                valid = false;
-            }
-            if (!validateEmail(emailInput.value.trim())) {
-                showError(emailInput, emailError);
-                valid = false;
-            }
-
-            if (valid) {
-                // Show loading state
-                setSubmitLoading(true);
-
-                try {
-                    const response = await fetch('https://studioflow.club/.netlify/functions/subscribe', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            name: nameInput.value.trim(),
-                            email: emailInput.value.trim(),
-                            plan: 'monthly',
-                        }),
-                    });
-
-                    if (!response.ok) {
-                        let errorMessage = 'Something went wrong. Please try again.';
-                        try {
-                            const errorData = await response.json();
-                            if (errorData && errorData.message) {
-                                errorMessage = errorData.message;
-                            }
-                        } catch (_) {
-                            // Use default error message
-                        }
-                        throw new Error(errorMessage);
-                    }
-
-                    // Success — hide form, show success state
-                    setSubmitLoading(false);
-                    form.classList.add('hidden');
-                    formCard.querySelector('.mt-5').classList.add('hidden');
-                    successName.textContent = 'Welcome aboard, ' + nameInput.value.trim().split(' ')[0] + '! 🚀';
-                    successState.classList.remove('hidden');
-
-                    // Trigger confetti
-                    launchConfetti();
-
-                    // Decrease spot count
-                    decrementSpot();
-                } catch (err) {
-                    // Error — re-enable button and show error message
-                    setSubmitLoading(false);
-                    showSubmitError(err.message || 'Something went wrong. Please try again.');
-                }
-            }
+            const email = emailInput ? emailInput.value.trim() : '';
+            const stripeUrl = 'https://buy.stripe.com/cNi4gB8WV3JS4II3OBb7y0v';
+            window.location.href = stripeUrl + (email ? '?prefilled_email=' + encodeURIComponent(email) : '');
         });
 
         // =============================================
