@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { categories } from '../../../data/categories.js';
 import DonationButton from '../../../components/DonationButton.jsx';
+import FoundingMembersSection from '../../../components/home/FoundingMembersSection.jsx';
 
 export default function HomeTab({ stats }) {
   const navigate = useNavigate();
@@ -71,6 +72,8 @@ export default function HomeTab({ stats }) {
           </button>
         ))}
       </div>
+
+      <FoundingMembersSection />
     </div>
   );
 }
