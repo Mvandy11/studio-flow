@@ -12,6 +12,7 @@
     "typecheck:libs": "tsc --build"
   },
   "dependencies": {
+    "@supabase/functions-js": "^2.107.0",
     "@supabase/supabase-js": "^2.43.4",
     "@tanstack/react-query": "catalog:",
     "date-fns": "^4.1.0",

@@ -1,0 +1,35 @@
+Diagnosis
+
+The Functions bundling step fails because the Netlify Function netlify/functions/stripe-webhook.js requires a module that isn't available to the functions bundler. See the packaging step at lines 88–90 and the dependencies error at line 92.
+The error message shows the missing module: "@supabase/functions-js" required by netlify/functions/stripe-webhook.js — see lines 95–101 (the function file is netlify/functions/stripe-webhook.js). The bundler reports: "Cannot find module '@supabase/functions-js'". This indicates the dependency is not declared where Netlify expects it (the site top-level package.json or the functions package.json).
+Solution
+
+Verify whether the dependency is declared in the repo root package.json
+
+Open the repo root package.json: https://github.com/Mvandy11/studio-flow/blob/main/package.json
+If "@supabase/functions-js" is not listed under dependencies in that file, Netlify's functions bundler will not install it and bundling will fail.
+Add the dependency to the top-level package.json (recommended)
+
+From your project root, run (adds to the workspace root so functions bundler can see it):
+pnpm add -w @supabase/functions-js
+pnpm install --no-frozen-lockfile
+Commit the updated package.json and pnpm-lock.yaml and push to the repo. Netlify will re-run the build and the function bundling should find the dependency.
+Alternative: add a package.json inside the functions folder
+If you prefer to keep function-only dependencies isolated, create netlify/functions/package.json and declare the dependency there. Example netlify/functions/package.json:
+{
+  "name": "netlify-functions",
+  "private": true,
+  "dependencies": {
+    "@supabase/functions-js": "^<version>"
+  }
+}
+Run pnpm install (or let Netlify install during build), commit, and push. Netlify will install dependencies declared in that functions/package.json when bundling.
+Notes
+
+The logs explicitly recommend the dependency be present in the site's top-level package.json (see lines 95–97), so the root-package.json approach is the simplest fix.
+After making the change, trigger a rebuild on Netlify. The functions bundling should succeed and the "Cannot find module '@supabase/functions-js'" error will be resolved.
+Relevant log excerpts:
+
+Functions being packaged: lines 88–90
+Dependencies installation error: line 92
+Missing module and require stack: lines 95–101
