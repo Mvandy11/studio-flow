@@ -124,6 +124,9 @@ importers:
       hls.js:
         specifier: ^1.6.16
         version: 1.6.16
+      qs:
+        specifier: ^6.15.2
+        version: 6.15.2
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -1590,6 +1593,10 @@ packages:
 
   qs@6.15.1:
     resolution: {integrity: sha512-6YHEFRL9mfgcAvql/XhwTvf5jKcOiiupt2FiJxHkiX1z4j7WL8J/jRHYLluORvc1XxB5rV20KoeK00gVJamspg==}
+    engines: {node: '>=0.6'}
+
+  qs@6.15.2:
+    resolution: {integrity: sha512-Rzq0KEyX/w/tEybncDgdkZrJgVUsUMk3xjh3t5bv3S1HTAtg+uOYt72+ZfwiQwKdysThkTBdL/rTi6HDmX9Ddw==}
     engines: {node: '>=0.6'}
 
   queue-microtask@1.2.3:
@@ -3386,6 +3393,10 @@ snapshots:
     dependencies:
       side-channel: 1.1.0
 
+  qs@6.15.2:
+    dependencies:
+      side-channel: 1.1.0
+
   queue-microtask@1.2.3: {}
 
   range-parser@1.2.1: {}
@@ -3620,7 +3631,7 @@ snapshots:
   stripe@14.25.0:
     dependencies:
       '@types/node': 25.6.0
-      qs: 6.15.1
+      qs: 6.15.2
 
   tailwindcss@4.2.4: {}
 

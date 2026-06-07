@@ -1,0 +1,107 @@
+The Netlify deploy errored, with the following guidance provided:
+
+Diagnosis
+
+- Relevant log lines show Netlify packaging functions then failing to install a dependency required by the function:
+  - Packaging functions: [line 84](#L84) and the function name at [line 85](#L85).
+  - The dependency error: [lines 91–96](#L91-L96) indicate "Cannot find module 'qs'" required by netlify/functions/stripe-webhook.js.
+- Error type: Missing runtime dependency for a Netlify Function. The bundler cannot find the npm package "qs" because it is not listed in the site's top-level package.json (or was not committed).
+- Cause: stripe-webhook.js requires 'qs' but that package is not declared in the repository's top-level dependencies, so Netlify's function bundling fails.
+
+Solution
+
+1. Verify the function file was committed
+   - Confirm netlify/functions/stripe-webhook.js exists in the repo (example: https://github.com/Mvandy11/studio-flow/blob/main/netlify/functions/stripe-webhook.js). If it is missing, commit it.
+
+2. Verify and add the missing package to top-level package.json
+   - Check that "qs" is present in the repository root package.json. If it is not, add it as a production dependency. From the project root run (pnpm is used in your build):
+```bash
+pnpm add qs --save-prod
+```
+   - If you use npm:
+```bash
+npm install qs --save
+```
+
+3. Commit and push the changes
+   - Commit package.json and the lockfile (pnpm-lock.yaml or package-lock.json):
+```bash
+git add package.json pnpm-lock.yaml
+git commit -m "chore: add qs dependency required by stripe webhook function"
+git push
+```
+
+4. Re-deploy on Netlify
+   - Trigger a new build on Netlify. The function bundler should now find "qs" in the top-level dependencies and proceed.
+
+Notes and troubleshooting
+- If other "Cannot find module" errors appear for other packages required by functions, repeat the same steps (verify the function file is committed, then add the missing package to the top-level package.json and push).
+- If you need to change Node versions on Netlify for any Node-related errors, see Netlify docs: https://docs.netlify.com/configure-builds/manage-dependencies/#node-js-and-javascript
+
+Why this fixes it
+- Netlify requires function dependencies to be declared in the site's top-level package.json so the bundler can install and include them when packaging functions. Adding "qs" ensures the bundler can install and bundle it for stripe-webhook.js.
+
+The relevant error logs are:
+
+Line 58: Lockfile is up to date, resolution step is skipped
+Line 59: Already up to date
+Line 60: Done in 1.3s using pnpm v10.30.3
+Line 61: > workspace@0.0.0 build /opt/build/repo
+Line 62: > vite build
+Line 63: vite v5.4.21 building for production...
+Line 64: transforming...
+Line 65: ✓ 1306 modules transformed.
+Line 66: rendering chunks...
+Line 67: computing gzip size...
+Line 68: Failed during stage 'building site': Build script returned non-zero exit code: 2
+Line 69: dist/public/index.html                     0.40 kB │ gzip:   0.27 kB
+Line 70: dist/public/assets/index-c4qvvvtn.css    115.45 kB │ gzip:  20.40 kB
+Line 71: dist/public/assets/index-BKyXlFvg.js   1,883.33 kB │ gzip: 527.55 kB
+Line 72: 
+Line 73: (!) Some chunks are larger than 500 kB after minification. Consider:
+Line 74: - Using dynamic import() to code-split the application
+Line 75: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchun
+Line 76: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+Line 77: ✓ built in 7.20s
+Line 78: ​
+Line 79: (build.command completed in 9.4s)
+Line 80: ​
+Line 81: Functions bundling                                            
+Line 82: ────────────────────────────────────────────────────────────────
+Line 83: ​
+Line 84: Packaging Functions from netlify/functions directory:
+Line 85:  - stripe-webhook.js
+Line 86: ​
+Line 87: ​
+Line 88: Dependencies installation error                               
+Line 89: ────────────────────────────────────────────────────────────────
+Line 90: ​
+Line 91:   Error message
+Line 92:   A Netlify Function failed to require one of its dependencies.
+Line 93:   Please make sure it is present in the site's top-level "package.json".
+​
+Line 94:   In file "/opt/build/repo/netlify/functions/stripe-webhook.js"
+Line 95:   Cannot find module 'qs'
+Line 96:   Require stack:
+Line 97:   - /opt/buildhome/node-deps/node_modules/@netlify/build/node_modules/@netlify/zip-it-and-ship-it/dist/runtimes/node/bundlers/zi
+Line 98: ​
+Line 99:   Resolved config
+Line 100:   build:
+Line 101:     command: pnpm install --no-frozen-lockfile && pnpm run build
+Line 102:     commandOrigin: config
+Line 113:       - NETLIFY_USE_PNPM
+Line 114:       - NODE_OPTIONS
+Line 115:     publish: /opt/build/repo/dist/public
+Line 116:     publishOrigin: config
+Line 117:   functionsDirectory: /opt/build/repo/netlify/functions
+Line 118:   redirects:
+Line 119:     - from: /founding.html
+Line 120:       status: 200
+Line 121:       to: /founding.html
+Line 122:     - from: /*
+      status: 200
+      to: /index.html
+  redirectsOrigin: config
+Line 123: Build failed due to a user error: Build script returned non-zero exit code: 2
+Line 124: Failing build: Failed to build site
+Line 125: Finished processing build request in 21.099s
