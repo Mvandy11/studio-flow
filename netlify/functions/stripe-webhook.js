@@ -52,19 +52,26 @@ exports.handler = async (event) => {
   const { error: memberError } = await supabase
     .from('members')
     .upsert(
-      {
-        email,
-        role: 'founding',
-        badge: 'founding_member',
-        stripe_customer_id: stripeCustomerId,
-        joined_at: new Date().toISOString(),
-      },
+      { email, role: 'founding', badge: 'founding_member', stripe_customer_id: stripeCustomerId, joined_at: new Date().toISOString() },
       { onConflict: 'email' }
     );
 
   if (memberError) {
     console.error('Error inserting member row:', memberError.message);
     return { statusCode: 500, body: JSON.stringify({ error: memberError.message }) };
+  }
+
+  const { data: userList } = await supabase.auth.admin.listUsers();
+  const authUser = userList?.users?.find((u) => u.email === email);
+
+  if (authUser) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        { id: authUser.id, email, stripe_customer_id: stripeCustomerId, is_founding_member: true, membership_tier: 'founding', membership_active: true, membership_started_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { onConflict: 'id' }
+      );
+    if (profileError) console.error('Profile update error:', profileError.message);
   }
 
   console.log('Founding member created:', email);
