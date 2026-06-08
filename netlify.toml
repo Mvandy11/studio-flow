@@ -6,11 +6,11 @@
   NETLIFY_USE_PNPM    = "true"
   NODE_OPTIONS        = "--max-old-space-size=4096"
 
+[functions]
+  node_bundler = "esbuild"
+
 # ── SPA catch-all (must be last) ───────────────────────────────
 [[redirects]]
   from   = "/*"
   to     = "/index.html"
   status = 200
-
-[[plugins]]
-package = "@netlify/plugin-functions-install-core"
