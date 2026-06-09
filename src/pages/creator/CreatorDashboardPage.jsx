@@ -6,7 +6,7 @@ import { useProfile } from '../../hooks/useProfile';   // ⭐ NEW
 import { isCreatorAdmin } from '../../lib/roles';
 
 export default function CreatorDashboardPage() {
-  const { role } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();   // ⭐ NEW
 
   const isAdmin = isCreatorAdmin(role);
@@ -66,8 +66,21 @@ export default function CreatorDashboardPage() {
     }
   }
 
-  if (memberLoading) {
+  if (authLoading) {
     return <div style={S.page}><div className="cinematic-spinner" style={{ width: '2rem', height: '2rem', margin: '4rem auto', display: 'block' }} /></div>;
+  }
+
+  if (!user) {
+    return (
+      <div style={S.page}>
+        <div style={S.gateCard}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔒</div>
+          <h2 style={S.gateTitle}>Creator Dashboard</h2>
+          <p style={S.gateSub}>Log in to access your Creator Dashboard.</p>
+          <Link to="/login" style={S.primaryBtn}>Log In</Link>
+        </div>
+      </div>
+    );
   }
 
   if (!isCreator) {
