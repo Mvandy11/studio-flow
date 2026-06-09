@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Trophy } from 'lucide-react';
 
 const CATEGORY_LABELS = {
   general:   'General',
@@ -10,16 +11,28 @@ const CATEGORY_LABELS = {
   design:    'Design',
 };
 
+function getCategoryGradient(category) {
+  const c = (category || '').toLowerCase();
+  if (c === 'music')                          return 'linear-gradient(135deg, #6d28d9, #db2777)';
+  if (c === 'art' || c === 'design' || c === 'creative') return 'linear-gradient(135deg, #0ea5e9, #6d28d9)';
+  if (c === 'comedy' || c === 'entertainment') return 'linear-gradient(135deg, #f59e0b, #ef4444)';
+  if (c === 'photo' || c === 'film')          return 'linear-gradient(135deg, #1e3a5f, #0ea5e9)';
+  if (c === 'gaming')                         return 'linear-gradient(135deg, #10b981, #6d28d9)';
+  return 'linear-gradient(135deg, #7C3AED, #F5C842)';
+}
+
 export default function ContestCard({ contest }) {
   const categoryLabel = contest.category
     ? (CATEGORY_LABELS[contest.category] ?? contest.category)
     : null;
 
+  const coverUrl = contest.cover_image || contest.image_url || contest.thumbnail_url;
+
   return (
     <Link to={`/contests/${contest.id}`} className="contest-card">
-      {contest.thumbnail_url ? (
+      {coverUrl ? (
         <img
-          src={contest.thumbnail_url}
+          src={coverUrl}
           alt={contest.title}
           className="contest-card__thumb"
           loading="lazy"
@@ -27,9 +40,27 @@ export default function ContestCard({ contest }) {
       ) : (
         <div
           className="contest-card__thumb"
-          style={{ display:'flex', alignItems:'center', justifyContent:'center', fontSize:'3rem' }}
+          style={{
+            background: getCategoryGradient(contest.category),
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '8px 8px 0 0',
+          }}
         >
-          🏆
+          <Trophy size={36} color="#F5C842" strokeWidth={1.5} />
+          <p style={{
+            color: '#fff',
+            fontWeight: 700,
+            marginTop: 8,
+            fontSize: 14,
+            textAlign: 'center',
+            padding: '0 12px',
+            lineHeight: 1.3,
+          }}>
+            {contest.title}
+          </p>
         </div>
       )}
 
