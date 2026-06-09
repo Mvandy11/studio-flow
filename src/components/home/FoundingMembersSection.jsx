@@ -48,7 +48,7 @@ export default function FoundingMembersSection() {
   return (
     <section style={{ marginTop: '2.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.1rem' }}>
-        <h2 className="hub-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Crown size={18} /> Founding Members</h2>
+        <h2 className="hub-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Crown size={20} color="#F5C842" /> Founding Members</h2>
         {!loading && (
           <span style={{
             fontSize: '0.72rem',
