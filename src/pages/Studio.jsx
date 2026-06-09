@@ -9,7 +9,7 @@ import StudioSessions from './StudioSessions';
 const fmt = n => `$${Number(n ?? 0).toFixed(2)}`;
 
 export default function Studio() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [section, setSection] = useState('overview');
 
   // ── Overview data ─────────────────────────────────────────
@@ -63,6 +63,19 @@ export default function Studio() {
     loadOverview();
     return () => { cancelled = true; };
   }, [user, section]);
+
+  if (authLoading) {
+    return null;
+  }
+
+  if (!user) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 16 }}>
+        <p style={{ color: '#9CA3AF', fontSize: 18, fontWeight: 600 }}>Log in to access your Creator Dashboard</p>
+        <a href="/login" style={{ background: 'linear-gradient(135deg, #F5C842, #D4A830)', color: '#0A0A0F', fontWeight: 700, padding: '10px 24px', borderRadius: 8, textDecoration: 'none' }}>Log In</a>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex' }}>
