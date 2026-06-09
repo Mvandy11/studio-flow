@@ -3,7 +3,7 @@ import { Link }               from 'react-router-dom';
 import { useAuth }            from '../../hooks/useAuth';
 import { useMembership }      from '../../modules/memberships';
 import { isCreatorAdmin }     from '../../lib/roles';
-import { Music, Music2, Dumbbell, UtensilsCrossed, Flame, Baby, Palette } from 'lucide-react';
+import { Music, Music2, Dumbbell, UtensilsCrossed, Flame, Baby, Palette, Heart } from 'lucide-react';
 
 const CATEGORIES = [
   { name: 'Comedy',     icon: '😂' },
@@ -67,8 +67,8 @@ export default function EventsPage() {
                 + Post Event
               </Link>
             )}
-            <a href={DONATION_URL} target="_blank" rel="noopener noreferrer" className="btn" style={{ textDecoration: 'none' }}>
-              💝 Support a Creator
+            <a href={DONATION_URL} target="_blank" rel="noopener noreferrer" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Heart size={14} color="#F5C842" fill="#F5C842" /> Support a Creator
             </a>
           </div>
         </div>
