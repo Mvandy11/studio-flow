@@ -574,6 +574,24 @@ function ProfileView({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
             <h1 className="portfolio-name" style={{ margin: 0 }}>{displayName}</h1>
             <MembershipBadge active={profile.subscription_active} />
+            {profile.is_founding_member && (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'rgba(245,200,66,0.1)',
+                border: '1px solid #F5C842',
+                color: '#F5C842',
+                borderRadius: '9999px',
+                padding: '2px 10px',
+                fontSize: '11px',
+                fontWeight: '700',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+              }}>
+                ⭐ Founding Member
+              </span>
+            )}
             {profile.is_live && (
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
