@@ -3,20 +3,21 @@ import { Link }               from 'react-router-dom';
 import { useAuth }            from '../../hooks/useAuth';
 import { useMembership }      from '../../modules/memberships';
 import { isCreatorAdmin }     from '../../lib/roles';
+import { Music, Music2, Dumbbell, UtensilsCrossed, Flame, Baby, Palette } from 'lucide-react';
 
 const CATEGORIES = [
   { name: 'Comedy',     icon: '😂' },
-  { name: 'Music',      icon: '🎵' },
-  { name: 'Dance',      icon: '💃' },
-  { name: 'Fitness',    icon: '💪' },
+  { name: 'Music',      icon: Music },
+  { name: 'Dance',      icon: Music2 },
+  { name: 'Fitness',    icon: Dumbbell },
   { name: 'Gaming',     icon: '🎮' },
   { name: 'Education',  icon: '📚' },
-  { name: 'Cooking',    icon: '🍳' },
-  { name: 'Motivation', icon: '🔥' },
-  { name: 'Kids',       icon: '🧸' },
+  { name: 'Cooking',    icon: UtensilsCrossed },
+  { name: 'Motivation', icon: Flame },
+  { name: 'Kids',       icon: Baby },
   { name: 'Talk Show',  icon: '🎙' },
   { name: 'Tutorials',  icon: '🛠' },
-  { name: 'Art',        icon: '🎨' },
+  { name: 'Art',        icon: Palette },
 ];
 
 const DONATION_URL = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
@@ -95,7 +96,10 @@ export default function EventsPage() {
                   e.currentTarget.style.transform   = 'none';
                 }}
               >
-                <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>{icon}</span>
+                {typeof icon === 'string'
+                  ? <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>{icon}</span>
+                  : (() => { const Icon = icon; return <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', color: 'rgba(200,200,215,0.85)' }}><Icon size={32} strokeWidth={1.5} /></span>; })()
+                }
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'rgba(200,200,215,0.85)' }}>{name}</span>
               </div>
             </Link>
