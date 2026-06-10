@@ -2,65 +2,76 @@ const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+  console.log('ENV CHECK:', {
+    SUPABASE_URL: !!process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    STRIPE_WEBHOOK_SECRET: !!process.env.STRIPE_WEBHOOK_SECRET,
+  });
 
-  const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  let stripeEvent;
   try {
-    stripeEvent = stripe.webhooks.constructEvent(
-      event.body,
-      event.headers['stripe-signature'],
-      webhookSecret
-    );
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    return { statusCode: 400, body: `Webhook Error: ${err.message}` };
-  }
-
-  if (stripeEvent.type === 'checkout.session.completed') {
-    const session = stripeEvent.data.object;
-    const email = session.customer_details?.email || session.customer_email;
-    const stripeCustomerId = session.customer;
-
-    if (!email) {
-      console.error('No email found in session:', session.id);
-      return { statusCode: 400, body: 'No email in session' };
+    if (event.httpMethod !== 'POST') {
+      return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    return await provisionFoundingMember({ email, stripeCustomerId });
-  }
+    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (stripeEvent.type === 'customer.subscription.created') {
-    const subscription = stripeEvent.data.object;
-
-    if (subscription.status !== 'trialing') {
-      return { statusCode: 200, body: JSON.stringify({ received: true }) };
-    }
-
-    let email;
-    let stripeCustomerId;
+    let stripeEvent;
     try {
-      const customer = await stripe.customers.retrieve(subscription.customer);
-      email = customer.email;
-      stripeCustomerId = customer.id;
+      stripeEvent = stripe.webhooks.constructEvent(
+        event.body,
+        event.headers['stripe-signature'],
+        webhookSecret
+      );
     } catch (err) {
-      console.error('Error retrieving Stripe customer:', err.message);
-      return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+      console.error('Webhook signature verification failed:', err.message);
+      return { statusCode: 400, body: `Webhook Error: ${err.message}` };
     }
 
-    if (!email) {
-      console.error('No email on Stripe customer:', subscription.customer);
-      return { statusCode: 400, body: 'No email on customer' };
+    if (stripeEvent.type === 'checkout.session.completed') {
+      const session = stripeEvent.data.object;
+      const email = session.customer_details?.email || session.customer_email;
+      const stripeCustomerId = session.customer;
+
+      if (!email) {
+        console.error('No email found in session:', session.id);
+        return { statusCode: 400, body: 'No email in session' };
+      }
+
+      return await provisionFoundingMember({ email, stripeCustomerId });
     }
 
-    return await provisionFoundingMember({ email, stripeCustomerId });
+    if (stripeEvent.type === 'customer.subscription.created') {
+      const subscription = stripeEvent.data.object;
+
+      if (subscription.status !== 'trialing') {
+        return { statusCode: 200, body: JSON.stringify({ received: true }) };
+      }
+
+      let email;
+      let stripeCustomerId;
+      try {
+        const customer = await stripe.customers.retrieve(subscription.customer);
+        email = customer.email;
+        stripeCustomerId = customer.id;
+      } catch (err) {
+        console.error('Error retrieving Stripe customer:', err.message);
+        return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+      }
+
+      if (!email) {
+        console.error('No email on Stripe customer:', subscription.customer);
+        return { statusCode: 400, body: 'No email on customer' };
+      }
+
+      return await provisionFoundingMember({ email, stripeCustomerId });
+    }
+
+    return { statusCode: 200, body: JSON.stringify({ received: true }) };
+  } catch (err) {
+    console.error('UNHANDLED ERROR:', err.message, err.stack);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
-
-  return { statusCode: 200, body: JSON.stringify({ received: true }) };
 };
 
 async function provisionFoundingMember({ email, stripeCustomerId }) {
