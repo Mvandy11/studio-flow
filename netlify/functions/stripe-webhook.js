@@ -21,25 +21,55 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: `Webhook Error: ${err.message}` };
   }
 
-  if (stripeEvent.type !== 'checkout.session.completed') {
-    return { statusCode: 200, body: JSON.stringify({ received: true }) };
+  if (stripeEvent.type === 'checkout.session.completed') {
+    const session = stripeEvent.data.object;
+    const email = session.customer_details?.email || session.customer_email;
+    const stripeCustomerId = session.customer;
+
+    if (!email) {
+      console.error('No email found in session:', session.id);
+      return { statusCode: 400, body: 'No email in session' };
+    }
+
+    return await provisionFoundingMember({ email, stripeCustomerId });
   }
 
-  const session = stripeEvent.data.object;
-  const email = session.customer_details?.email || session.customer_email;
-  const stripeCustomerId = session.customer;
+  if (stripeEvent.type === 'customer.subscription.created') {
+    const subscription = stripeEvent.data.object;
 
-  if (!email) {
-    console.error('No email found in session:', session.id);
-    return { statusCode: 400, body: 'No email in session' };
+    if (subscription.status !== 'trialing') {
+      return { statusCode: 200, body: JSON.stringify({ received: true }) };
+    }
+
+    let email;
+    let stripeCustomerId;
+    try {
+      const customer = await stripe.customers.retrieve(subscription.customer);
+      email = customer.email;
+      stripeCustomerId = customer.id;
+    } catch (err) {
+      console.error('Error retrieving Stripe customer:', err.message);
+      return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    }
+
+    if (!email) {
+      console.error('No email on Stripe customer:', subscription.customer);
+      return { statusCode: 400, body: 'No email on customer' };
+    }
+
+    return await provisionFoundingMember({ email, stripeCustomerId });
   }
 
+  return { statusCode: 200, body: JSON.stringify({ received: true }) };
+};
+
+async function provisionFoundingMember({ email, stripeCustomerId }) {
   const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+  const { error: authError } = await supabase.auth.admin.createUser({
     email,
     email_confirm: true,
   });
@@ -68,12 +98,21 @@ exports.handler = async (event) => {
     const { error: profileError } = await supabase
       .from('profiles')
       .upsert(
-        { id: authUser.id, email, stripe_customer_id: stripeCustomerId, is_founding_member: true, membership_tier: 'founding', membership_active: true, membership_started_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        {
+          id: authUser.id,
+          email,
+          stripe_customer_id: stripeCustomerId,
+          is_founding_member: true,
+          membership_tier: 'founding',
+          membership_active: true,
+          membership_started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: 'id' }
       );
     if (profileError) console.error('Profile update error:', profileError.message);
   }
 
-  console.log('Founding member created:', email);
+  console.log('Founding member provisioned:', email);
   return { statusCode: 200, body: JSON.stringify({ success: true, email }) };
-};
+}
