@@ -25,6 +25,8 @@ export const handler = async (event) => {
     const email = session.customer_details?.email;
     if (!email) return { statusCode: 400, body: JSON.stringify({ error: 'No email found' }) };
 
+    const displayName = session.customer_details?.name ?? email.split('@')[0];
+
     // Check if already claimed
     const { data: existing } = await supabase
       .from('members')
@@ -49,7 +51,9 @@ export const handler = async (event) => {
     // Write to members table
     const { error } = await supabase.from('members').insert({
       email,
+      display_name: displayName,
       is_founding: true,
+      badge: 'founding_member',
       stripe_customer_id: session.customer,
       joined_at: new Date().toISOString(),
     });
