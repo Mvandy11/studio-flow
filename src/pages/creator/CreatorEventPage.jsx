@@ -301,7 +301,7 @@ export default function CreatorEventPage() {
             </p>
           </div>
           <Link to="/membership" className="btn btn--primary" style={{ textDecoration: 'none', flexShrink: 0, fontSize: '0.875rem' }}>
-            Upgrade — $30/mo →
+            Upgrade — $40/mo →
           </Link>
         </div>
       )}

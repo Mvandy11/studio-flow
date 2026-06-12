@@ -76,77 +76,38 @@ export default function SubscriptionPage() {
           )}
         </div>
 
-        {/* Plan cards */}
-        <div style={plansRow}>
-
-          {/* ── $30 Member ── */}
-          <div style={{ ...planCard, ...(tier === 'member_30' && activePlanBorder) }}>
-            {tier === 'member_30' && (
-              <div style={activeBadge}>Your Plan</div>
-            )}
+        {/* ── Founding Member CTA (only for non-active users) ── */}
+        {!isActive && (
+          <div style={{ ...planCard, background: 'rgba(250,188,80,0.06)', border: '1px solid rgba(250,188,80,0.25)', marginBottom: '1.5rem' }}>
             <div style={planHeader}>
-              <span style={planName}>Member</span>
-              <span style={planPrice}>$30<span style={planPer}>/mo</span></span>
+              <span style={{ ...planName, color: '#fabc50' }}>🔥 Founding Member</span>
+              <span style={{ ...planPrice, color: '#fabc50' }}>$25<span style={planPer}>/mo</span></span>
             </div>
-            <p style={planTagline}>Support the community and unlock your place in Studio Flow.</p>
-
+            <p style={planTagline}>Lock in $25/mo forever — only 100 spots. After that, membership opens at $40/mo.</p>
             <ul style={featureList}>
-              {MEMBER_30_FEATURES.map((f, i) => (
+              {[
+                '🔒 $25/mo locked forever (reg. $40/mo)',
+                '🏅 Founding Member badge — permanent',
+                '🏆 $10/mo fuels contest prizes',
+                '🎬 $15/mo fuels event rewards',
+                '⚡ Early access to every new feature',
+                '💬 Priority support',
+              ].map((f, i) => (
                 <li key={i} style={featureItem}>{f}</li>
               ))}
             </ul>
-
             <div style={{ marginTop: 'auto', paddingTop: '1.5rem' }}>
-              {isActive ? (
-                <div style={alreadyActive}>✅ Active</div>
-              ) : (
-                <a
-                  href={MEMBER_30_LINK}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={btnPrimary}
-                >
-                  Join for $30/month
-                </a>
-              )}
+              <a href="/" style={btnPrimary}>Claim Your Founding Spot →</a>
             </div>
           </div>
+        )}
 
-          {/* ── $50 Creator Member ── */}
-          <div style={{ ...planCard, ...creatorCard, ...(tier === 'creator_50' && activePlanBorder) }}>
-            {tier === 'creator_50' && (
-              <div style={activeBadge}>Your Plan</div>
-            )}
-            <div style={{ position: 'absolute', top: '-1px', left: '50%', transform: 'translateX(-50%)' }}>
-              <span style={popularBadge}>Most Powerful</span>
-            </div>
-            <div style={planHeader}>
-              <span style={planName}>Creator Member</span>
-              <span style={planPrice}>$50<span style={planPer}>/mo</span></span>
-            </div>
-            <p style={planTagline}>Everything in Member — plus full creator tools and monetization.</p>
-
-            <ul style={featureList}>
-              {CREATOR_50_FEATURES.map((f, i) => (
-                <li key={i} style={featureItem}>{f}</li>
-              ))}
-            </ul>
-
-            <div style={{ marginTop: 'auto', paddingTop: '1.5rem' }}>
-              {isActive && tier === 'creator_50' ? (
-                <div style={alreadyActive}>✅ Active</div>
-              ) : (
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}?subject=Creator%20Member%20%2450%2Fmo%20Sign%20Up&body=Hi%2C%20I%27d%20like%20to%20join%20the%20%2450%20Creator%20Member%20plan.%20Please%20send%20my%20Stripe%20link.`}
-                  style={btnCreator}
-                >
-                  Get Creator Link
-                </a>
-              )}
-            </div>
+        {/* ── Active member status ── */}
+        {isActive && (
+          <div style={{ ...planCard, background: 'rgba(134,239,172,0.05)', border: '1px solid rgba(134,239,172,0.2)', marginBottom: '1.5rem' }}>
+            <div style={alreadyActive}>✅ Membership Active — {tierLabel}</div>
           </div>
-
-        </div>
+        )}
 
         {/* Reward pool note */}
         <div style={poolNote}>

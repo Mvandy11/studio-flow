@@ -5,20 +5,24 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabaseClient';
 import CancelMembershipButton from '../components/CancelMembershipButton';
 
-// ── Stripe Payment Links ───────────────────────────────────────────────────
-const STRIPE_MEMBER_30  = 'https://buy.stripe.com/7sYdRb2yx3JS1wwacZb7y0o';
-const STRIPE_CREATOR_50 = 'https://buy.stripe.com/cNi6oJ1utcgo3EE4SFb7y0u';
-const STRIPE_DONATION   = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
+const STRIPE_DONATION      = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
+const FOUNDING_CHECKOUT_URL = import.meta.env.VITE_FOUNDING_CHECKOUT_URL;
 
 const TIER_META: Record<string, { label: string; color: string; border: string; bg: string }> = {
+  founding: {
+    label: '🔥 Founding Member',
+    color: '#fabc50',
+    border: 'rgba(250,188,80,0.4)',
+    bg: 'rgba(250,188,80,0.08)',
+  },
   member_30: {
-    label: '$30 Member',
+    label: 'Member',
     color: '#60a5fa',
     border: 'rgba(96,165,250,0.4)',
     bg: 'rgba(96,165,250,0.1)',
   },
   creator_50: {
-    label: '$50 Creator',
+    label: 'Creator Member',
     color: '#a78bfa',
     border: 'rgba(167,139,250,0.4)',
     bg: 'rgba(167,139,250,0.1)',
@@ -45,7 +49,16 @@ function TierBadge({ tier }: { tier: string }) {
   );
 }
 
-const PERKS_30 = [
+const PERKS_FOUNDING = [
+  '🔒 $25/mo locked forever (reg. $40/mo)',
+  '🏅 Founding Member badge — permanent',
+  '🏆 $10/mo fuels contest prizes',
+  '🎬 $15/mo fuels event rewards',
+  '⚡ Early access to every new feature',
+  '💬 Priority support',
+];
+
+const PERKS_MEMBER = [
   '🏆 Enter monthly contests',
   '💬 Free Chat + community access',
   '📢 Early access to announcements',
@@ -54,19 +67,18 @@ const PERKS_30 = [
   '🎁 $10 of your membership funds the monthly Reward Pool',
 ];
 
-const PERKS_50 = [
-  ...PERKS_30,
+const PERKS_CREATOR = [
+  ...PERKS_MEMBER,
   '🎬 Create and publish live or recorded events',
   '📡 Stream key + RTMP/HLS broadcasting',
   '💰 Donation collection on events',
   '🖼 AI enhance, upscale & denoise tools',
   '⚡ Priority review for event requests',
+  '🎁 $15 funds the Event Creator Pool',
 ];
 
 export default function MembershipPage() {
   const { user, loading: authLoading } = useAuth();
-
-  // ── Pull refetch out of useMembership so we can pass it to CancelMembershipButton ──
   const { membership, loading, hasAccess, tier, refetch } = useMembership();
 
   const [portalLoading, setPortalLoading] = useState(false);
@@ -109,15 +121,19 @@ export default function MembershipPage() {
     );
   }
 
-  const periodEnd  = membership?.current_period_end
+  const periodEnd = membership?.current_period_end
     ? new Date(membership.current_period_end).toLocaleDateString()
     : null;
   const tierMeta = TIER_META[tier] ?? TIER_META.free;
 
+  const perks = tier === 'founding'   ? PERKS_FOUNDING
+    : tier === 'creator_50' ? PERKS_CREATOR
+    : PERKS_MEMBER;
+
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto', padding: '1.5rem 1rem' }}>
 
-      {/* ── Header ───────────────────────────────────────────────────── */}
+      {/* ── Header ── */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>🌟 Membership</h1>
         <p style={{ color: 'var(--text-muted, #888)', marginTop: '0.4rem', fontSize: '0.9rem' }}>
@@ -125,7 +141,7 @@ export default function MembershipPage() {
         </p>
       </div>
 
-      {/* ── Status card ──────────────────────────────────────────────── */}
+      {/* ── Status card ── */}
       <div style={{
         background: 'var(--surface, #1a1a2e)',
         border: '1px solid var(--border, #2a2a40)',
@@ -134,8 +150,9 @@ export default function MembershipPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: '0.25rem' }}>
-              {tier === 'creator_50' ? '🎬 Creator Member'
-                : tier === 'member_30' ? '🌟 Studio Member'
+              {tier === 'founding'   ? '🔥 Founding Member'
+                : tier === 'creator_50' ? '🎬 Creator Member'
+                : tier === 'member_30'  ? '🌟 Studio Member'
                 : 'Studio Flow Account'}
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #888)' }}>{user.email}</div>
@@ -155,11 +172,8 @@ export default function MembershipPage() {
           </div>
         )}
 
-        {/* ── Manage + Cancel — active members only ─────────────────── */}
         {hasAccess && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-            {/* Manage Subscription button */}
             <div>
               <button
                 onClick={handleManageSubscription}
@@ -179,10 +193,7 @@ export default function MembershipPage() {
                 Update payment method · View invoices
               </p>
             </div>
-
-            {/* Cancel Membership — passes refetch so UI updates instantly */}
             <CancelMembershipButton memberTier={tier} onCancelled={refetch} />
-
           </div>
         )}
 
@@ -191,7 +202,7 @@ export default function MembershipPage() {
         )}
       </div>
 
-      {/* ── Active member perks ───────────────────────────────────────── */}
+      {/* ── Active member perks ── */}
       {hasAccess && (
         <div style={{
           padding: '1.25rem', borderRadius: '12px',
@@ -199,86 +210,60 @@ export default function MembershipPage() {
           marginBottom: '1.5rem',
         }}>
           <p style={{ margin: '0 0 0.75rem', fontWeight: 700, color: tierMeta.color }}>
-            {tier === 'creator_50' ? '🎬 Creator Plan includes:' : '🌟 Member Plan includes:'}
+            {tier === 'founding'   ? '🔥 Founding Member includes:'
+              : tier === 'creator_50' ? '🎬 Creator Plan includes:'
+              : '🌟 Member Plan includes:'}
           </p>
           <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            {(tier === 'creator_50' ? PERKS_50 : PERKS_30).map((perk) => (
+            {perks.map((perk) => (
               <li key={perk} style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.8)' }}>{perk}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* ── Upgrade tiers (free users) ────────────────────────────────── */}
+      {/* ── No membership — Founding Member CTA ── */}
       {!hasAccess && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-
-          {/* $30 Member */}
-          <div style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: '14px', padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <div>
-                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#60a5fa' }}>🌟 Studio Member</span>
-                <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', color: 'rgba(200,200,215,0.4)' }}>Viewer + Community</span>
-              </div>
-              <span style={{ fontWeight: 800, fontSize: '1.25rem', color: '#60a5fa' }}>$30<span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/mo</span></span>
-            </div>
-            <ul style={{ margin: '0 0 1rem', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              {PERKS_30.map((p) => <li key={p} style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)' }}>{p}</li>)}
-            </ul>
-            <a
-              href={`${STRIPE_MEMBER_30}?client_reference_id=${user.id}`}
-              target="_blank" rel="noopener noreferrer"
-              style={{ display: 'block', textAlign: 'center', padding: '0.65rem', borderRadius: '10px', background: 'rgba(96,165,250,0.2)', border: '1px solid rgba(96,165,250,0.35)', color: '#60a5fa', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}
-            >
-              Join for $30/month
-            </a>
+        <div style={{
+          background: 'rgba(250,188,80,0.06)', border: '1px solid rgba(250,188,80,0.25)',
+          borderRadius: '14px', padding: '1.5rem', marginBottom: '1.5rem',
+        }}>
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fabc50', marginBottom: '0.5rem' }}>
+            🔥 Founding Member — $25/mo forever
           </div>
-
-          {/* $50 Creator */}
-          <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.25)', borderRadius: '14px', padding: '1.5rem', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '-10px', right: '1rem', background: '#a78bfa', color: '#000', fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '999px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Best Value
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <div>
-                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#a78bfa' }}>🎬 Creator Member</span>
-                <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', color: 'rgba(200,200,215,0.4)' }}>Full creator access</span>
-              </div>
-              <span style={{ fontWeight: 800, fontSize: '1.25rem', color: '#a78bfa' }}>$50<span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/mo</span></span>
-            </div>
-            <ul style={{ margin: '0 0 1rem', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              {PERKS_50.map((p) => <li key={p} style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)' }}>{p}</li>)}
-            </ul>
-            <a
-              href={`${STRIPE_CREATOR_50}?client_reference_id=${user.id}`}
-              target="_blank" rel="noopener noreferrer"
-              style={{ display: 'block', textAlign: 'center', padding: '0.65rem', borderRadius: '10px', background: 'rgba(167,139,250,0.2)', border: '1px solid rgba(167,139,250,0.4)', color: '#a78bfa', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}
-            >
-              Join for $50/month
-            </a>
-          </div>
-
-        </div>
-      )}
-
-      {/* ── Upgrade prompt for $30 members ───────────────────────────── */}
-      {hasAccess && tier === 'member_30' && (
-        <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem' }}>
-          <p style={{ margin: '0 0 0.5rem', fontWeight: 700, color: '#a78bfa' }}>🎬 Upgrade to Creator ($50/mo)</p>
-          <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
-            Unlock event creation, live streaming, donations, and AI tools.
+          <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', margin: '0 0 0.75rem', lineHeight: '1.5' }}>
+            Lock in $25/mo permanently before all 100 spots fill. After that, membership opens at $40/mo.
           </p>
-          <a
-            href={`${STRIPE_CREATOR_50}?client_reference_id=${user.id}`}
-            target="_blank" rel="noopener noreferrer"
-            style={{ color: '#a78bfa', fontSize: '0.85rem', fontWeight: 600 }}
-          >
-            Upgrade now →
-          </a>
+          <ul style={{ margin: '0 0 1rem', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            {PERKS_FOUNDING.map((p) => (
+              <li key={p} style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)' }}>{p}</li>
+            ))}
+          </ul>
+          {FOUNDING_CHECKOUT_URL ? (
+            <a
+              href={FOUNDING_CHECKOUT_URL}
+              style={{
+                display: 'block', textAlign: 'center', padding: '0.75rem',
+                borderRadius: '10px', background: '#fabc50',
+                color: '#000', fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none',
+              }}
+            >
+              Claim Your Founding Spot →
+            </a>
+          ) : (
+            <Link to="/" style={{
+              display: 'block', textAlign: 'center', padding: '0.75rem',
+              borderRadius: '10px', background: 'rgba(250,188,80,0.15)',
+              border: '1px solid rgba(250,188,80,0.35)',
+              color: '#fabc50', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none',
+            }}>
+              View Founding Member Offer →
+            </Link>
+          )}
         </div>
       )}
 
-      {/* ── Donation ──────────────────────────────────────────────────── */}
+      {/* ── Donation ── */}
       <div style={{
         background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)',
         borderRadius: '12px', padding: '1.1rem 1.25rem', marginBottom: '1.5rem',
@@ -296,7 +281,7 @@ export default function MembershipPage() {
         </a>
       </div>
 
-      {/* ── Footer links ──────────────────────────────────────────────── */}
+      {/* ── Footer links ── */}
       <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-muted, #888)', flexWrap: 'wrap' }}>
         <Link to="/contests"  style={{ color: 'inherit' }}>Browse Contests</Link>
         <Link to="/free-chat" style={{ color: 'inherit' }}>Free Chat</Link>

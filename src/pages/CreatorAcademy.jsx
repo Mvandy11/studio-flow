@@ -277,9 +277,9 @@ const sections = [
     title: 'Posting Events',
     tagline: 'Publish your own event and earn — no approval needed',
     description:
-      'Creator members ($50/mo) can post events directly to Studio Flow with no admin review. Your event goes live instantly in your chosen category, discoverable by all members. Upload a video, go live via RTMP/OBS, and receive donations from your audience.',
+      'Creator members ($40/mo) can post events directly to Studio Flow with no admin review. Your event goes live instantly in your chosen category, discoverable by all members. Upload a video, go live via RTMP/OBS, and receive donations from your audience.',
     steps: [
-      'Upgrade to Creator membership ($50/mo)',
+      'Upgrade to Creator membership ($40/mo)',
       'Go to Creator Dashboard → Post New Event',
       'Add a title, description, and category',
       'Upload a thumbnail and video (or toggle Go Live for RTMP streaming)',

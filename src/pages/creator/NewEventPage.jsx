@@ -208,7 +208,7 @@ export default function NewEventPage() {
         <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🎬</div>
         <h2 style={{ marginBottom: '0.5rem', fontWeight: 700 }}>Creator Membership Required</h2>
         <p style={{ ...mutedText, marginBottom: '1.25rem', maxWidth: '420px' }}>
-          Posting events requires the <strong style={{ color: '#a78bfa' }}>$50 Creator</strong> tier.
+          Posting events requires the <strong style={{ color: '#a78bfa' }}>$40 Creator</strong> tier.
           Upgrade to publish your content instantly — no approval needed.
         </p>
         <Link to="/membership" className="btn btn--primary" style={{ textDecoration: 'none' }}>

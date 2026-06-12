@@ -30,7 +30,6 @@ export default function FoundingMemberSection() {
         body: JSON.stringify({ session_id: sessionId }),
       })
         .then(() => {
-          // Clean URL and refresh count
           window.history.replaceState({}, '', window.location.pathname);
           setClaimed(prev => (prev !== null ? prev + 1 : 1));
         })
@@ -44,17 +43,27 @@ export default function FoundingMemberSection() {
     <section className="founding-section">
       <div className="founding-badge">🔥 Founding Member</div>
       <h2>Only {TOTAL_SPOTS} Spots — <span className="highlight">{claimed === null ? '...' : remaining} Remaining</span></h2>
-      <p>Lock in <strong>$25/mo forever</strong>, get early access to every new feature, and earn a badge that proves you were here first.</p>
+      <p>
+        Founding members lock in <strong>$25/mo forever</strong> — when the 100 spots fill,
+        regular membership becomes <strong>$40/mo</strong>. Of each $40 membership,
+        <strong> $10 goes to the Contest Prize Pool</strong> and <strong>$15 goes to Event Rewards</strong>.
+        Founding members keep their $25 rate and their badge permanently.
+      </p>
       <div className="founding-perks">
-        <span>✅ $25/mo locked forever</span>
-        <span>✅ Founding Member badge</span>
-        <span>✅ Early feature access</span>
+        <span>✅ $25/mo locked forever (reg. $40/mo)</span>
+        <span>✅ Founding Member badge — permanent</span>
+        <span>✅ $10/mo fuels contest prizes</span>
+        <span>✅ $15/mo fuels event rewards</span>
+        <span>✅ Early access to every new feature</span>
         <span>✅ Priority support</span>
       </div>
       <a href={STRIPE_CHECKOUT_URL} className="founding-btn">
         Claim Your Founding Spot →
       </a>
       <p className="founding-sub">🔴 LIVE · {claimed === null ? '...' : claimed} of {TOTAL_SPOTS} spots claimed</p>
+      <p className="founding-sub" style={{ marginTop: '0.35rem', opacity: 0.65 }}>
+        After 100 spots fill, membership opens at $40/mo — founding members keep $25 forever.
+      </p>
     </section>
   );
 }

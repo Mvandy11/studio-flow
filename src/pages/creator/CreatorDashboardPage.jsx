@@ -89,7 +89,7 @@ export default function CreatorDashboardPage() {
         <div style={S.gateCard}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔒</div>
           <h2 style={S.gateTitle}>Creator Dashboard</h2>
-          <p style={S.gateSub}>Upgrade to the Creator plan ($50/mo) to access your full creator hub.</p>
+          <p style={S.gateSub}>Upgrade to the Creator plan ($40/mo) to access your full creator hub.</p>
           <Link to="/membership" style={S.primaryBtn}>View Membership Plans →</Link>
         </div>
       </div>

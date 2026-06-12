@@ -837,7 +837,7 @@ export default function ContestDetailPage() {
           <div>
             <p style={{ fontWeight: 700, margin: '0 0 0.25rem', fontSize: '0.95rem' }}>🌟 Upgrade to Enter Contests</p>
             <p style={{ color: 'rgba(200,200,215,0.5)', fontSize: '0.82rem', margin: 0 }}>
-              A membership ($30/mo or $50/mo) lets you submit entries and win prizes.
+              A membership ($40/mo) lets you submit entries and win prizes.
             </p>
           </div>
           <Link to="/membership" style={upgradeBtn}>Upgrade to Enter →</Link>

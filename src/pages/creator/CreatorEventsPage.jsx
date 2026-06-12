@@ -72,7 +72,7 @@ export default function CreatorEventsPage() {
       <div style={S.gate}>
         <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔒</div>
         <h2 style={S.gateTitle}>Creator access required</h2>
-        <p style={S.gateSub}>Upgrade to Creator ($50/mo) to publish and manage events.</p>
+        <p style={S.gateSub}>Upgrade to Creator ($40/mo) to publish and manage events.</p>
         <Link to="/membership" style={S.primaryBtn}>View Plans →</Link>
       </div>
     );
