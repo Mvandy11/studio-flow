@@ -18,6 +18,26 @@ export default function FoundingMemberSection() {
     fetchCount();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const founding = params.get('founding');
+
+    if (founding === 'success' && sessionId) {
+      fetch('/.netlify/functions/claim-founding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      })
+        .then(() => {
+          // Clean URL and refresh count
+          window.history.replaceState({}, '', window.location.pathname);
+          setClaimed(prev => (prev !== null ? prev + 1 : 1));
+        })
+        .catch(console.error);
+    }
+  }, []);
+
   const remaining = TOTAL_SPOTS - (claimed ?? 0);
 
   return (
