@@ -3,6 +3,7 @@ import { Folders } from 'lucide-react';
 import { categories } from '../../../data/categories.js';
 import DonationButton from '../../../components/DonationButton.jsx';
 import FoundingMembersSection from '../../../components/home/FoundingMembersSection.jsx';
+import FoundingMemberSection from '../../../components/FoundingMemberSection.jsx';
 
 export default function HomeTab({ stats }) {
   const navigate = useNavigate();
@@ -34,6 +35,8 @@ export default function HomeTab({ stats }) {
           <div className="hub-stat__label">Total Members</div>
         </div>
       </div>
+
+      <FoundingMemberSection />
 
       {/* Donation strip */}
       <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.15)', borderRadius: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>

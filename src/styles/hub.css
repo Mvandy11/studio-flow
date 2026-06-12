@@ -897,3 +897,85 @@
   .hub-content { padding: 1.25rem 1rem 4rem; }
   .hub-hero { padding: 2.5rem 1.25rem; }
 }
+
+/* ── Founding Member Section ─────────────────────────────── */
+.founding-section {
+  margin: 2rem 0;
+  padding: 2.5rem 2rem;
+  background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(245,200,66,0.08) 100%);
+  border: 1px solid rgba(245,200,66,0.25);
+  border-radius: 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.founding-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.founding-badge {
+  display: inline-block;
+  background: rgba(245,200,66,0.12);
+  border: 1px solid rgba(245,200,66,0.4);
+  color: #F5C842;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.9rem;
+  border-radius: 9999px;
+  margin-bottom: 1rem;
+}
+.founding-section h2 {
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.75rem;
+  line-height: 1.25;
+}
+.founding-section .highlight {
+  color: #F5C842;
+}
+.founding-section p {
+  color: rgba(200,200,215,0.65);
+  font-size: 0.95rem;
+  margin: 0 auto 1.5rem;
+  max-width: 480px;
+  line-height: 1.6;
+}
+.founding-perks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem 1.25rem;
+  margin-bottom: 1.75rem;
+  font-size: 0.85rem;
+  color: rgba(200,200,215,0.8);
+  font-weight: 600;
+}
+.founding-btn {
+  display: inline-block;
+  background: linear-gradient(135deg, #F5C842, #D4A830);
+  color: #0A0A0F;
+  font-weight: 800;
+  font-size: 1rem;
+  padding: 0.8rem 2rem;
+  border-radius: 9999px;
+  text-decoration: none;
+  box-shadow: 0 0 24px rgba(245,200,66,0.3);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.founding-btn:hover {
+  box-shadow: 0 0 36px rgba(245,200,66,0.5);
+  transform: translateY(-2px);
+}
+.founding-sub {
+  margin: 1.1rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(200,200,215,0.45);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
