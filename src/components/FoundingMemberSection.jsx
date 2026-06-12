@@ -6,6 +6,8 @@ const STRIPE_CHECKOUT_URL = import.meta.env.VITE_FOUNDING_CHECKOUT_URL;
 
 export default function FoundingMemberSection() {
   const [claimed, setClaimed] = useState(null);
+  const [user, setUser] = useState(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   useEffect(() => {
     async function fetchCount() {
@@ -16,6 +18,16 @@ export default function FoundingMemberSection() {
       setClaimed(count ?? 0);
     }
     fetchCount();
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -37,6 +49,13 @@ export default function FoundingMemberSection() {
     }
   }, []);
 
+  const handleClaimClick = (e) => {
+    if (!user) {
+      e.preventDefault();
+      setShowAuthPrompt(true);
+    }
+  };
+
   const remaining = TOTAL_SPOTS - (claimed ?? 0);
 
   return (
@@ -57,9 +76,21 @@ export default function FoundingMemberSection() {
         <span>✅ Early access to every new feature</span>
         <span>✅ Priority support</span>
       </div>
-      <a href={STRIPE_CHECKOUT_URL} className="founding-btn">
+
+      <a href={STRIPE_CHECKOUT_URL} className="founding-btn" onClick={handleClaimClick}>
         Claim Your Founding Spot →
       </a>
+
+      {showAuthPrompt && (
+        <div className="auth-prompt">
+          <p>⚡ You need a free account before checkout.</p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '12px' }}>
+            <a href="/signup" className="auth-prompt-btn">Create Account</a>
+            <a href="/login" className="auth-prompt-btn secondary">Sign In</a>
+          </div>
+        </div>
+      )}
+
       <p className="founding-sub">🔴 LIVE · {claimed === null ? '...' : claimed} of {TOTAL_SPOTS} spots claimed</p>
       <p className="founding-sub" style={{ marginTop: '0.35rem', opacity: 0.65 }}>
         After 100 spots fill, membership opens at $40/mo — founding members keep $25 forever.
