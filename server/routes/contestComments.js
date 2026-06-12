@@ -34,16 +34,23 @@ async function getUser(req) {
 // Returns contest-level comments (entry_id IS NULL) ordered oldest-first.
 router.get('/:id/comments', async (req, res) => {
   const { id } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('contest_comments')
+      .select('id, contest_id, user_id, user_name, content, created_at')
+      .eq('contest_id', id)
+      .is('entry_id', null)
+      .order('created_at', { ascending: true });
 
-  const { data, error } = await supabaseAdmin
-    .from('contest_comments')
-    .select('id, contest_id, user_id, user_name, content, created_at')
-    .eq('contest_id', id)
-    .is('entry_id', null)
-    .order('created_at', { ascending: true });
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ comments: data ?? [] });
+    if (error) {
+      console.error('GET /api/contests/:id/comments error:', error.message);
+      return res.status(200).json({ comments: [] });
+    }
+    res.json({ comments: data ?? [] });
+  } catch (err) {
+    console.error('GET /api/contests/:id/comments error:', err.message);
+    return res.status(200).json({ comments: [] });
+  }
 });
 
 // ── POST /api/contests/:id/comments ───────────────────────────────────────────
@@ -82,15 +89,22 @@ router.post('/:id/comments', async (req, res) => {
 // Returns per-entry comments ordered oldest-first.
 router.get('/:id/entries/:entryId/comments', async (req, res) => {
   const { entryId } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('contest_comments')
+      .select('id, contest_id, entry_id, user_id, user_name, content, created_at')
+      .eq('entry_id', entryId)
+      .order('created_at', { ascending: true });
 
-  const { data, error } = await supabaseAdmin
-    .from('contest_comments')
-    .select('id, contest_id, entry_id, user_id, user_name, content, created_at')
-    .eq('entry_id', entryId)
-    .order('created_at', { ascending: true });
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ comments: data ?? [] });
+    if (error) {
+      console.error('GET /api/contests/:id/entries/:entryId/comments error:', error.message);
+      return res.status(200).json({ comments: [] });
+    }
+    res.json({ comments: data ?? [] });
+  } catch (err) {
+    console.error('GET /api/contests/:id/entries/:entryId/comments error:', err.message);
+    return res.status(200).json({ comments: [] });
+  }
 });
 
 // ── POST /api/contests/:id/entries/:entryId/comments ─────────────────────────

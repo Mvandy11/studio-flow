@@ -28,26 +28,33 @@ async function getUser(req) {
 // ── GET /api/comments/:video_id ───────────────────────────────
 router.get('/:video_id', async (req, res) => {
   const { video_id } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('comments')
+      .select('id, user_id, comment, body, text, created_at')
+      .is('submission_id', null)   // video comments only (not submission comments)
+      .eq('text', video_id)
+      .order('created_at', { ascending: true });
 
-  const { data, error } = await supabaseAdmin
-    .from('comments')
-    .select('id, user_id, comment, body, text, created_at')
-    .is('submission_id', null)   // video comments only (not submission comments)
-    .eq('text', video_id)
-    .order('created_at', { ascending: true });
+    if (error) {
+      console.error('GET /api/comments/:video_id error:', error.message);
+      return res.status(200).json({ comments: [] });
+    }
 
-  if (error) return res.status(500).json({ error: error.message });
+    const comments = (data || []).map((c) => ({
+      id:         c.id,
+      user_id:    c.user_id,
+      user_name:  c.comment || 'Creator',  // `comment` col stores the display name
+      video_id:   c.text,
+      content:    c.body,
+      created_at: c.created_at,
+    }));
 
-  const comments = (data || []).map((c) => ({
-    id:         c.id,
-    user_id:    c.user_id,
-    user_name:  c.comment || 'Creator',  // `comment` col stores the display name
-    video_id:   c.text,
-    content:    c.body,
-    created_at: c.created_at,
-  }));
-
-  res.json({ comments });
+    res.json({ comments });
+  } catch (err) {
+    console.error('GET /api/comments/:video_id error:', err.message);
+    return res.status(200).json({ comments: [] });
+  }
 });
 
 // ── POST /api/comments ────────────────────────────────────────
