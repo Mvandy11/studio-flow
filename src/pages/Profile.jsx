@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useProfile } from '../hooks/useProfile';
+import { supabase } from '../lib/supabaseClient';
 import ProfileHeader from '../components/ProfileHeader';
 import CinematicModal from '../components/CinematicModal';
 
@@ -22,6 +23,31 @@ export default function ProfilePage() {
       if (profile.membership_tier === 'member_30') return 'Member';
     }
     return 'Free Member';
+  }
+
+  // --- SUBSCRIPTION MANAGEMENT -----------------------------------------------
+  async function handleManageSubscription() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+
+    const { data: member } = await supabase
+      .from('members')
+      .select('stripe_customer_id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (!member?.stripe_customer_id) {
+      alert('No active membership found.');
+      return;
+    }
+
+    const res = await fetch('/.netlify/functions/create-portal-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: member.stripe_customer_id }),
+    });
+    const { url } = await res.json();
+    window.location.href = url;
   }
 
   // --- FORM HANDLERS ---------------------------------------------------------
@@ -55,6 +81,22 @@ export default function ProfilePage() {
         }}
       >
         <strong>Membership:</strong> {getMembershipLabel()}
+        <button
+          onClick={handleManageSubscription}
+          style={{
+            display: 'block',
+            padding: '10px 24px',
+            background: 'transparent',
+            border: '1px solid #475569',
+            color: '#94a3b8',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            marginTop: '12px',
+          }}
+        >
+          Manage / Cancel Subscription
+        </button>
       </div>
 
       <button
