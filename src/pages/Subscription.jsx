@@ -1,43 +1,13 @@
 import { useAuth } from '../hooks/useAuth';
 import { useMembership } from '../hooks/useMembership';
 
-const MEMBER_30_LINK   = 'https://buy.stripe.com/7sYdRb2yx3JS1wwacZb7y0o';
-const SUPPORT_EMAIL    = 'ObviouslyInspiredStudio@outlook.com';
-
-const MEMBER_30_FEATURES = [
-  '🏆 Enter monthly contests — always free',
-  '💬 Free Chat access',
-  '📢 Early access to announcements',
-  '❤️ Like and support creator submissions',
-  '💰 $10 → Monthly Reward Pool',
-];
-
-const CREATOR_50_FEATURES = [
-  '📅 Create & publish events',
-  '📡 RTMP / HLS streaming',
-  '💸 Accept donations',
-  '🤖 AI Tools — Enhance · Upscale · Denoise',
-  '🎓 Creator Academy',
-  '🏆 Enter monthly contests — always free',
-  '💬 Free Chat access',
-  '📢 Early access to announcements',
-  '❤️ Like and support creator submissions',
-  '⭐ Priority review',
-  '💰 $10 → Monthly Reward Pool',
-  '🎬 $15 → Event Creator Pool',
-  '📊 Creator Dashboard + Analytics',
-  '🎟 Ticket sales via Stripe Payment Links',
-  '💳 Premier Payout Settings (Stripe Connect)',
-];
+const SUPPORT_EMAIL = 'ObviouslyInspiredStudio@outlook.com';
 
 export default function SubscriptionPage() {
   const { user } = useAuth();
   const { isActive, tier, loading: membershipLoading } = useMembership();
 
-  const tierLabel =
-    tier === 'member_30'   ? '$30 Member' :
-    tier === 'creator_50'  ? '$50 Creator Member' :
-    tier ?? 'Free';
+  const tierLabel = tier === 'founding' ? 'Founding Member' : tier ?? 'Free';
 
   return (
     <div style={page}>
@@ -161,13 +131,6 @@ const subtitle = {
   margin:   '0 0 1rem',
 };
 
-const plansRow = {
-  display:   'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-  gap:       '1.5rem',
-  marginBottom: '1.5rem',
-};
-
 const planCard = {
   position:     'relative',
   background:   'rgba(255,255,255,0.04)',
@@ -178,14 +141,6 @@ const planCard = {
   flexDirection:'column',
 };
 
-const creatorCard = {
-  background: 'rgba(192,132,252,0.06)',
-  border:     '1px solid rgba(192,132,252,0.25)',
-};
-
-const activePlanBorder = {
-  border: '1px solid rgba(134,239,172,0.4)',
-};
 
 const planHeader = {
   display:        'flex',
@@ -250,19 +205,6 @@ const btnPrimary = {
   cursor:       'pointer',
 };
 
-const btnCreator = {
-  display:      'block',
-  textAlign:    'center',
-  padding:      '0.85rem',
-  borderRadius: '12px',
-  background:   'linear-gradient(135deg, #a855f7, #7c3aed)',
-  color:        '#fff',
-  fontWeight:   800,
-  fontSize:     '0.95rem',
-  textDecoration: 'none',
-  cursor:       'pointer',
-};
-
 const alreadyActive = {
   textAlign:  'center',
   color:      '#86efac',
@@ -271,34 +213,6 @@ const alreadyActive = {
   background: 'rgba(134,239,172,0.08)',
   border:     '1px solid rgba(134,239,172,0.2)',
   borderRadius: '10px',
-};
-
-const activeBadge = {
-  position:     'absolute',
-  top:          '1rem',
-  right:        '1rem',
-  fontSize:     '0.65rem',
-  fontWeight:   700,
-  letterSpacing:'0.07em',
-  textTransform:'uppercase',
-  color:        '#86efac',
-  background:   'rgba(134,239,172,0.12)',
-  border:       '1px solid rgba(134,239,172,0.25)',
-  borderRadius: '4px',
-  padding:      '0.2rem 0.55rem',
-};
-
-const popularBadge = {
-  fontSize:     '0.65rem',
-  fontWeight:   700,
-  letterSpacing:'0.07em',
-  textTransform:'uppercase',
-  color:        '#c084fc',
-  background:   'rgba(192,132,252,0.12)',
-  border:       '1px solid rgba(192,132,252,0.3)',
-  borderRadius: '0 0 8px 8px',
-  padding:      '0.2rem 0.75rem',
-  whiteSpace:   'nowrap',
 };
 
 const poolNote = {
