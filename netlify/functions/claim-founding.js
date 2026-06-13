@@ -1,6 +1,8 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -59,6 +61,33 @@ export const handler = async (event) => {
     });
 
     if (error) throw error;
+
+    // Notify Studio Flow of new founding member
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Studio Flow <noreply@studioflow.club>',
+        to: ['obviouslyinspiredstudio@outlook.com'],
+        subject: `🔥 Founding Spot #${count + 1} Claimed — ${displayName}`,
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0f172a;color:#fff;padding:32px;border-radius:16px;">
+            <h2 style="color:#ffb800;margin:0 0 4px 0;">🏅 New Founding Member!</h2>
+            <p style="color:#94a3b8;margin:0 0 24px 0;">Someone just locked in a founding spot on Studio Flow.</p>
+            <div style="background:#1e293b;border-radius:12px;padding:20px;margin-bottom:20px;">
+              <p style="margin:0 0 10px 0;"><strong style="color:#ffb800;">Name:</strong> <span style="color:#e2e8f0;">${displayName}</span></p>
+              <p style="margin:0 0 10px 0;"><strong style="color:#ffb800;">Email:</strong> <span style="color:#e2e8f0;">${email}</span></p>
+              <p style="margin:0 0 10px 0;"><strong style="color:#ffb800;">Spot:</strong> <span style="color:#e2e8f0;">#${count + 1} of 100</span></p>
+              <p style="margin:0;"><strong style="color:#ffb800;">Spots Remaining:</strong> <span style="color:#e2e8f0;">${99 - count}</span></p>
+            </div>
+            <p style="color:#64748b;font-size:0.8rem;margin:0;">Claimed at ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'short' })} ET</p>
+          </div>
+        `,
+      }),
+    }).catch(err => console.error('Resend notification error:', err.message));
 
     return { statusCode: 200, body: JSON.stringify({ success: true, email }) };
   } catch (err) {
