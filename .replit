@@ -85,3 +85,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 VITE_API_BASE_URL = "https://studio-flow-backend.onrender.com"
+VITE_STRIPE_TEST_CHECKOUT_URL = "PLACEHOLDER"

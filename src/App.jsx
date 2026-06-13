@@ -56,6 +56,7 @@ const CreatorRevenuePage     = lazy(() => import('./pages/creator/CreatorRevenue
 const CreatorDonationsPage   = lazy(() => import('./pages/creator/CreatorDonationsPage'));
 const MyContestEntriesPage   = lazy(() => import('./pages/contests/MyContestEntriesPage'));
 const DonateSuccess          = lazy(() => import('./pages/DonateSuccess'));
+const TestFounding           = lazy(() => import('./pages/TestFounding'));
 
 const PageLoader = (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: '#94a3b8' }}>
@@ -144,6 +145,9 @@ export default function App() {
             <Route path="/success"         element={<Success />} />
             <Route path="/cancel"          element={<Cancel />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
+
+            {/* ── Hidden test pages ── */}
+            <Route path="/test-founding" element={<TestFounding />} />
 
             {/* ── Dev Mode routes ── */}
             <Route path="/dev"                  element={<Dashboard />} />
