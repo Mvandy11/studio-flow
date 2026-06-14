@@ -3,7 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Auto-detect test vs live session and use correct key
+const rawBody = event.body;
+const isTestSession = rawBody?.includes('"cs_test_') || rawBody?.includes("'cs_test_");
+const stripe = new Stripe(
+  isTestSession
+    ? process.env.STRIPE_TEST_SECRET_KEY
+    : process.env.STRIPE_SECRET_KEY
+);
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
