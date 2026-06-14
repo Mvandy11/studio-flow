@@ -3,14 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-// Auto-detect test vs live session and use correct key
-const rawBody = event.body;
-const isTestSession = rawBody?.includes('"cs_test_') || rawBody?.includes("'cs_test_");
-const stripe = new Stripe(
-  isTestSession
-    ? process.env.STRIPE_TEST_SECRET_KEY
-    : process.env.STRIPE_SECRET_KEY
-);
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -22,6 +14,15 @@ export const handler = async (event) => {
   }
 
   try {
+    // Auto-detect test vs live session and use correct key
+    const rawBody = event.body;
+    const isTestSession = rawBody?.includes('"cs_test_') || rawBody?.includes("'cs_test_");
+    const stripe = new Stripe(
+      isTestSession
+        ? process.env.STRIPE_TEST_SECRET_KEY
+        : process.env.STRIPE_SECRET_KEY
+    );
+
     const { session_id } = JSON.parse(event.body);
     if (!session_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing session_id' }) };
 
