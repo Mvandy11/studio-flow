@@ -5,8 +5,6 @@
   NODE_VERSION        = "20"
   NETLIFY_USE_PNPM    = "true"
   NODE_OPTIONS        = "--max-old-space-size=4096"
-  # Test mode key — remove after testing
-  STRIPE_TEST_SECRET_KEY = "PLACEHOLDER"
 
 [functions]
   node_bundler = "esbuild"
