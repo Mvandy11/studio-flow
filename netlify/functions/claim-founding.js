@@ -23,13 +23,24 @@ export const handler = async (event) => {
         : process.env.STRIPE_SECRET_KEY
     );
 
-    const { session_id } = JSON.parse(event.body);
-    if (!session_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing session_id' }) };
+    const parsed = JSON.parse(rawBody);
 
-    // Verify the session with Stripe
-    const session = await stripe.checkout.sessions.retrieve(session_id);
-    if (session.payment_status !== 'paid' && session.status !== 'complete') {
-      return { statusCode: 402, body: JSON.stringify({ error: 'Payment not complete' }) };
+    // Support both: Stripe webhook (event object) and direct call ({ session_id })
+    let session;
+    if (parsed.type === 'checkout.session.completed') {
+      // Called as a Stripe webhook — session is embedded in the event
+      session = parsed.data.object;
+      if (session.payment_status !== 'paid' && session.status !== 'complete') {
+        return { statusCode: 402, body: JSON.stringify({ error: 'Payment not complete' }) };
+      }
+    } else {
+      // Called directly from the frontend with { session_id }
+      const { session_id } = parsed;
+      if (!session_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing session_id' }) };
+      session = await stripe.checkout.sessions.retrieve(session_id);
+      if (session.payment_status !== 'paid' && session.status !== 'complete') {
+        return { statusCode: 402, body: JSON.stringify({ error: 'Payment not complete' }) };
+      }
     }
 
     const email = session.customer_details?.email;
