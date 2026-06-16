@@ -8,12 +8,14 @@ export const handler = async (event) => {
     !k.startsWith('npm_') && !k.startsWith('NODE') && !k.startsWith('PATH')
   ));
 
-  const supabaseUrl = process.env['SUPABASE_URL'] || process.env['VITE_SUPABASE_URL'];
+  const supabaseUrl =
+    process.env['SUPABASE_URL'] ||
+    process.env['VITE_SUPABASE_URL'] ||
+    process.env['Supabse_URL'];          // typo in Netlify — keeping as fallback
+
   const supabaseKey =
     process.env['SUPABASE_SERVICE_ROLE_KEY'] ||
-    process.env['VITE_SUPABASE_SERVICE_ROLE_KEY'] ||
-    process.env['SUPABASE_SERVICE_KEY'] ||
-    process.env['SERVICE_ROLE_KEY'];
+    process.env['Supabase_Service_Role_Key']; // actual name in Netlify
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('Missing env vars:', { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
@@ -31,7 +33,7 @@ export const handler = async (event) => {
     const isTestSession = rawBody?.includes('"cs_test_') || rawBody?.includes("'cs_test_");
     const stripe = new Stripe(
       isTestSession
-        ? process.env.STRIPE_TEST_SECRET_KEY
+        ? process.env['STRIPE_TEST_SECRET_KEY'] || process.env['STRIPE_Test_SECRET_KEY']
         : process.env.STRIPE_SECRET_KEY
     );
 
