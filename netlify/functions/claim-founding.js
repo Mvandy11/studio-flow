@@ -4,14 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 export const handler = async (event) => {
-  console.log('ENV CHECK:', {
-    SUPABASE_URL: !!process.env['SUPABASE_URL'],
-    VITE_SUPABASE_URL: !!process.env['VITE_SUPABASE_URL'],
-    SERVICE_ROLE_KEY: !!process.env['SUPABASE_SERVICE_ROLE_KEY'],
-    VITE_SERVICE_ROLE_KEY: !!process.env['VITE_SUPABASE_SERVICE_ROLE_KEY'],
-    SUPABASE_SERVICE_KEY: !!process.env['SUPABASE_SERVICE_KEY'],
-    SERVICE_KEY: !!process.env['SERVICE_ROLE_KEY'],
-  });
+  console.log('ALL ENV KEYS:', Object.keys(process.env).filter(k =>
+    !k.startsWith('npm_') && !k.startsWith('NODE') && !k.startsWith('PATH')
+  ));
 
   const supabaseUrl = process.env['SUPABASE_URL'] || process.env['VITE_SUPABASE_URL'];
   const supabaseKey =
