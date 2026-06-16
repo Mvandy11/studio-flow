@@ -6,6 +6,12 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 export const handler = async (event) => {
   const supabaseUrl = process.env['SUPABASE_URL'] || process.env['VITE_SUPABASE_URL'];
   const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing env vars:', { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
+    return { statusCode: 500, body: JSON.stringify({ error: 'Server misconfiguration' }) };
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey);
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
