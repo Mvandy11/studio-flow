@@ -5,13 +5,20 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 export const handler = async (event) => {
   console.log('ENV CHECK:', {
-    SUPABASE_URL: process.env['SUPABASE_URL'],
-    VITE_SUPABASE_URL: process.env['VITE_SUPABASE_URL'],
-    HAS_SERVICE_KEY: !!process.env['SUPABASE_SERVICE_ROLE_KEY'],
+    SUPABASE_URL: !!process.env['SUPABASE_URL'],
+    VITE_SUPABASE_URL: !!process.env['VITE_SUPABASE_URL'],
+    SERVICE_ROLE_KEY: !!process.env['SUPABASE_SERVICE_ROLE_KEY'],
+    VITE_SERVICE_ROLE_KEY: !!process.env['VITE_SUPABASE_SERVICE_ROLE_KEY'],
+    SUPABASE_SERVICE_KEY: !!process.env['SUPABASE_SERVICE_KEY'],
+    SERVICE_KEY: !!process.env['SERVICE_ROLE_KEY'],
   });
 
   const supabaseUrl = process.env['SUPABASE_URL'] || process.env['VITE_SUPABASE_URL'];
-  const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+  const supabaseKey =
+    process.env['SUPABASE_SERVICE_ROLE_KEY'] ||
+    process.env['VITE_SUPABASE_SERVICE_ROLE_KEY'] ||
+    process.env['SUPABASE_SERVICE_KEY'] ||
+    process.env['SERVICE_ROLE_KEY'];
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('Missing env vars:', { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
