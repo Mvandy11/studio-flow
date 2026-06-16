@@ -1,35 +1,37 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
 
 export default function MembershipSuccess() {
-  const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'failed'
+  const [status, setStatus] = useState('loading');
   const [countdown, setCountdown] = useState(4);
 
   useEffect(() => {
-    let attempts = 0;
-    const maxAttempts = 10;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
 
-    const poll = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setStatus('failed'); return; }
+    if (!sessionId) {
+      setStatus('failed');
+      return;
+    }
 
-      const { data } = await supabase
-        .from('members')
-        .select('is_founding')
-        .eq('email', user.email)
-        .single();
-
-      if (data?.is_founding) {
-        setStatus('success');
-      } else if (attempts < maxAttempts) {
-        attempts++;
-        setTimeout(poll, 2000); // retry every 2 seconds
-      } else {
-        setStatus('failed'); // give up after 20 seconds
-      }
-    };
-
-    poll();
+    // Call claim-founding with the session_id
+    fetch('/.netlify/functions/claim-founding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log('claim-founding response:', data);
+        if (data.success || data.message === 'Already a founding member') {
+          setStatus('success');
+        } else {
+          setStatus('failed');
+        }
+      })
+      .catch(err => {
+        console.error('claim-founding error:', err);
+        setStatus('failed');
+      });
   }, []);
 
   // Auto-redirect to /membership after success
@@ -43,28 +45,21 @@ export default function MembershipSuccess() {
     return () => clearTimeout(t);
   }, [status, countdown]);
 
-  if (status === 'loading') {
-    return (
-      <div className="activation-loading">
-        <h2>Confirming your founding membership... ⏳</h2>
-        <p>Just a moment while we verify your spot.</p>
-      </div>
-    );
-  }
+  if (status === 'loading') return (
+    <div style={{ textAlign: 'center', padding: '60px', color: '#fff' }}>
+      <p>🏅 Locking in your founding spot...</p>
+    </div>
+  );
 
-  if (status === 'failed') {
-    return (
-      <div className="activation-error">
-        <h2>Something went wrong</h2>
-        <p>We couldn't confirm your founding membership. Please contact support.</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-        <button onClick={() => (window.location.href = '/membership')}>Go to Membership</button>
-      </div>
-    );
-  }
+  if (status === 'failed') return (
+    <div style={{ textAlign: 'center', padding: '60px', color: '#fff' }}>
+      <p>Something went wrong. Please contact support.</p>
+      <button onClick={() => window.location.reload()} style={{ marginTop: '1rem' }}>Retry</button>
+    </div>
+  );
 
   return (
-    <div className="activation-success">
+    <div className="activation-success" style={{ textAlign: 'center', padding: '60px', color: '#fff' }}>
       <h2>Welcome, Founding Member! 🏅</h2>
       <p>Your $25/mo founding spot is locked in forever.</p>
       <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #888)', marginTop: '0.5rem' }}>
