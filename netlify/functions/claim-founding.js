@@ -53,6 +53,12 @@ export const handler = async (event) => {
       }
     }
 
+    // Block test-mode Stripe sessions from inserting into production DB
+    if (session.id && session.id.startsWith('cs_test_')) {
+      console.warn('Blocked test session:', session.id);
+      return { statusCode: 200, body: JSON.stringify({ ignored: 'test session' }) };
+    }
+
     const email = session.customer_details?.email;
     if (!email) return { statusCode: 400, body: JSON.stringify({ error: 'No email found' }) };
 
