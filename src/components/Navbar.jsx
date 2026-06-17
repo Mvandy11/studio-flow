@@ -137,12 +137,6 @@ export default function Navbar({ onHamburger }) {
                 >
                   {initial}
                 </div>
-                <span
-                  className="profile-menu-trigger__badge"
-                  style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
-                >
-                  {meta.label}
-                </span>
                 <span className="profile-menu-trigger__chevron" style={{ transform: profileOpen ? 'rotate(180deg)' : 'none' }}>
                   ▾
                 </span>
