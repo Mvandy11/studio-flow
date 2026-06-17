@@ -5,7 +5,7 @@ import { useMembership } from '../hooks/useMembership';
 import { isCreatorAdmin } from '../lib/roles';
 import MobileDrawer from './MobileDrawer';
 
-function ProfileDropdown({ user, role, membership, tier, meta, isActive, expiresAt, onLogout }) {
+function ProfileDropdown({ user, role, tier, meta, onLogout }) {
   const initial = user?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
@@ -15,33 +15,7 @@ function ProfileDropdown({ user, role, membership, tier, meta, isActive, expires
         <div className="profile-dropdown__avatar">{initial}</div>
         <div className="profile-dropdown__info">
           <div className="profile-dropdown__email">{user.email}</div>
-          <span
-            className="profile-dropdown__badge"
-            style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
-          >
-            {tier === 'enterprise' ? '✦ ' : ''}{meta.label}
-            {isActive ? '' : ' · Inactive'}
-          </span>
         </div>
-      </div>
-
-      <div className="profile-dropdown__divider" />
-
-      {/* Membership info */}
-      <div className="profile-dropdown__section-label">Membership</div>
-      <div className="profile-dropdown__membership-info">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-          <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.5)' }}>Status</span>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isActive ? '#86efac' : 'rgba(200,200,215,0.4)' }}>
-            {isActive ? '● Active' : '○ Inactive'}
-          </span>
-        </div>
-        {expiresAt && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.5)' }}>Renews</span>
-            <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.7)' }}>{expiresAt}</span>
-          </div>
-        )}
       </div>
 
       <div className="profile-dropdown__divider" />
@@ -66,7 +40,7 @@ function ProfileDropdown({ user, role, membership, tier, meta, isActive, expires
 
 export default function Navbar({ onHamburger }) {
   const { user, role, logout } = useAuth();
-  const { tier, meta, isActive, expiresAt } = useMembership();
+  const { tier, meta } = useMembership();
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [profileOpen,  setProfileOpen]  = useState(false);
   const dropdownRef = useRef(null);
@@ -148,8 +122,6 @@ export default function Navbar({ onHamburger }) {
                   role={role}
                   tier={tier}
                   meta={meta}
-                  isActive={isActive}
-                  expiresAt={expiresAt}
                   onLogout={() => { logout(); setProfileOpen(false); }}
                 />
               )}
