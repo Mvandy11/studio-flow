@@ -12,6 +12,7 @@ export default defineConfig({
     // ⭐ Your build output is going to dist/public — keep this consistent
     outDir: "dist/public",
     emptyOutDir: true,
+    cssCodeSplit: true,
   },
 
   resolve: {
