@@ -564,7 +564,7 @@ export default function EventSlotView() {
             <span style={{ fontWeight: 800, fontSize: '1.75rem', color: 'var(--accent-gold, #f5a623)' }}>
               ${price.toFixed(2)}
             </span>
-            <span style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)' }}>98% goes directly to the creator</span>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)' }}>All proceeds support the creator</span>
           </div>
         )}
 

@@ -26,7 +26,7 @@ export default function EarningsCalculator({ ticketPrice, membershipCost = 15 })
     <div className="earnings-calculator">
       <div className="earnings-calc-row">
         <label className="cinematic-label" style={{ flex: 1 }}>
-          Expected Ticket Sales
+          Expected Attendees
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
             <input
               type="range"

@@ -217,7 +217,7 @@ export default function AdminAnalyticsDashboard() {
             <StatCard icon="🎵" label="Contests"        value={totals.contests        ?? 0} accent="gold" />
             <StatCard icon="🎤" label="Events"          value={totals.events          ?? 0} accent="blue" />
             <StatCard icon="👥" label="Users"           value={totals.users           ?? 0} accent="green" />
-            <StatCard icon="🎟" label="Ticket Sales"    value={totals.ticketPurchases ?? 0} accent="purple" />
+            <StatCard icon="🎟" label="Attendees"       value={totals.ticketPurchases ?? 0} accent="purple" />
             <StatCard icon="💰" label="Revenue"         value={`$${(totals.revenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} accent="green" />
             <StatCard icon="🏆" label="Winners Drawn"   value={totals.winners         ?? 0} accent="gold" />
             <StatCard icon="🌟" label="Unique Winners"  value={totals.uniqueWinners   ?? 0} accent="red" />
@@ -226,7 +226,7 @@ export default function AdminAnalyticsDashboard() {
           {/* ── Charts row 1: Tickets over time + Revenue by event ── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
 
-            <Section title="Ticket Sales Over Time">
+            <Section title="Event Attendance Over Time">
               {data.ticketsByDay?.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={data.ticketsByDay} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -239,7 +239,7 @@ export default function AdminAnalyticsDashboard() {
                     <Line type="monotone" dataKey="revenue" name="Revenue $" stroke="#f2c98f" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
-              ) : <ChartEmpty message="No ticket sales in this period." />}
+              ) : <ChartEmpty message="No event attendance data in this period." />}
             </Section>
 
             <Section title="Revenue by Event">
@@ -316,7 +316,7 @@ export default function AdminAnalyticsDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
 
             {/* Top Events */}
-            <Section title="Top Events by Ticket Sales">
+            <Section title="Top Events by Revenue">
               {data.topEvents?.length > 0 ? (
                 <div className="admin-table-wrap">
                   <table className="admin-table">
@@ -348,7 +348,7 @@ export default function AdminAnalyticsDashboard() {
                   </table>
                 </div>
               ) : (
-                <p className="admin-empty" style={{ padding: '2rem 0' }}>No ticket sales yet.</p>
+                <p className="admin-empty" style={{ padding: '2rem 0' }}>No event revenue yet.</p>
               )}
             </Section>
 
