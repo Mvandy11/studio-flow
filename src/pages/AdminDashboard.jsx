@@ -499,13 +499,18 @@ export default function AdminDashboard() {
 
             {/* ── Monthly Profit Calculator ── */}
             {(() => {
-              const totalMembers  = tierCounts.founding + tierCounts.member_30 + tierCounts.creator_50;
-              const totalRevenue  = (tierCounts.founding   * RC.prices.founding)
-                                  + (tierCounts.member_30  * RC.prices.member_30)
-                                  + (tierCounts.creator_50 * RC.prices.creator_50);
-              const contestPool   = totalMembers * RC.contestPoolPerMember;
-              const eventPool     = totalMembers * RC.eventPoolPerMember;
-              const myProfit      = totalRevenue - contestPool - eventPool;
+              const foundingMembers  = tierCounts.founding;
+              const standardMembers  = tierCounts.member_30 + tierCounts.creator_50;
+              const totalMembers     = foundingMembers + standardMembers;
+
+              const totalRevenue  = (foundingMembers * RC.founding.price)
+                                  + (standardMembers * RC.standard.price);
+              const contestPool   = (foundingMembers * RC.founding.contestPool)
+                                  + (standardMembers * RC.standard.contestPool);
+              const eventPool     = (foundingMembers * RC.founding.eventPool)
+                                  + (standardMembers * RC.standard.eventPool);
+              const myProfit      = (foundingMembers * RC.founding.myProfit)
+                                  + (standardMembers * RC.standard.myProfit);
               return (
                 <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '1.5rem' }}>
                   <h2 className="admin-section-title" style={{ marginBottom: '1rem' }}>💰 My Monthly Profit</h2>
@@ -515,7 +520,7 @@ export default function AdminDashboard() {
                       <p style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.5)' }}>Total Members</p>
                       <p style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>{totalMembers}</p>
                       <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(200,200,215,0.35)' }}>
-                        {tierCounts.founding} founding · {tierCounts.member_30} member · {tierCounts.creator_50} creator
+                        {foundingMembers} founding · {standardMembers} standard
                       </p>
                     </div>
 
@@ -538,9 +543,18 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.82rem', color: 'rgba(200,200,215,0.5)' }}>
-                    <p style={{ margin: 0 }}>🏆 Contest Pool: <span style={{ color: '#fff', fontWeight: 600 }}>${contestPool.toFixed(2)}</span> <span style={{ opacity: 0.5 }}>(${RC.contestPoolPerMember}/member)</span></p>
-                    <p style={{ margin: 0 }}>🎪 Event Pool: <span style={{ color: '#fff', fontWeight: 600 }}>${eventPool.toFixed(2)}</span> <span style={{ opacity: 0.5 }}>(${RC.eventPoolPerMember}/member)</span></p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.82rem', color: 'rgba(200,200,215,0.5)', marginBottom: '0.75rem' }}>
+                    <p style={{ margin: 0 }}>🏆 Contest Pool: <span style={{ color: '#fff', fontWeight: 600 }}>${contestPool.toFixed(2)}</span></p>
+                    <p style={{ margin: 0 }}>🎪 Event Pool: <span style={{ color: '#fff', fontWeight: 600 }}>${eventPool.toFixed(2)}</span></p>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)' }}>
+                    <p style={{ margin: 0 }}>
+                      Founding ({foundingMembers} × $25): $5/member → <span style={{ color: '#fff' }}>${(foundingMembers * RC.founding.myProfit).toFixed(2)}</span>
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      Standard ({standardMembers} × $40): $15/member → <span style={{ color: '#fff' }}>${(standardMembers * RC.standard.myProfit).toFixed(2)}</span>
+                    </p>
                   </div>
                 </div>
               );

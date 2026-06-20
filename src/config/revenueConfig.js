@@ -1,11 +1,15 @@
 export const REVENUE_CONFIG = {
-  prices: {
-    founding:   25.00,
-    member_30:  30.00,
-    creator_50: 50.00,
+  founding: {
+    price:       25.00,
+    contestPool: 10.00,
+    eventPool:   10.00,
+    myProfit:     5.00,
+  },
+  standard: {
+    price:       40.00,
+    contestPool: 15.00,
+    eventPool:   10.00,
+    myProfit:    15.00,
   },
   foundingMemberLimit: 100,
-
-  contestPoolPerMember: 10.00,
-  eventPoolPerMember:   15.00,
 };
