@@ -157,7 +157,7 @@ export default function MembershipPage() {
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #888)' }}>{user.email}</div>
           </div>
-          <TierBadge tier={tier} />
+          {tier && tier !== 'free' && <TierBadge tier={tier} />}
         </div>
 
         {periodEnd && (

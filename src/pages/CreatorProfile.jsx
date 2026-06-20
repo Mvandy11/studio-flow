@@ -110,30 +110,34 @@ function MembershipSection({ user }) {
       }}>
         {/* Tier badge + status row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <span style={{
-            padding: '0.3rem 0.85rem',
-            borderRadius: '999px',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            letterSpacing: '0.05em',
-            background: meta.bg,
-            color: meta.color,
-            border: `1px solid ${meta.border}`,
-          }}>
-            {tier === 'enterprise' ? '✦ ' : ''}{meta.label}
-          </span>
-
-          <span style={{
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            color: isActive ? '#86efac' : 'rgba(200,200,215,0.4)',
-          }}>
-            {isActive ? '● Active' : '○ Inactive'}
-          </span>
-
-          {expiresAt && (
-            <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.4)' }}>
-              Renews {expiresAt}
+          {tier && tier !== 'free' ? (
+            <>
+              <span style={{
+                padding: '0.3rem 0.85rem',
+                borderRadius: '999px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                background: meta.bg,
+                color: meta.color,
+                border: `1px solid ${meta.border}`,
+              }}>
+                {tier === 'enterprise' ? '✦ ' : ''}{meta.label}
+              </span>
+              {isActive && (
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#86efac' }}>
+                  ● Active
+                </span>
+              )}
+              {expiresAt && (
+                <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.4)' }}>
+                  Renews {expiresAt}
+                </span>
+              )}
+            </>
+          ) : (
+            <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.4)' }}>
+              Member · <a href="/membership" style={{ color: '#a78bfa', textDecoration: 'none' }}>Upgrade</a>
             </span>
           )}
         </div>
