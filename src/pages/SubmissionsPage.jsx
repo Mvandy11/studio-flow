@@ -10,6 +10,8 @@ export default function SubmissionsPage() {
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState('');
 
+  const isAdmin = user?.email === 'obviouslyinspiredstudio@outlook.com';
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) { setLoading(false); return; }
@@ -30,6 +32,20 @@ export default function SubmissionsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAdminDelete(submissionId) {
+    if (!window.confirm('Remove this entry permanently?')) return;
+    await supabase.from('likes').delete().eq('submission_id', submissionId);
+    await supabase.from('comments').delete().eq('submission_id', submissionId);
+    const { error } = await supabase.from('submissions').delete().eq('id', submissionId);
+    if (error) {
+      console.error('Delete failed:', error.message);
+      alert('Failed to delete entry.');
+    } else {
+      alert('Entry removed.');
+      load();
     }
   }
 
@@ -101,6 +117,14 @@ export default function SubmissionsPage() {
                     {s.status || 'pending'}
                   </span>
                 </div>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleAdminDelete(s.id)}
+                    style={{ marginTop: '0.5rem', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#fca5a5' }}
+                  >
+                    🗑 Remove Entry
+                  </button>
+                )}
               </div>
             );
           })}

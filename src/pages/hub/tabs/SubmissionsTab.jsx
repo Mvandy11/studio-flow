@@ -10,21 +10,36 @@ export default function SubmissionsTab() {
   const [submissions, setSubmissions] = useState([]);
   const [loading,     setLoading]     = useState(true);
 
-  useEffect(() => {
+  const isAdmin = user?.email === 'obviouslyinspiredstudio@outlook.com';
+
+  async function load() {
     if (!user) { setLoading(false); return; }
-    async function load() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setLoading(false); return; }
-      try {
-        const data = await api('/api/submissions', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        setSubmissions(Array.isArray(data) ? data : []);
-      } catch (_) {}
-      setLoading(false);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setLoading(false); return; }
+    try {
+      const data = await api('/api/submissions', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      setSubmissions(Array.isArray(data) ? data : []);
+    } catch (_) {}
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, [user]);
+
+  async function handleAdminDelete(submissionId) {
+    if (!window.confirm('Remove this entry permanently?')) return;
+    await supabase.from('likes').delete().eq('submission_id', submissionId);
+    await supabase.from('comments').delete().eq('submission_id', submissionId);
+    const { error } = await supabase.from('submissions').delete().eq('id', submissionId);
+    if (error) {
+      console.error('Delete failed:', error.message);
+      alert('Failed to delete entry.');
+    } else {
+      alert('Entry removed.');
+      load();
     }
-    load();
-  }, [user]);
+  }
 
   if (!user) return (
     <div className="hub-content" style={{ textAlign: 'center', paddingTop: '3rem' }}>
@@ -89,15 +104,25 @@ export default function SubmissionsTab() {
                   {new Date(s.created_at).toLocaleDateString()}
                 </p>
               </div>
-              <span style={{
-                padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
-                textTransform: 'uppercase',
-                background: s.status === 'approved' ? 'rgba(34,197,94,0.12)' : s.status === 'rejected' ? 'rgba(239,68,68,0.12)' : 'rgba(245,166,35,0.12)',
-                color: s.status === 'approved' ? '#22c55e' : s.status === 'rejected' ? '#f87171' : 'var(--hub-gold)',
-                border: `1px solid ${s.status === 'approved' ? 'rgba(34,197,94,0.3)' : s.status === 'rejected' ? 'rgba(239,68,68,0.3)' : 'rgba(245,166,35,0.3)'}`,
-              }}>
-                {s.status || 'pending'}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
+                <span style={{
+                  padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
+                  textTransform: 'uppercase',
+                  background: s.status === 'approved' ? 'rgba(34,197,94,0.12)' : s.status === 'rejected' ? 'rgba(239,68,68,0.12)' : 'rgba(245,166,35,0.12)',
+                  color: s.status === 'approved' ? '#22c55e' : s.status === 'rejected' ? '#f87171' : 'var(--hub-gold)',
+                  border: `1px solid ${s.status === 'approved' ? 'rgba(34,197,94,0.3)' : s.status === 'rejected' ? 'rgba(239,68,68,0.3)' : 'rgba(245,166,35,0.3)'}`,
+                }}>
+                  {s.status || 'pending'}
+                </span>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleAdminDelete(s.id)}
+                    style={{ padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#fca5a5' }}
+                  >
+                    🗑 Remove Entry
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

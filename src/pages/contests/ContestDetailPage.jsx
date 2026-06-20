@@ -172,6 +172,22 @@ export default function ContestDetailPage() {
     }
   }
 
+  async function handleAdminDelete(entryId) {
+    if (!window.confirm('Remove this entry permanently?')) return;
+    // Delete associated likes (contest entries use entry_id)
+    await supabase.from('likes').delete().eq('entry_id', entryId);
+    // Delete any lingering comments
+    await supabase.from('comments').delete().eq('submission_id', entryId);
+    const { error } = await supabase.from('submissions').delete().eq('id', entryId);
+    if (error) {
+      console.error('Delete failed:', error.message);
+      alert('Failed to delete entry.');
+    } else {
+      alert('Entry removed.');
+      load();
+    }
+  }
+
   async function handleLike(entryId) {
     if (!user) { alert('You must be logged in to like an entry.'); return; }
     setLiking(entryId);
@@ -909,6 +925,14 @@ export default function ContestDetailPage() {
                     >
                       {liking === entry.id ? '…' : isLiked ? '♥ Liked' : '♡ Like'}
                     </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleAdminDelete(entry.id)}
+                        style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#fca5a5', marginLeft: 'auto' }}
+                      >
+                        🗑 Remove Entry
+                      </button>
+                    )}
                   </div>
 
                 </div>
