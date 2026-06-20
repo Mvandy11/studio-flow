@@ -8,6 +8,7 @@ import '../styles/admin.css';
 import { api } from '../lib/api.js';
 import AdminPayoutPanel       from '../components/admin/AdminPayoutPanel';        // ← NEW
 import AdminRevenueTallyCards from '../components/admin/AdminRevenueTallyCards';   // ← NEW
+import { REVENUE_CONFIG as RC } from '../config/revenueConfig';
 
 const TABS = ['Overview', 'Contests', 'Events', 'Submissions', 'Announcements', 'Requests', 'Payouts', 'Moderation']; // ← NEW: added Payouts
 
@@ -60,7 +61,7 @@ export default function AdminDashboard() {
   const [subHistory, setSubHistory] = useState([]);
 
   // Membership tier breakdown
-  const [tierCounts, setTierCounts] = useState({ member_30: 0, creator_50: 0 });
+  const [tierCounts, setTierCounts] = useState({ founding: 0, member_30: 0, creator_50: 0 });
 
   // Announcement form
   const [showAnnForm, setShowAnnForm] = useState(false);
@@ -195,6 +196,7 @@ export default function AdminDashboard() {
         .neq('membership_tier', 'free');
       if (tierData) {
         setTierCounts({
+          founding:   tierData.filter((p) => p.membership_tier === 'founding').length,
           member_30:  tierData.filter((p) => p.membership_tier === 'member_30').length,
           creator_50: tierData.filter((p) => p.membership_tier === 'creator_50').length,
         });
@@ -494,6 +496,55 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* ── Monthly Profit Calculator ── */}
+            {(() => {
+              const totalMembers  = tierCounts.founding + tierCounts.member_30 + tierCounts.creator_50;
+              const totalRevenue  = (tierCounts.founding   * RC.prices.founding)
+                                  + (tierCounts.member_30  * RC.prices.member_30)
+                                  + (tierCounts.creator_50 * RC.prices.creator_50);
+              const contestPool   = totalMembers * RC.contestPoolPerMember;
+              const eventPool     = totalMembers * RC.eventPoolPerMember;
+              const myProfit      = totalRevenue - contestPool - eventPool;
+              return (
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '1.5rem' }}>
+                  <h2 className="admin-section-title" style={{ marginBottom: '1rem' }}>💰 My Monthly Profit</h2>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.875rem', marginBottom: '1rem' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.5)' }}>Total Members</p>
+                      <p style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>{totalMembers}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(200,200,215,0.35)' }}>
+                        {tierCounts.founding} founding · {tierCounts.member_30} member · {tierCounts.creator_50} creator
+                      </p>
+                    </div>
+
+                    <div style={{ background: 'rgba(134,239,172,0.06)', border: '1px solid rgba(134,239,172,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.5)' }}>Gross Revenue</p>
+                      <p style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800, color: '#86efac' }}>${totalRevenue.toFixed(2)}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(200,200,215,0.35)' }}>this month</p>
+                    </div>
+
+                    <div style={{ background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.5)' }}>Pool Allocations</p>
+                      <p style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-gold, #f5a623)' }}>-${(contestPool + eventPool).toFixed(2)}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(200,200,215,0.35)' }}>contests + events</p>
+                    </div>
+
+                    <div style={{ background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.3)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', color: 'rgba(192,132,252,0.7)' }}>My Profit</p>
+                      <p style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>${myProfit.toFixed(2)}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(192,132,252,0.5)' }}>after pool deductions</p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.82rem', color: 'rgba(200,200,215,0.5)' }}>
+                    <p style={{ margin: 0 }}>🏆 Contest Pool: <span style={{ color: '#fff', fontWeight: 600 }}>${contestPool.toFixed(2)}</span> <span style={{ opacity: 0.5 }}>(${RC.contestPoolPerMember}/member)</span></p>
+                    <p style={{ margin: 0 }}>🎪 Event Pool: <span style={{ color: '#fff', fontWeight: 600 }}>${eventPool.toFixed(2)}</span> <span style={{ opacity: 0.5 }}>(${RC.eventPoolPerMember}/member)</span></p>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Recent Contest Entries */}
             <div className="admin-section-header">
