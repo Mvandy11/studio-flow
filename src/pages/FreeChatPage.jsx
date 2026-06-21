@@ -1,4 +1,4 @@
-import ChatWindow from '../components/chat/ChatWindow.tsx';
+import ChatWindow from '../components/chat/ChatWindow';
 
 export default function FreeChatPage() {
   return (
