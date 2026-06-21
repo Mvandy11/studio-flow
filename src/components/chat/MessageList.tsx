@@ -39,7 +39,7 @@ export default function MessageList({
     return (
       <div className="chat-message-list">
         <div className="chat-empty">
-          <div className="chat-empty__icon">💬</div>
+          <div className="chat-empty__icon">🗣</div>
           <span>No messages yet — be the first to say something!</span>
         </div>
       </div>

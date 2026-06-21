@@ -21,8 +21,8 @@ export function getChannelId(
 /** Return the ordered channel list for a given context. */
 export function getDefaultChannels(contestId?: string): Channel[] {
   const channels: Channel[] = [
-    { id: 'general',       label: 'General',       icon: '💬' },
-    { id: 'announcements', label: 'Announcements',  icon: '📢' },
+    { id: 'general',       label: 'General',       icon: '🗣' },
+    { id: 'announcements', label: 'Announcements',  icon: '🔔' },
   ];
   if (contestId) {
     channels.push({

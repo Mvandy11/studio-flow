@@ -92,8 +92,8 @@ export default function AppSidebar({ open, onClose }) {
         <div className="app-sidebar__section-label">Platform</div>
         <nav className="app-sidebar__nav">
           <NavItem to="/contests"        icon="🏆" label="Contests" />
-          <NavItem to="/announcements"   icon="📢" label="Announcements" />
-          <NavItem to="/free-chat"       icon="💬" label="Free Chat" />
+          <NavItem to="/announcements"   icon="🔔" label="Announcements" />
+          <NavItem to="/free-chat"       icon="🗣" label="Free Chat" />
           <NavItem to="/creator-academy" icon="🎓" label="Academy" />
         </nav>
 
