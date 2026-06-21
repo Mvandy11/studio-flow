@@ -51,7 +51,7 @@ export default function HomeTab({ stats }) {
       </div>
 
       {/* Category cards — single source of truth: src/data/categories.js */}
-      <h2 className="hub-section-title" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Folders size={20} color="#F5C842" /> Browse Categories</h2>
+      <h2 className="hub-section-title" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>📁 Browse Categories</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
         {categories.map((cat) => (
           <button
