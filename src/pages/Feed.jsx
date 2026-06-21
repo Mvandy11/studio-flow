@@ -278,7 +278,7 @@ export default function Feed() {
     thumbnail:  null,
     href:       `/contests/${c.id}`,
     created_at: c.created_at,
-    badge:      c.prize ? `Prize: ${c.prize}` : (c.status === 'active' ? 'Open' : c.status),
+    badge:      c.prize ? `Prize: ${c.prize}` : (c.status === 'voting' ? 'Admin Pick' : c.status === 'active' ? 'Open' : c.status),
   }));
 
   const announcementCards = announcements.map((a) => ({

@@ -388,8 +388,8 @@ const faqs = [
     a: 'Yes — every learning module is available to all Studio Flow users at no cost. Simply sign in and start learning.',
   },
   {
-    q: 'How does the like-based voting system work?',
-    a: 'Each user can like any contest entry once. Likes accumulate throughout the contest period and are a key factor in winner selection alongside engagement, creativity, and impact.',
+    q: 'How are contest winners chosen?',
+    a: 'Winners are hand-selected by our admin team based on creativity and quality. Likes from the community are considered as a signal of engagement, but the final decision rests with the Studio Flow team.',
   },
   {
     q: 'How do I receive my contest or event earnings?',
@@ -520,7 +520,7 @@ export default function CreatorAcademy() {
           <p className="ca-hero__subtitle">
             Welcome to the Creator Academy — your guide to building, growing, and thriving on Studio Flow.
             This space teaches you how to create powerful content, build your brand, understand the new
-            Studio Flow creator economy, and participate in contests using our like-based voting system.
+            Studio Flow creator economy, and participate in contests where winners are hand-selected by our admin team based on creativity and quality.
           </p>
           <div className="ca-hero__actions">
             <a href="#getting-started" className="ca-btn ca-btn--primary">

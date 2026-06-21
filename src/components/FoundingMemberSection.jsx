@@ -72,7 +72,7 @@ export default function FoundingMemberSection() {
         <span>✅ $25/mo locked forever (reg. $40/mo)</span>
         <span>✅ Founding Member badge — permanent</span>
         <span>✅ $10/mo fuels contest prizes</span>
-        <span>✅ $15/mo fuels event rewards</span>
+        <span>✅ $10/mo fuels event rewards</span>
         <span>✅ Early access to every new feature</span>
         <span>✅ Priority support</span>
       </div>
