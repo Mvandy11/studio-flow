@@ -51,7 +51,7 @@ export default function ContestsPage() {
       <div className="page-header" style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1rem', flexWrap:'wrap' }}>
         <div>
           <h1 className="page-title">🏆 Contests</h1>
-          <p className="page-subtitle">Submit your work, like your favorites, and win prizes. Contests never close — winners are selected by the admin based on likes and quality.</p>
+          <p className="page-subtitle">Submit your work, enter contests, and win prizes. Contests never close — winners are hand-selected by our admin team based on creativity and quality.</p>
         </div>
         {isCreatorAdmin(role) && (
           <Link to="/contests/create" className="btn btn--primary" style={{ textDecoration:'none' }}>

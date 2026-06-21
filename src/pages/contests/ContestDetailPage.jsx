@@ -811,7 +811,7 @@ export default function ContestDetailPage() {
             Submissions ({entries.length})
           </h2>
           <p style={{ fontSize:'0.82rem', color:'rgba(200,200,215,0.5)', marginBottom:'1rem' }}>
-            Sorted by most liked. Winners are selected by the admin based on likes and quality.
+            Sorted by most liked. Winners are hand-selected by our admin team based on creativity and quality.
           </p>
           <div className="contest-entries-grid">
             {entries.map((entry) => {

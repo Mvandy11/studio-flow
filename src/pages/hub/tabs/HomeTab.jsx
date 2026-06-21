@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { Folders } from 'lucide-react';
 import { categories } from '../../../data/categories.js';
 import DonationButton from '../../../components/DonationButton.jsx';
 import FoundingMembersSection from '../../../components/home/FoundingMembersSection.jsx';
@@ -17,7 +16,7 @@ export default function HomeTab({ stats }) {
         <h1 className="hub-hero__title">Studio Flow — Where Creators Compete &amp; Earn</h1>
         <p className="hub-hero__subtitle">
           Submit your work, enter contests, and watch live creator events.
-          Entry is free — winners selected by admin based on likes and quality.
+          Entry is free — winners hand-selected by our admin team based on creativity and quality.
         </p>
       </div>
 

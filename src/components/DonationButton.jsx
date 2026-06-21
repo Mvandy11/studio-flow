@@ -20,7 +20,7 @@ export default function DonationButton({ compact = false }) {
         transition: 'background 0.15s, border-color 0.15s',
       }}
     >
-      💝 {compact ? 'Donate' : 'Donate to Reward Pool'}
+      💜 {compact ? 'Donate' : 'Donate to Reward Pool'}
     </a>
   );
 }
