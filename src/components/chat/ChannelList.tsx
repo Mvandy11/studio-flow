@@ -1,3 +1,4 @@
+import { Megaphone } from 'lucide-react';
 import type { Channel, ChannelId } from '../../modules/chat/channels';
 
 interface ChannelListProps {
@@ -30,7 +31,9 @@ export default function ChannelList({
               className={`chat-channel-btn${isActive ? ' chat-channel-btn--active' : ''}`}
               onClick={() => onSelect(ch.id)}
             >
-              <span className="chat-channel-btn__icon">{ch.icon}</span>
+              <span className="chat-channel-btn__icon">
+                {ch.id === 'announcements' ? <Megaphone size={14} /> : ch.icon}
+              </span>
               <span className="chat-channel-btn__label">{ch.label}</span>
               {unread > 0 && !isActive && (
                 <span className="chat-unread-badge">{unread > 99 ? '99+' : unread}</span>
