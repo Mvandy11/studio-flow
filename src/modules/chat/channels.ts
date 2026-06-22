@@ -22,7 +22,7 @@ export function getChannelId(
 export function getDefaultChannels(contestId?: string): Channel[] {
   const channels: Channel[] = [
     { id: 'general',       label: 'General',       icon: '🗣' },
-    { id: 'announcements', label: 'Announcements',  icon: '🔔' },
+    { id: 'announcements', label: 'Announcements',  icon: '📣' },
   ];
   if (contestId) {
     channels.push({
