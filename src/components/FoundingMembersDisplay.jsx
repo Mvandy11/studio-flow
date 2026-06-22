@@ -18,7 +18,7 @@ export default function FoundingMembersDisplay() {
   return (
     <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 24px' }}>
       <h3 style={{ textAlign: 'center', fontSize: '1.8rem', fontWeight: '800', color: '#fff', marginBottom: '8px' }}>
-        🏅 Our Founding Members
+        🏅 Our First 1,000 Members
       </h3>
       <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '40px' }}>
         The first {members.length} creators who believed in Studio Flow
@@ -48,7 +48,7 @@ export default function FoundingMembersDisplay() {
               fontSize: '0.7rem', background: 'rgba(255,184,0,0.2)', color: '#ffb800',
               borderRadius: '20px', padding: '3px 10px', marginBottom: '8px', display: 'inline-block',
             }}>
-              🔥 Founding Member
+              First 1,000 Member
             </div>
             <div style={{ color: '#fff', fontWeight: '700', fontSize: '0.95rem' }}>
               {m.display_name || m.email.split('@')[0]}

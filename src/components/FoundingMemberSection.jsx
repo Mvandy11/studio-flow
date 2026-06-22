@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Star, Check } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
-const TOTAL_SPOTS = 100;
+const TOTAL_SPOTS = 1000;
 const STRIPE_CHECKOUT_URL = import.meta.env.VITE_FOUNDING_CHECKOUT_URL;
 
 export default function FoundingMemberSection() {
@@ -60,25 +61,25 @@ export default function FoundingMemberSection() {
 
   return (
     <section className="founding-section">
-      <div className="founding-badge">🌟 Founding Member</div>
-      <h2>Only {TOTAL_SPOTS} Spots — <span className="highlight">{claimed === null ? '...' : remaining} Remaining</span></h2>
+      <div className="founding-badge"><Star size={14} /> First 1,000 Member</div>
+      <h2>Only {TOTAL_SPOTS.toLocaleString()} Spots — <span className="highlight">{claimed === null ? '...' : remaining.toLocaleString()} Remaining</span></h2>
       <p>
-        Founding members lock in <strong>$25/mo forever</strong> — when the 100 spots fill,
+        First 1,000 members lock in <strong>$25/mo forever</strong> — when the 1,000 spots fill,
         regular membership becomes <strong>$40/mo</strong>. Of each $40 membership,
         <strong> $15 goes to the Contest Prize Pool</strong> and <strong>$10 goes to Event Rewards</strong>.
-        Founding members keep their $25 rate and their badge permanently.
+        First 1,000 members keep their $25 rate and their badge permanently.
       </p>
       <div className="founding-perks">
-        <span>✅ $25/mo locked forever (reg. $40/mo)</span>
-        <span>✅ Founding Member badge — permanent</span>
-        <span>✅ $10/mo fuels contest prizes</span>
-        <span>✅ $10/mo fuels event rewards</span>
-        <span>✅ Early access to every new feature</span>
-        <span>✅ Priority support</span>
+        <span><Check size={16} className="text-green-400" /> $25/mo locked forever (reg. $40/mo)</span>
+        <span><Check size={16} className="text-green-400" /> First 1,000 Member badge — permanent</span>
+        <span><Check size={16} className="text-green-400" /> $10/mo fuels contest prizes</span>
+        <span><Check size={16} className="text-green-400" /> $10/mo fuels event rewards</span>
+        <span><Check size={16} className="text-green-400" /> Early access to every new feature</span>
+        <span><Check size={16} className="text-green-400" /> Priority support</span>
       </div>
 
       <a href={STRIPE_CHECKOUT_URL} className="founding-btn" onClick={handleClaimClick}>
-        Claim Your Founding Spot →
+        Claim Your Spot →
       </a>
 
       {showAuthPrompt && (
@@ -91,9 +92,9 @@ export default function FoundingMemberSection() {
         </div>
       )}
 
-      <p className="founding-sub"><span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', marginRight: '6px', verticalAlign: 'middle', boxShadow: '0 0 6px #4ade80' }} />LIVE · {claimed === null ? '...' : claimed} of {TOTAL_SPOTS} spots claimed</p>
+      <p className="founding-sub"><span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', marginRight: '6px', verticalAlign: 'middle', boxShadow: '0 0 6px #4ade80' }} />LIVE · {claimed === null ? '...' : (claimed).toLocaleString()} of {TOTAL_SPOTS.toLocaleString()} spots claimed</p>
       <p className="founding-sub" style={{ marginTop: '0.35rem', opacity: 0.65 }}>
-        After 100 spots fill, membership opens at $40/mo — founding members keep $25 forever.
+        After 1,000 spots fill, membership opens at $40/mo — first 1,000 members keep $25 forever.
       </p>
     </section>
   );

@@ -47,7 +47,7 @@ export default function FoundingMembersSection() {
   return (
     <section style={{ marginTop: '2.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.1rem' }}>
-        <h2 className="hub-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>👑 Founding Members</h2>
+        <h2 className="hub-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>👑 First 1,000 Members</h2>
         {!loading && (
           <span style={{
             fontSize: '0.72rem',
@@ -58,7 +58,7 @@ export default function FoundingMembersSection() {
             borderRadius: '100px',
             padding: '2px 10px',
           }}>
-            {members.length} / 100
+            {members.length} / 1,000
           </span>
         )}
       </div>
@@ -140,7 +140,7 @@ export default function FoundingMembersSection() {
                 borderRadius: '100px',
                 padding: '2px 8px',
               }}>
-                👑 Founding Member
+                👑 First 1,000 Member
               </span>
             </div>
           ))}

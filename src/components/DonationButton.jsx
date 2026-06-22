@@ -1,3 +1,5 @@
+import { Heart } from 'lucide-react';
+
 const REWARD_POOL_STRIPE_LINK = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
 
 export default function DonationButton({ compact = false }) {
@@ -15,12 +17,14 @@ export default function DonationButton({ compact = false }) {
         fontWeight: 600,
         fontSize: compact ? '0.8rem' : '0.875rem',
         cursor: 'pointer',
-        display: 'inline-block',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.35rem',
         textDecoration: 'none',
         transition: 'background 0.15s, border-color 0.15s',
       }}
     >
-      💜 {compact ? 'Donate' : 'Donate to Reward Pool'}
+      <Heart size={16} /> {compact ? 'Donate' : 'Donate to Reward Pool'}
     </a>
   );
 }
