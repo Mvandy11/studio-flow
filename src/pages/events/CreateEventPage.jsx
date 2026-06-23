@@ -252,12 +252,12 @@ export default function CreateEventPage() {
               </label>
               <input
                 className="cinematic-input"
-                placeholder="YouTube Live, Twitch, Vimeo, or Cloudflare Stream URL"
+                placeholder="Paste your live stream URL — TikTok, YouTube, Twitch, Instagram, Kick, etc."
                 value={form.live_stream_url}
                 onChange={(e) => set('live_stream_url', e.target.value)}
               />
               <p style={{ fontSize: '0.75rem', color: 'rgba(200,200,215,0.35)', marginTop: '0.3rem' }}>
-                Embeds a live player on the event page. Supports YouTube, Twitch, Vimeo, and Cloudflare Stream.
+                Paste your live stream link from any platform — TikTok, YouTube, Twitch, Instagram, Facebook, Kick, or any other streaming service. Viewers will be directed to your stream to support your algorithm.
               </p>
             </div>
           )}

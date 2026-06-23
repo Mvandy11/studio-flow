@@ -5,9 +5,22 @@ import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
 import { checkEventAccess } from '../../lib/checkEventAccess';
 import { api } from '../../lib/api.js';
-import LivePlayer from '../../components/LivePlayer';
 
 /* ── helpers ─────────────────────────────────────────────────── */
+function getStreamPlatform(url) {
+  if (!url) return 'Live Stream';
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.includes('tiktok.com'))                                 return 'TikTok Live';
+    if (host.includes('youtube.com') || host.includes('youtu.be'))  return 'YouTube Live';
+    if (host.includes('twitch.tv'))                                  return 'Twitch';
+    if (host.includes('instagram.com'))                              return 'Instagram Live';
+    if (host.includes('facebook.com') || host.includes('fb.com'))   return 'Facebook Live';
+    if (host.includes('kick.com'))                                   return 'Kick';
+    return 'Live Stream';
+  } catch { return 'Live Stream'; }
+}
+
 function formatDate(iso) {
   if (!iso) return null;
   return new Date(iso).toLocaleString('en-US', {
@@ -353,9 +366,21 @@ export default function EventDetailsPage() {
         </div>
       )}
 
-      {/* Live stream player */}
+      {/* Live stream — Watch Live button */}
       {isLive && event.live_stream_url && eventStatus !== 'ended' && (
-        <LivePlayer url={event.live_stream_url} label={event.title} />
+        <div style={{ marginBottom: '1.75rem', textAlign: 'center', padding: '2rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: '16px' }}>
+          <a
+            href={event.live_stream_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', padding: '0.9rem 2.25rem', borderRadius: '12px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171', fontWeight: 700, fontSize: '1.05rem', textDecoration: 'none' }}
+          >
+            📡 Watch Live →
+          </a>
+          <p style={{ margin: '0.75rem 0 0', fontSize: '0.78rem', color: 'rgba(200,200,215,0.45)' }}>
+            Opens on {getStreamPlatform(event.live_stream_url)} — your view supports the creator's algorithm
+          </p>
+        </div>
       )}
 
       {/* Video player (recorded events) */}
@@ -377,6 +402,11 @@ export default function EventDetailsPage() {
         <span style={{ padding: '0.25rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', background: isLive ? 'rgba(167,139,250,0.12)' : 'rgba(52,211,153,0.12)', color: isLive ? '#a78bfa' : '#34d399', border: `1px solid ${isLive ? '#a78bfa44' : '#34d39944'}` }}>
           {isLive ? '📡 Live Event' : '🎬 Pre‑Recorded'}
         </span>
+        {isLive && event.live_stream_url && (
+          <span style={{ padding: '0.25rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
+            {getStreamPlatform(event.live_stream_url)}
+          </span>
+        )}
         <span style={{ padding: '0.25rem 0.7rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, background: price === 0 ? 'rgba(34,197,94,0.12)' : 'rgba(245,166,35,0.12)', color: price === 0 ? '#22c55e' : '#f5a623', border: `1px solid ${price === 0 ? '#22c55e44' : '#f5a62344'}` }}>
           {price === 0 ? 'Free' : `$${price.toFixed(2)}`}
         </span>

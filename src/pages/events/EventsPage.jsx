@@ -5,6 +5,20 @@ import { useMembership }      from '../../modules/memberships';
 import { isCreatorAdmin }     from '../../lib/roles';
 import { Music, Music2, Dumbbell, UtensilsCrossed, Flame, Baby, Palette, Heart } from 'lucide-react';
 
+function getStreamPlatform(url) {
+  if (!url) return 'Live Stream';
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.includes('tiktok.com'))                                return 'TikTok Live';
+    if (host.includes('youtube.com') || host.includes('youtu.be')) return 'YouTube Live';
+    if (host.includes('twitch.tv'))                                 return 'Twitch';
+    if (host.includes('instagram.com'))                             return 'Instagram Live';
+    if (host.includes('facebook.com') || host.includes('fb.com'))  return 'Facebook Live';
+    if (host.includes('kick.com'))                                  return 'Kick';
+    return 'Live Stream';
+  } catch { return 'Live Stream'; }
+}
+
 const CATEGORIES = [
   { name: 'Comedy',     icon: '😂' },
   { name: 'Music',      icon: Music },
@@ -175,7 +189,14 @@ function FeaturedCard({ slot, tier }) {
           {slot.category && (
             <span style={catPillStyle}>{slot.category}</span>
           )}
-          <p style={{ margin: '0.4rem 0 0.25rem', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3 }}>{slot.title}</p>
+          <p style={{ margin: '0.4rem 0 0.25rem', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3 }}>
+            {slot.title}
+            {isLive && slot.live_stream_url && (
+              <span style={{ display: 'inline-block', marginLeft: '0.4rem', fontSize: '0.6rem', fontWeight: 700, background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '999px', padding: '0.1rem 0.5rem', verticalAlign: 'middle', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {getStreamPlatform(slot.live_stream_url)}
+              </span>
+            )}
+          </p>
           <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(200,200,215,0.4)' }}>by {displayName}</p>
         </div>
       </div>
