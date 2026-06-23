@@ -73,6 +73,8 @@ export default function App() {
           <Routes>
             {/* ── Core ── */}
             <Route path="/login"      element={<LoginPage />} />
+            <Route path="/signup"     element={<Navigate to="/login" replace />} />
+            <Route path="/upgrade"    element={<Navigate to="/membership" replace />} />
             <Route path="/"           element={<Home />} />
             <Route path="/feed"       element={<Feed />} />
             <Route path="/profile"    element={<CreatorProfile />} />

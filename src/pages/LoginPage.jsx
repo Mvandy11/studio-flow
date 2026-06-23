@@ -67,7 +67,7 @@ export default function LoginPage() {
             Studio Flow
           </div>
           <div style={{ fontSize: '0.72rem', color: 'rgba(200,200,215,0.4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '0.2rem' }}>
-            Obviously Inspired Studio
+            Where Creators Compete &amp; Earn
           </div>
         </Link>
 

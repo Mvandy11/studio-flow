@@ -3,7 +3,7 @@ import { Link }               from 'react-router-dom';
 import { useAuth }            from '../../hooks/useAuth';
 import { useMembership }      from '../../modules/memberships';
 import { isCreatorAdmin }     from '../../lib/roles';
-import { Music, Music2, Dumbbell, UtensilsCrossed, Flame, Baby, Palette, Heart } from 'lucide-react';
+import { Music, Music2, Dumbbell, UtensilsCrossed, Flame, Baby, Palette, Heart, Lock } from 'lucide-react';
 
 function getStreamPlatform(url) {
   if (!url) return 'Live Stream';
@@ -147,7 +147,7 @@ export default function EventsPage() {
       {tier !== 'member_30' && tier !== 'creator_50' && !isAdmin && (
         <div style={upgradeBanner}>
           <div>
-            <p style={{ fontWeight: 700, marginBottom: '0.25rem' }}>🌟 Unlock Full Access</p>
+            <p style={{ fontWeight: 700, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Lock size={16} /> Unlock Full Access</p>
             <p style={{ color: 'rgba(200,200,215,0.6)', fontSize: '0.875rem', margin: 0 }}>
               Become a member to watch full events and enter contests.
             </p>

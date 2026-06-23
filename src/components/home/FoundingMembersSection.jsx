@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Star } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
 function formatDate(iso) {
@@ -74,7 +75,7 @@ export default function FoundingMembersSection() {
           color: 'var(--hub-muted)',
           fontSize: '0.875rem',
         }}>
-          No founding members yet — be the first.
+          No members yet — be the first of 1,000.
         </div>
       ) : (
         <div style={{
@@ -140,7 +141,7 @@ export default function FoundingMembersSection() {
                 borderRadius: '100px',
                 padding: '2px 8px',
               }}>
-                👑 First 1,000 Member
+                <Star size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} /> First 1,000 Member
               </span>
             </div>
           ))}

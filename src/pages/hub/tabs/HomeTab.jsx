@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Gift } from 'lucide-react';
+import { Gift, Clapperboard } from 'lucide-react';
 import { categories } from '../../../data/categories.js';
 import DonationButton from '../../../components/DonationButton.jsx';
 import FoundingMembersSection from '../../../components/home/FoundingMembersSection.jsx';
@@ -52,7 +52,7 @@ export default function HomeTab({ stats }) {
       </div>
 
       {/* Category cards — single source of truth: src/data/categories.js */}
-      <h2 className="hub-section-title" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>📁 Browse Categories</h2>
+      <h2 className="hub-section-title" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Clapperboard size={20} /> Browse Categories</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
         {categories.map((cat) => (
           <button
