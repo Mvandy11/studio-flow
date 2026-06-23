@@ -149,7 +149,6 @@ export default function Feed() {
 
   const [sessions,      setSessions]      = useState([]);
   const [events,        setEvents]        = useState([]);
-  const [contests,      setContests]      = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [feedLoading,   setFeedLoading]   = useState(true);
   const [feedError,     setFeedError]     = useState(null);
@@ -176,29 +175,19 @@ export default function Feed() {
             .limit(20),
 
           supabase
-            .from('contests')
-            .select('id, title, description, created_at, status, prize')
-            .in('status', ['active', 'voting', 'completed'])
-            .order('created_at', { ascending: false })
-            .limit(10),
-
-          supabase
             .from('announcements')
             .select('id, title, body, created_at')
             .order('created_at', { ascending: false })
             .limit(10),
         ]);
 
-        const [sessRes, evRes, conRes, annRes] = results;
+        const [sessRes, evRes, annRes] = results;
 
         setSessions(
           sessRes.status === 'fulfilled' ? (sessRes.value.data ?? []) : []
         );
         setEvents(
           evRes.status === 'fulfilled' ? (evRes.value.data ?? []) : []
-        );
-        setContests(
-          conRes.status === 'fulfilled' ? (conRes.value.data ?? []) : []
         );
         setAnnouncements(
           annRes.status === 'fulfilled' ? (annRes.value.data ?? []) : []
@@ -270,17 +259,6 @@ export default function Feed() {
     badge:      ev.is_paid_event ? `$${ev.ticket_price} ticket` : 'Free',
   }));
 
-  const contestCards = contests.map((c) => ({
-    id:         `contest-${c.id}`,
-    type:       'contest',
-    title:      c.title || 'Contest',
-    subtitle:   c.description,
-    thumbnail:  null,
-    href:       `/contests/${c.id}`,
-    created_at: c.created_at,
-    badge:      c.prize ? `Prize: ${c.prize}` : (c.status === 'voting' ? 'Admin Pick' : c.status === 'active' ? 'Open' : c.status),
-  }));
-
   const announcementCards = announcements.map((a) => ({
     id:         `ann-${a.id}`,
     type:       'announcement',
@@ -291,8 +269,8 @@ export default function Feed() {
     created_at: a.created_at,
   }));
 
-  /* ── Unified "Latest" stream (all content, newest first) ── */
-  const allItems = [...sessionCards, ...eventCards, ...contestCards, ...announcementCards]
+  /* ── Unified "Latest" stream — sessions & events only, no contests or announcements ── */
+  const allItems = [...sessionCards, ...eventCards]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 30);
 
@@ -306,7 +284,7 @@ export default function Feed() {
           Studio Flow Feed
         </h1>
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(200,200,215,0.4)' }}>
-          Sessions, events, contests &amp; announcements — all in one place.
+          Sessions, events &amp; announcements — all in one place.
           {!user && (
             <> <Link to="/login" style={{ color: 'rgba(110,168,255,0.8)', textDecoration: 'none' }}>Log in</Link> to see personalized content.</>
           )}
