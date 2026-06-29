@@ -9,6 +9,9 @@ import { logError } from './utils/logError.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST_DIR  = join(__dirname, '..', 'dist', 'public');
 
+// ─────────────────────────────────────────────────────────────
+// Existing route imports
+// ─────────────────────────────────────────────────────────────
 import aiRoutes                  from './routes/ai/index.js';
 import authProfileRouter         from './routes/authProfile.js';
 import contestsRouter            from './routes/contests.js';
@@ -22,8 +25,8 @@ import eventSlotsRouter          from './routes/eventSlots.js';
 import customEventRequestsRouter from './routes/customEventRequests.js';
 import adminApprovalRouter       from './routes/adminApproval.js';
 import adminRevenueRouter        from './routes/adminRevenue.js';
-import adminPayoutRouter         from './routes/adminPayout.js';         // ← NEW
-import stripeConnectRouter       from './routes/stripeConnect.js';        // ← NEW
+import adminPayoutRouter         from './routes/adminPayout.js';
+import stripeConnectRouter       from './routes/stripeConnect.js';
 import slotCreationRouter        from './routes/slotCreation.js';
 import eventsRouter              from './routes/events.js';
 import testWinnerPullRouter      from './routes/testWinnerPull.js';
@@ -42,6 +45,11 @@ import creatorEventsRouter       from './routes/creatorEvents.js';
 import revenuePoolRouter         from './routes/revenuePool.js';
 import donationsRouter           from './routes/donations.js';
 
+// ─────────────────────────────────────────────────────────────
+// ⭐ NEW — Identity Engine Router
+// ─────────────────────────────────────────────────────────────
+import identityRouter            from './routes/identity.js';
+
 const app = express();
 
 // ─────────────────────────────────────────────────────────────
@@ -50,14 +58,12 @@ const app = express();
 app.use(cors({ origin: '*' }));
 
 // ─────────────────────────────────────────────────────────────
-// 2. REQUEST LOGGER — mounted before routes so every request is logged.
+// 2. REQUEST LOGGER
 // ─────────────────────────────────────────────────────────────
 app.use(requestLogger);
 
 // ─────────────────────────────────────────────────────────────
-// 3. Body parsers
-//    Stripe webhooks need raw bytes for signature verification —
-//    mount express.raw() on webhook paths BEFORE express.json().
+// 3. Body parsers (Stripe raw bytes first)
 // ─────────────────────────────────────────────────────────────
 app.use(
   [
@@ -85,7 +91,7 @@ app.use('/api/announcements',         announcementsRouter);
 app.use('/api/custom-events',         customEventsRouter);
 app.use('/api/payments',              paymentsRouter);
 app.use('/api/stripe',                stripePortalRouter);
-app.use('/api/stripe-connect',        stripeConnectRouter);              // ← NEW
+app.use('/api/stripe-connect',        stripeConnectRouter);
 app.use('/api/membership',            membershipRouter);
 app.use('/api/creator/events',        creatorEventsRouter);
 app.use('/api/revenue-pool',          revenuePoolRouter);
@@ -95,7 +101,7 @@ app.use('/api/event-slots',           eventSlotsRouter);
 app.use('/api/custom-event-requests', customEventRequestsRouter);
 app.use('/api/admin/analytics',       analyticsRouter);
 app.use('/api/admin/winners',         adminWinnersRouter);
-app.use('/api/admin',                 adminPayoutRouter);                // ← NEW — before adminRevenueRouter & adminApprovalRouter
+app.use('/api/admin',                 adminPayoutRouter);
 app.use('/api/admin',                 adminRevenueRouter);
 app.use('/api/admin',                 adminApprovalRouter);
 app.use('/api/slots',                 slotCreationRouter);
@@ -107,6 +113,11 @@ app.use('/api/slot',                  recordedEventsRouter);
 app.use('/api/events',                uploadRecordedVideoRouter);
 app.use('/api/free-chat',             freeChatRouter);
 app.use('/api/comments',              commentsRouter);
+
+// ─────────────────────────────────────────────────────────────
+// ⭐ NEW — Identity Engine Route
+// ─────────────────────────────────────────────────────────────
+app.use('/api/identity', identityRouter);
 
 // ─────────────────────────────────────────────────────────────
 // 6. Health check
@@ -122,23 +133,20 @@ app.get('/api/health', (_req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // 7. Serve built React frontend in production
-//    (only when the dist/ folder exists — dev uses Vite directly)
 // ─────────────────────────────────────────────────────────────
 if (existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
-  // React Router catch-all — must come last so /api/* routes above win
   app.get('*', (_req, res) => {
     res.sendFile(join(DIST_DIR, 'index.html'));
   });
 } else {
-  // Dev fallback 404
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found' });
   });
 }
 
 // ─────────────────────────────────────────────────────────────
-// 8. Global error handler — logs full stack, returns JSON
+// 8. Global error handler
 // ─────────────────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
   const ts = new Date().toISOString();
