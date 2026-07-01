@@ -27,8 +27,7 @@ const StagePage             = lazy(() => import('./pages/stage/StagePage'));
 // ── AI Tools ──
 const Tools                 = lazy(() => import('./pages/Tools'));
 const DenoiseToolPage       = lazy(() => import('./features/ai-denoise/components/DenoiseToolPage'));
-const UpscalePage           = lazy(() => import('./pages/UpscalePage'));
-const EnhancePage           = lazy(() => import('./pages/EnhancePage'));
+
 
 // ── Contests ──
 const ContestsPage          = lazy(() => import('./pages/contests/ContestsPage'));
@@ -113,11 +112,6 @@ export default function App() {
             {/* ── AI Tools ── */}
             <Route path="/tools"          element={<Tools />} />
             <Route path="/tools/denoise"  element={<DenoiseToolPage />} />
-            <Route path="/tools/upscale"  element={<UpscalePage />} />
-            <Route path="/tools/enhance"  element={<EnhancePage />} />
-            {/* Legacy short paths → redirect to canonical */}
-            <Route path="/upscale"  element={<Navigate to="/tools/upscale" replace />} />
-            <Route path="/enhance"  element={<Navigate to="/tools/enhance" replace />} />
             <Route path="/denoise"  element={<Navigate to="/tools/denoise" replace />} />
 
             {/* ── Contests ── (specific before :id) */}
