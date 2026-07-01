@@ -16,7 +16,7 @@ const Success          = lazy(() => import('./pages/Success'));
 const SessionEditor    = lazy(() => import('./pages/SessionEditor'));
 const Studio           = lazy(() => import('./pages/Studio'));
 const Tools            = lazy(() => import('./pages/Tools'));
-const Upscale          = lazy(() => import('./pages/Upscale'));
+const Upscale = lazy(() => import('./pages/UpscalePage'));
 const Enhance          = lazy(() => import('./pages/Enhance'));
 const Contests         = lazy(() => import('./pages/Contests'));
 const PaymentSuccess   = lazy(() => import('./pages/PaymentSuccess'));
