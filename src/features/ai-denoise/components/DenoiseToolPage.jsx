@@ -10,9 +10,9 @@ export default function DenoiseToolPage() {
   const { file, isUploading, progress, error, result, upload, reset } = useDenoiseUpload();
 
   if (!user) return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-      <p className="text-gray-400">Log in to access this feature.</p>
-      <a href="/login" className="bg-yellow-400 text-black px-6 py-2 rounded-full font-semibold">Log In</a>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '1rem', textAlign: 'center' }}>
+      <p style={{ color: '#9CA3AF', fontSize: 18, fontWeight: 600 }}>Log in to access AI Denoise.</p>
+      <a href="/login" style={{ background: 'linear-gradient(135deg, #F5C842, #D4A830)', color: '#0A0A0F', fontWeight: 700, padding: '10px 24px', borderRadius: 8, textDecoration: 'none' }}>Log In</a>
     </div>
   );
 
