@@ -39,7 +39,7 @@ const MyContestEntriesPage  = lazy(() => import('./pages/contests/MyContestEntri
 // ── Community ──
 const FreeChatPage          = lazy(() => import('./pages/FreeChatPage'));
 const AnnouncementsPage     = lazy(() => import('./pages/AnnouncementsPage'));
-const CreatorAcademy        = lazy(() => import('./pages/CreatorAcademy'));
+const Generator             = lazy(() => import('./pages/Generator'));
 const SubmissionsPage       = lazy(() => import('./pages/SubmissionsPage'));
 
 // ── Creator ──
@@ -129,7 +129,7 @@ export default function App() {
             {/* ── Community ── */}
             <Route path="/free-chat"       element={<FreeChatPage />} />
             <Route path="/announcements"   element={<AnnouncementsPage />} />
-            <Route path="/creator-academy" element={<CreatorAcademy />} />
+            <Route path="/generator"       element={<Generator />} />
             <Route path="/submissions"     element={<SubmissionsPage />} />
             <Route path="/chat"            element={<ChatPage />} />
             <Route path="/education"       element={<Education />} />

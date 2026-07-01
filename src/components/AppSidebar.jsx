@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom';
-import { Megaphone } from 'lucide-react';
+import { Megaphone, Clapperboard } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { useProfile } from '../hooks/useProfile';
@@ -95,7 +95,7 @@ export default function AppSidebar({ open, onClose }) {
           <NavItem to="/contests"        icon="🏆" label="Contests" />
           <NavItem to="/announcements"   icon={<Megaphone size={16} />} label="Announcements" />
           <NavItem to="/free-chat"       icon="🗣" label="Free Chat" />
-          <NavItem to="/creator-academy" icon="🎓" label="Academy" />
+          <NavItem to="/generator" icon={<Clapperboard size={16} />} label="Video Generator" />
         </nav>
 
         <div className="app-sidebar__divider" />
