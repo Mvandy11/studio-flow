@@ -1,23 +1,31 @@
 import { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 import "./videoGenerator.css";
 
 export default function VideoGenerator() {
+  const { user } = useAuth();
   const [identities, setIdentities] = useState([]);
   const [selectedIdentity, setSelectedIdentity] = useState(null);
-  const [scenes, setScenes] = useState([
-    { id: 1, prompt: "" }
-  ]);
+  const [scenes, setScenes] = useState([{ id: 1, prompt: "" }]);
   const [loading, setLoading] = useState(false);
-  const [renderId, setRenderId] = useState(null);
+  const [renderJobId, setRenderJobId] = useState(null);
   const [renderStatus, setRenderStatus] = useState(null);
   const [finalVideoUrl, setFinalVideoUrl] = useState(null);
+  const [error, setError] = useState(null);
+
+  if (!user) return <Navigate to="/login" replace />;
 
   // Load identities from backend
   useEffect(() => {
     async function fetchIdentities() {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/identity/list`);
-      const data = await res.json();
-      setIdentities(data.identities || []);
+      try {
+        const res = await fetch("/api/identity/list");
+        const data = await res.json();
+        setIdentities(data.identities || []);
+      } catch (err) {
+        console.error("Failed to load identities", err);
+      }
     }
     fetchIdentities();
   }, []);
@@ -32,56 +40,71 @@ export default function VideoGenerator() {
 
   async function generateVideo() {
     if (!selectedIdentity) {
-      alert("Please select an identity.");
+      setError("Please select an identity.");
       return;
     }
 
     setLoading(true);
     setFinalVideoUrl(null);
+    setError(null);
 
-    const payload = {
-      identity_id: selectedIdentity.identity_id,
-      scenes: scenes.map(s => ({
-        id: s.id,
-        prompt: s.prompt
-      }))
-    };
+    try {
+      const payload = {
+        identity_id: selectedIdentity.id,
+        identity_url: selectedIdentity.selfie_url,
+        scenes: scenes.map(s => ({ id: s.id, prompt: s.prompt })),
+        script_text: scenes.map(s => s.prompt).filter(Boolean).join(" "),
+        member_id: user.id
+      };
 
-    const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/video/generate`,
-      {
+      const res = await fetch("/api/sessions/video/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
-      }
-    );
+      });
 
-    const data = await res.json();
-    setRenderId(data.render_id);
-    setRenderStatus("queued");
-    setLoading(false);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to start render.");
+        setLoading(false);
+        return;
+      }
+
+      setRenderJobId(data.render_job_id);
+      setRenderStatus("queued");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Poll render status
   useEffect(() => {
-    if (!renderId) return;
+    if (!renderJobId) return;
 
     const interval = setInterval(async () => {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/video/status/${renderId}`
-      );
-      const data = await res.json();
+      try {
+        const res = await fetch(`/api/sessions/video/status/${renderJobId}`);
+        const data = await res.json();
 
-      setRenderStatus(data.status);
+        setRenderStatus(data.status);
 
-      if (data.status === "completed") {
-        setFinalVideoUrl(data.video_url);
-        clearInterval(interval);
+        if (data.status === "completed") {
+          setFinalVideoUrl(data.video_url);
+          clearInterval(interval);
+        } else if (data.status === "error") {
+          setError("Render failed. Please try again.");
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error("Status poll error", err);
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [renderId]);
+  }, [renderJobId]);
 
   return (
     <div className="vg-wrapper">
@@ -89,20 +112,24 @@ export default function VideoGenerator() {
 
         <h2 className="vg-title">Video Scene Generator</h2>
 
+        {error && (
+          <div className="vg-error">{error}</div>
+        )}
+
         {/* Identity Selector */}
         <label className="vg-label">Select Member Identity</label>
         <select
           className="vg-select"
           onChange={(e) => {
             const id = e.target.value;
-            const identity = identities.find(i => i.identity_id === id);
-            setSelectedIdentity(identity);
+            const identity = identities.find(i => i.id === id);
+            setSelectedIdentity(identity || null);
           }}
         >
           <option value="">Choose identity...</option>
           {identities.map(identity => (
-            <option key={identity.identity_id} value={identity.identity_id}>
-              {identity.identity_id}
+            <option key={identity.id} value={identity.id}>
+              {identity.persona_description || identity.id}
             </option>
           ))}
         </select>
@@ -116,7 +143,7 @@ export default function VideoGenerator() {
               <label>Scene {scene.id}</label>
               <textarea
                 className="vg-textarea"
-                placeholder="Describe the scene..."
+                placeholder="Describe what the AI should say in this scene..."
                 value={scene.prompt}
                 onChange={(e) => updateScene(scene.id, e.target.value)}
               />
