@@ -50,12 +50,12 @@ function TierBadge({ tier }: { tier: string }) {
 }
 
 const PERKS_FOUNDING = [
-  '🔒 $25/mo locked forever (reg. $40/mo)',
-  '🏅 Founding Member badge — permanent',
-  '🏆 $10/mo fuels contest prizes',
-  '🎬 $10/mo fuels event rewards',
-  '⚡ Early access to every new feature',
-  '💬 Priority support',
+  '🏆 $10/month added to the Contest Prize Pool — your membership directly funds winner payouts',
+  '🎬 Video Generator access — 5 AI videos per month included',
+  '🔇 AI Audio Denoise — clean your audio with one click',
+  '🎙️ Full Studio access — your personal creator workspace',
+  '💬 Members-only chat channels',
+  '🔒 Founding Member rate locked at $25/mo — price increases to $40/mo after launch',
 ];
 
 const PERKS_MEMBER = [
@@ -285,7 +285,7 @@ export default function MembershipPage() {
       <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-muted, #888)', flexWrap: 'wrap' }}>
         <Link to="/contests"  style={{ color: 'inherit' }}>Browse Contests</Link>
         <Link to="/free-chat" style={{ color: 'inherit' }}>Free Chat</Link>
-        <Link to="/events"    style={{ color: 'inherit' }}>Explore Events</Link>
+        <Link to="/generator" style={{ color: 'inherit' }}>Video Generator</Link>
       </div>
 
       <p style={{ fontSize: '0.72rem', color: 'var(--text-muted, #888)', marginTop: '1.5rem' }}>

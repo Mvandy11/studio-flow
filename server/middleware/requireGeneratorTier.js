@@ -1,5 +1,7 @@
 import { supabase } from '../supabase/client.js';
 
+const GENERATOR_TIERS = ['founding', 'premier'];
+
 export default async function requireGeneratorTier(req, res, next) {
   const userId = req.user?.id;
   if (!userId) return res.status(401).json({ error: 'Not authenticated' });
@@ -11,9 +13,9 @@ export default async function requireGeneratorTier(req, res, next) {
     .eq('member_id', userId)
     .single();
 
-  if (!membership || membership.tier !== 'studio_creator') {
+  if (!membership || !GENERATOR_TIERS.includes(membership.tier)) {
     return res.status(403).json({
-      error: 'Studio Creator membership required to use the Video Generator.',
+      error: 'A Founding or Premier membership is required to use the Video Generator.',
       upgrade_required: true
     });
   }

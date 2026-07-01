@@ -26,6 +26,7 @@ export default function HomeTab({ stats }) {
         <div className="hub-stat">
           <div className="hub-stat__value">{stats.activeContests}</div>
           <div className="hub-stat__label">Contests</div>
+          <div style={{ fontSize: '0.68rem', color: 'rgba(200,200,215,0.45)', marginTop: '0.2rem', lineHeight: 1.3 }}>Prize pool grows $10 with every member</div>
         </div>
         <div className="hub-stat">
           <div className="hub-stat__value">{stats.totalMembers}</div>

@@ -68,6 +68,20 @@ router.post('/stripe-webhook', async (req, res) => {
         break;
       }
 
+      // ── Founding member subscription created ──────────────────
+      case 'customer.subscription.created': {
+        const subscription = event.data.object;
+        await handleSubscriptionCreated(subscription);
+        break;
+      }
+
+      // ── Invoice paid (recurring founding member payment) ──────
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        await handleInvoicePaid(invoice);
+        break;
+      }
+
       // ── Connect transfer created (success) ────────────────────
       case 'transfer.created': {
         const transfer = event.data.object;
@@ -320,6 +334,76 @@ async function handleSubscriptionDeleted(subscription) {
   } else {
     console.log(`[webhook/subscription.deleted] ${profile.email} already inactive — skipped`);
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Helper: insert revenue_pool_entries row for founding member
+// ─────────────────────────────────────────────────────────────
+async function insertRevenuePoolEntry(memberId, amountTotal) {
+  if (!memberId || amountTotal !== 25) return;
+  const month = new Date().toISOString().slice(0, 7);
+  const { error } = await supabaseAdmin.from('revenue_pool_entries').insert({
+    member_id:           memberId,
+    amount_total:        25.00,
+    contest_allocation:  10.00,
+    platform_allocation: 15.00,
+    tier:                'founding',
+    month,
+    created_at:          new Date().toISOString(),
+  });
+  if (error) {
+    console.warn('[webhook/revenue_pool_entries] insert error:', error.message);
+  } else {
+    console.log(`[webhook/revenue_pool_entries] inserted for member ${memberId} month ${month}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Handler: customer.subscription.created
+// ─────────────────────────────────────────────────────────────
+async function handleSubscriptionCreated(subscription) {
+  const customerId = subscription.customer;
+  const amountTotal = (subscription.plan?.amount ?? 0) / 100;
+  console.log(`[webhook/subscription.created] customer=${customerId} amount=$${amountTotal}`);
+
+  if (!customerId) return;
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle();
+
+  if (!profile) {
+    console.warn(`[webhook/subscription.created] No profile for customer ${customerId}`);
+    return;
+  }
+
+  await insertRevenuePoolEntry(profile.id, amountTotal);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Handler: invoice.payment_succeeded
+// ─────────────────────────────────────────────────────────────
+async function handleInvoicePaid(invoice) {
+  const customerId  = invoice.customer;
+  const amountTotal = (invoice.amount_paid ?? 0) / 100;
+  console.log(`[webhook/invoice.payment_succeeded] customer=${customerId} amount=$${amountTotal}`);
+
+  if (!customerId) return;
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle();
+
+  if (!profile) {
+    console.warn(`[webhook/invoice.payment_succeeded] No profile for customer ${customerId}`);
+    return;
+  }
+
+  await insertRevenuePoolEntry(profile.id, amountTotal);
 }
 
 // ─────────────────────────────────────────────────────────────
