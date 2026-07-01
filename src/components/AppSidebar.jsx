@@ -83,8 +83,6 @@ export default function AppSidebar({ open, onClose }) {
         <div className="app-sidebar__section-label">AI Tools</div>
         <nav className="app-sidebar__nav">
           <NavItem to="/tools/denoise" icon="♫" label="Denoise" />
-          <NavItem to="/tools/upscale" icon="⤢" label="Upscale" />
-          <NavItem to="/tools/enhance" icon="✦" label="Enhance" />
         </nav>
 
         <div className="app-sidebar__divider" />
