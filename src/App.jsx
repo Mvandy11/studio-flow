@@ -21,8 +21,11 @@ const EnhancePage      = lazy(() => import('./pages/EnhancePage'));
 const ContestsPage     = lazy(() => import('./pages/contests/ContestsPage'));
 const PaymentSuccess   = lazy(() => import('./pages/PaymentSuccess'));
 
-// ⭐ NEW: Identity Engine page
+// ⭐ Identity Engine
 const CreateIdentity   = lazy(() => import('./pages/CreateIdentity'));
+
+// ⭐ Video Generator
+const VideoGenerator   = lazy(() => import('./pages/VideoGenerator'));
 
 export default function App() {
   return (
@@ -42,6 +45,9 @@ export default function App() {
 
             {/* ⭐ ── Identity Engine ── */}
             <Route path="/dashboard/identity" element={<CreateIdentity />} />
+
+            {/* ⭐ ── Video Generator ── */}
+            <Route path="/dashboard/video-generator" element={<VideoGenerator />} />
 
             {/* ── Studio Tools ── */}
             <Route path="/studio"     element={<Studio />} />
@@ -68,5 +74,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
 
