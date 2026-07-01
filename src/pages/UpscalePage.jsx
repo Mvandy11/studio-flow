@@ -1,4 +1,5 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useUpscale } from '../hooks/useUpscale';
 import { FileDropZone, BeforeAfterSlider } from '../components/upscale';
 import styles from './UpscalePage.module.css';
@@ -39,12 +40,7 @@ export default function UpscalePage() {
     }
   };
 
-  if (!user) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '1rem', textAlign: 'center' }}>
-      <p style={{ color: '#9CA3AF', fontSize: 18, fontWeight: 600 }}>Log in to access AI Upscale.</p>
-      <a href="/login" style={{ background: 'linear-gradient(135deg, #F5C842, #D4A830)', color: '#0A0A0F', fontWeight: 700, padding: '10px 24px', borderRadius: 8, textDecoration: 'none' }}>Log In</a>
-    </div>
-  );
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <div className={styles.page}>
