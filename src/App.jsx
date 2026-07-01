@@ -16,10 +16,13 @@ const Success          = lazy(() => import('./pages/Success'));
 const SessionEditor    = lazy(() => import('./pages/SessionEditor'));
 const Studio           = lazy(() => import('./pages/Studio'));
 const Tools            = lazy(() => import('./pages/Tools'));
-const Upscale = lazy(() => import('./pages/UpscalePage'));
+const Upscale          = lazy(() => import('./pages/UpscalePage'));
 const EnhancePage      = lazy(() => import('./pages/EnhancePage'));
 const ContestsPage     = lazy(() => import('./pages/contests/ContestsPage'));
 const PaymentSuccess   = lazy(() => import('./pages/PaymentSuccess'));
+
+// ⭐ NEW: Identity Engine page
+const CreateIdentity   = lazy(() => import('./pages/CreateIdentity'));
 
 export default function App() {
   return (
@@ -36,6 +39,9 @@ export default function App() {
             <Route path="/feed"       element={<Feed />} />
             <Route path="/dashboard"  element={<Dashboard />} />
             <Route path="/profile"    element={<CreatorProfile />} />
+
+            {/* ⭐ ── Identity Engine ── */}
+            <Route path="/dashboard/identity" element={<CreateIdentity />} />
 
             {/* ── Studio Tools ── */}
             <Route path="/studio"     element={<Studio />} />
@@ -55,7 +61,6 @@ export default function App() {
             {/* ── Sessions ── */}
             <Route path="/session-editor" element={<SessionEditor />} />
 
-
           </Routes>
 
         </Suspense>
@@ -63,4 +68,5 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
 
