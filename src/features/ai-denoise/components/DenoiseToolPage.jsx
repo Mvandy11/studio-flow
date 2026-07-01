@@ -3,9 +3,18 @@ import FileUploader from './FileUploader';
 import AudioPlayerComparison from './AudioPlayerComparison';
 import { useDenoiseUpload } from '../hooks/useDenoiseUpload';
 import styles from './DenoiseToolPage.module.css';
+import { useAuth } from '../../../hooks/useAuth';
 
 export default function DenoiseToolPage() {
+  const { user } = useAuth();
   const { file, isUploading, progress, error, result, upload, reset } = useDenoiseUpload();
+
+  if (!user) return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+      <p className="text-gray-400">Log in to access this feature.</p>
+      <a href="/login" className="bg-yellow-400 text-black px-6 py-2 rounded-full font-semibold">Log In</a>
+    </div>
+  );
 
   return (
     <div className={styles.page}>

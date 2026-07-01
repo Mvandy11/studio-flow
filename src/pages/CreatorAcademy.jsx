@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './CreatorAcademy.css';
 import DonationButton from '../components/DonationButton';
+import { useAuth } from '../hooks/useAuth';
 
 /* ─── Icon Components (inline SVG for zero-dependency usage) ─── */
 const icons = {
@@ -504,6 +505,15 @@ function ProgressBar({ total }) {
 /* ─── Main Page ─── */
 
 export default function CreatorAcademy() {
+  const { user } = useAuth();
+
+  if (!user) return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+      <p className="text-gray-400">Log in to access this feature.</p>
+      <a href="/login" className="bg-yellow-400 text-black px-6 py-2 rounded-full font-semibold">Log In</a>
+    </div>
+  );
+
   return (
     <div className="ca-page">
       {/* ── Hero Banner ── */}
