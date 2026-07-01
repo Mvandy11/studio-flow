@@ -4,68 +4,168 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 
-// ── Lazy-loaded pages ──
-const Home             = lazy(() => import('./pages/Home'));
-const Feed             = lazy(() => import('./pages/Feed'));
-const Dashboard        = lazy(() => import('./pages/Dashboard'));
-const LoginPage        = lazy(() => import('./pages/LoginPage'));
-const CreatorProfile   = lazy(() => import('./pages/CreatorProfile'));
-const ChatPage         = lazy(() => import('./pages/ChatPage'));
-const Education        = lazy(() => import('./pages/Education'));
-const Success          = lazy(() => import('./pages/Success'));
-const SessionEditor    = lazy(() => import('./pages/SessionEditor'));
-const Studio           = lazy(() => import('./pages/Studio'));
-const Tools            = lazy(() => import('./pages/Tools'));
-const Upscale          = lazy(() => import('./pages/UpscalePage'));
-const EnhancePage      = lazy(() => import('./pages/EnhancePage'));
-const ContestsPage     = lazy(() => import('./pages/contests/ContestsPage'));
-const PaymentSuccess   = lazy(() => import('./pages/PaymentSuccess'));
+// ── Core pages ──
+const Home                  = lazy(() => import('./pages/Home'));
+const Feed                  = lazy(() => import('./pages/Feed'));
+const LoginPage             = lazy(() => import('./pages/LoginPage'));
+const CreatorProfile        = lazy(() => import('./pages/CreatorProfile'));
 
-// ⭐ Identity Engine
-const CreateIdentity   = lazy(() => import('./pages/CreateIdentity'));
+// ── Events ──
+const EventsPage            = lazy(() => import('./pages/events/EventsPage'));
+const EventDetailsPage      = lazy(() => import('./pages/events/EventDetailsPage'));
+const CreateEventPage       = lazy(() => import('./pages/events/CreateEventPage'));
+const PurchasePage          = lazy(() => import('./pages/events/PurchasePage'));
+const CategoryEventsPage    = lazy(() => import('./pages/events/CategoryEventsPage'));
 
-// ⭐ Video Generator
-const VideoGenerator   = lazy(() => import('./pages/VideoGenerator'));
+// ── Studio ──
+const Studio                = lazy(() => import('./pages/Studio'));
+const StudioSessions        = lazy(() => import('./pages/StudioSessions'));
+const SessionEditor         = lazy(() => import('./pages/SessionEditor'));
+const SessionPage           = lazy(() => import('./pages/SessionPage'));
+const StagePage             = lazy(() => import('./pages/stage/StagePage'));
+
+// ── AI Tools ──
+const Tools                 = lazy(() => import('./pages/Tools'));
+const DenoiseToolPage       = lazy(() => import('./features/ai-denoise/components/DenoiseToolPage'));
+const UpscalePage           = lazy(() => import('./pages/UpscalePage'));
+const EnhancePage           = lazy(() => import('./pages/EnhancePage'));
+
+// ── Contests ──
+const ContestsPage          = lazy(() => import('./pages/contests/ContestsPage'));
+const ContestDetailPage     = lazy(() => import('./pages/contests/ContestDetailPage'));
+const CreateContestPage     = lazy(() => import('./pages/contests/CreateContestPage'));
+const MyContestEntriesPage  = lazy(() => import('./pages/contests/MyContestEntriesPage'));
+
+// ── Community ──
+const FreeChatPage          = lazy(() => import('./pages/FreeChatPage'));
+const AnnouncementsPage     = lazy(() => import('./pages/AnnouncementsPage'));
+const CreatorAcademy        = lazy(() => import('./pages/CreatorAcademy'));
+const SubmissionsPage       = lazy(() => import('./pages/SubmissionsPage'));
+
+// ── Creator ──
+const CreatorDashboardPage  = lazy(() => import('./pages/creator/CreatorDashboardPage'));
+const NewEventPage          = lazy(() => import('./pages/creator/NewEventPage'));
+const CreatorEventsPage     = lazy(() => import('./pages/creator/CreatorEventsPage'));
+const CreatorDonationsPage  = lazy(() => import('./pages/creator/CreatorDonationsPage'));
+const CreatorRevenuePage    = lazy(() => import('./pages/creator/CreatorRevenuePage'));
+
+// ── Membership / Earnings ──
+const MembershipPage        = lazy(() => import('./pages/MembershipPage'));
+const EarningsDashboard     = lazy(() => import('./pages/EarningsDashboard'));
+const PremierSettings       = lazy(() => import('./pages/PremierSettings'));
+const PayoutSettings        = lazy(() => import('./pages/PayoutSettings'));
+
+// ── Admin ──
+const AdminDashboard        = lazy(() => import('./pages/AdminDashboard'));
+const AdminWinnersDashboard = lazy(() => import('./pages/AdminWinnersDashboard'));
+const AdminAnalyticsDashboard = lazy(() => import('./pages/AdminAnalyticsDashboard'));
+const AdminErrorsDashboard  = lazy(() => import('./pages/admin/AdminErrorsDashboard'));
+const AdminEventRequests    = lazy(() => import('./pages/AdminEventRequests'));
+
+// ── Payments ──
+const PaymentSuccess        = lazy(() => import('./pages/PaymentSuccess'));
+const Success               = lazy(() => import('./pages/Success'));
+const MembershipSuccess     = lazy(() => import('./pages/MembershipSuccess'));
+const DonateSuccess         = lazy(() => import('./pages/DonateSuccess'));
+
+// ── Identity / Video Generator (AI Architect additions) ──
+const CreateIdentity        = lazy(() => import('./pages/CreateIdentity'));
+const VideoGenerator        = lazy(() => import('./pages/VideoGenerator'));
+
+// ── Misc ──
+const Education             = lazy(() => import('./pages/Education'));
+const ChatPage              = lazy(() => import('./pages/ChatPage'));
+const CustomEventRequestPage = lazy(() => import('./pages/CustomEventRequestPage'));
+const EventSlotUpload       = lazy(() => import('./pages/EventSlotUpload'));
+const EventSlotView         = lazy(() => import('./pages/EventSlotView'));
 
 export default function App() {
   return (
     <BrowserRouter>
       <Layout>
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#888' }}>Loading…</div>}>
 
           <Routes>
 
             {/* ── Core ── */}
-            <Route path="/"           element={<Home />} />
-            <Route path="/login"      element={<LoginPage />} />
-            <Route path="/signup"     element={<Navigate to="/login" replace />} />
-            <Route path="/feed"       element={<Feed />} />
-            <Route path="/dashboard"  element={<Dashboard />} />
+            <Route path="/"        element={<Home />} />
+            <Route path="/login"   element={<LoginPage />} />
+            <Route path="/signup"  element={<Navigate to="/login" replace />} />
+            <Route path="/upgrade" element={<Navigate to="/membership" replace />} />
+            <Route path="/feed"    element={<Feed />} />
             <Route path="/profile"    element={<CreatorProfile />} />
+            <Route path="/profile/:id" element={<CreatorProfile />} />
 
-            {/* ⭐ ── Identity Engine ── */}
-            <Route path="/dashboard/identity" element={<CreateIdentity />} />
+            {/* ── Events ── (specific routes before :id) */}
+            <Route path="/events"                        element={<EventsPage />} />
+            <Route path="/events/create"                 element={<CreateEventPage />} />
+            <Route path="/events/category/:category"     element={<CategoryEventsPage />} />
+            <Route path="/events/:id"                    element={<EventDetailsPage />} />
+            <Route path="/events/:eventId/purchase"      element={<PurchasePage />} />
 
-            {/* ⭐ ── Video Generator ── */}
-            <Route path="/dashboard/video-generator" element={<VideoGenerator />} />
+            {/* ── Studio ── */}
+            <Route path="/studio"              element={<Studio />} />
+            <Route path="/studio/sessions"     element={<StudioSessions />} />
+            <Route path="/session-editor"      element={<SessionEditor />} />
+            <Route path="/session/:id"         element={<SessionPage />} />
+            <Route path="/stage/:stageRoomId"  element={<StagePage />} />
 
-            {/* ── Studio Tools ── */}
-            <Route path="/studio"     element={<Studio />} />
-            <Route path="/tools"      element={<Tools />} />
-            <Route path="/upscale"    element={<Upscale />} />
-            <Route path="/enhance"    element={<EnhancePage />} />
-            <Route path="/contests"   element={<ContestsPage />} />
+            {/* ── AI Tools ── */}
+            <Route path="/tools"          element={<Tools />} />
+            <Route path="/tools/denoise"  element={<DenoiseToolPage />} />
+            <Route path="/tools/upscale"  element={<UpscalePage />} />
+            <Route path="/tools/enhance"  element={<EnhancePage />} />
+            {/* Legacy short paths → redirect to canonical */}
+            <Route path="/upscale"  element={<Navigate to="/tools/upscale" replace />} />
+            <Route path="/enhance"  element={<Navigate to="/tools/enhance" replace />} />
+            <Route path="/denoise"  element={<Navigate to="/tools/denoise" replace />} />
 
-            {/* ── Chat & Education ── */}
-            <Route path="/chat"       element={<ChatPage />} />
-            <Route path="/education"  element={<Education />} />
+            {/* ── Contests ── (specific before :id) */}
+            <Route path="/contests"             element={<ContestsPage />} />
+            <Route path="/contests/create"      element={<CreateContestPage />} />
+            <Route path="/contests/my-entries"  element={<MyContestEntriesPage />} />
+            <Route path="/contests/:id"         element={<ContestDetailPage />} />
+
+            {/* ── Community ── */}
+            <Route path="/free-chat"       element={<FreeChatPage />} />
+            <Route path="/announcements"   element={<AnnouncementsPage />} />
+            <Route path="/creator-academy" element={<CreatorAcademy />} />
+            <Route path="/submissions"     element={<SubmissionsPage />} />
+            <Route path="/chat"            element={<ChatPage />} />
+            <Route path="/education"       element={<Education />} />
+
+            {/* ── Creator ── */}
+            <Route path="/creator/dashboard" element={<CreatorDashboardPage />} />
+            <Route path="/creator/new-event" element={<NewEventPage />} />
+            <Route path="/creator/events"    element={<CreatorEventsPage />} />
+            <Route path="/creator/donations" element={<CreatorDonationsPage />} />
+            <Route path="/creator/revenue"   element={<CreatorRevenuePage />} />
+            <Route path="/custom-event-request" element={<CustomEventRequestPage />} />
+            <Route path="/event-slot/upload"    element={<EventSlotUpload />} />
+            <Route path="/event-slot/view"      element={<EventSlotView />} />
+
+            {/* ── Membership / Earnings ── */}
+            <Route path="/membership"       element={<MembershipPage />} />
+            <Route path="/earnings"         element={<EarningsDashboard />} />
+            <Route path="/premier-settings" element={<PremierSettings />} />
+            <Route path="/payout-settings"  element={<PayoutSettings />} />
+
+            {/* ── Admin ── */}
+            <Route path="/admin"            element={<AdminDashboard />} />
+            <Route path="/admin/winners"    element={<AdminWinnersDashboard />} />
+            <Route path="/admin/analytics"  element={<AdminAnalyticsDashboard />} />
+            <Route path="/admin/errors"     element={<AdminErrorsDashboard />} />
+            <Route path="/admin/event-requests" element={<AdminEventRequests />} />
 
             {/* ── Payments ── */}
-            <Route path="/payment/success" element={<PaymentSuccess />} />
-            <Route path="/success"         element={<Success />} />
+            <Route path="/payment/success"   element={<PaymentSuccess />} />
+            <Route path="/membership/success" element={<MembershipSuccess />} />
+            <Route path="/donate/success"    element={<DonateSuccess />} />
+            <Route path="/success"           element={<Success />} />
 
-            {/* ── Sessions ── */}
-            <Route path="/session-editor" element={<SessionEditor />} />
+            {/* ── AI Architect additions ── */}
+            <Route path="/dashboard/identity"       element={<CreateIdentity />} />
+            <Route path="/dashboard/video-generator" element={<VideoGenerator />} />
 
           </Routes>
 
@@ -74,4 +174,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
