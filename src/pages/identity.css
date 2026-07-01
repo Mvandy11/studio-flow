@@ -1,0 +1,73 @@
+.identity-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.identity-card {
+  background: #0f172a;
+  padding: 30px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  color: #e2e8f0;
+  box-shadow: 0 0 20px rgba(0,0,0,0.4);
+}
+
+.identity-title {
+  font-size: 28px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.identity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.identity-label {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.identity-input {
+  padding: 10px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #e2e8f0;
+}
+
+.identity-button {
+  padding: 12px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.identity-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.identity-error {
+  margin-top: 20px;
+  color: #f87171;
+}
+
+.identity-result {
+  margin-top: 30px;
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.identity-json {
+  white-space: pre-wrap;
+  font-size: 14px;
+  color: #94a3b8;
+}
