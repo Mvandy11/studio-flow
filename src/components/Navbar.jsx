@@ -91,7 +91,7 @@ export default function Navbar({ onHamburger }) {
         <input
           className="app-topnav__search"
           type="search"
-          placeholder="Search sessions, creators, events…"
+          placeholder="Search sessions, creators, videos…"
           aria-label="Search"
         />
 

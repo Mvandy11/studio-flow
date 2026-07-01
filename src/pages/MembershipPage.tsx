@@ -50,12 +50,12 @@ function TierBadge({ tier }: { tier: string }) {
 }
 
 const PERKS_FOUNDING = [
-  '🏆 $10/month added to the Contest Prize Pool — your membership directly funds winner payouts',
-  '🎬 Video Generator access — 5 AI videos per month included',
-  '🔇 AI Audio Denoise — clean your audio with one click',
-  '🎙️ Full Studio access — your personal creator workspace',
-  '💬 Members-only chat channels',
-  '🔒 Founding Member rate locked at $25/mo — price increases to $40/mo after launch',
+  '🏆 $10/month goes directly into the Contest Prize Pool — 100% paid out to winning members',
+  '🎬 Video Generator — 5 AI-generated videos per month',
+  '🔇 AI Audio Denoise — clean your recordings instantly',
+  '🎙️ Full Studio access',
+  '💬 Members-only community chat',
+  '🔒 Founding rate locked — new members will pay $40/mo after launch',
 ];
 
 const PERKS_MEMBER = [
@@ -228,11 +228,11 @@ export default function MembershipPage() {
           background: 'rgba(250,188,80,0.06)', border: '1px solid rgba(250,188,80,0.25)',
           borderRadius: '14px', padding: '1.5rem', marginBottom: '1.5rem',
         }}>
-          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fabc50', marginBottom: '0.5rem' }}>
-            🔥 Founding Member — $25/mo forever
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fabc50', marginBottom: '0.25rem' }}>
+            🔥 Founding Member — $25/month
           </div>
           <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', margin: '0 0 0.75rem', lineHeight: '1.5' }}>
-            Lock in $25/mo permanently before all 100 spots fill. After that, membership opens at $40/mo.
+            Founding Member rate — locks in before price increases to $40/mo. Only 100 spots available.
           </p>
           <ul style={{ margin: '0 0 1rem', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
             {PERKS_FOUNDING.map((p) => (

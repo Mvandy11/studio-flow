@@ -284,7 +284,7 @@ export default function Feed() {
           Studio Flow Feed
         </h1>
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(200,200,215,0.4)' }}>
-          Sessions, events &amp; announcements — all in one place.
+          Videos, contests &amp; announcements — all in one place.
           {!user && (
             <> <Link to="/login" style={{ color: 'rgba(110,168,255,0.8)', textDecoration: 'none' }}>Log in</Link> to see personalized content.</>
           )}
@@ -309,7 +309,7 @@ export default function Feed() {
             No posts yet — creators will appear here soon.
           </p>
           <p style={{ color: 'rgba(200,200,215,0.3)', fontSize: '0.82rem' }}>
-            Check back later or explore <Link to="/contests" style={{ color: 'rgba(110,168,255,0.7)', textDecoration: 'none' }}>contests</Link> and <Link to="/events" style={{ color: 'rgba(110,168,255,0.7)', textDecoration: 'none' }}>events</Link>.
+            Check back later or explore <Link to="/contests" style={{ color: 'rgba(110,168,255,0.7)', textDecoration: 'none' }}>contests</Link>.
           </p>
         </div>
       ) : (

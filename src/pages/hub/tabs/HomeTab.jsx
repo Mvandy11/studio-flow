@@ -13,10 +13,9 @@ export default function HomeTab({ stats }) {
     <div className="hub-content">
       {/* Hero */}
       <div className="hub-hero">
-        <div className="hub-hero__eyebrow">Obviously Inspired Studio</div>
         <h1 className="hub-hero__title">Studio Flow — Where Creators Compete &amp; Earn</h1>
         <p className="hub-hero__subtitle">
-          Submit your work, enter contests, and watch live creator events.
+          Submit your work, enter contests, and earn from a community that shows up.
           Entry is free — winners hand-selected by our admin team based on creativity and quality.
         </p>
       </div>

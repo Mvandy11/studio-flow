@@ -4,6 +4,7 @@ import { isCreatorAdmin } from '../lib/roles';
 import { api } from '../lib/api.js';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabaseClient';
+import { Megaphone, Pin } from 'lucide-react';
 
 export default function AnnouncementsPage() {
   const { user, role } = useAuth();
@@ -115,7 +116,7 @@ export default function AnnouncementsPage() {
     <div className="page-container">
       <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <h1 className="page-title">📢 Announcements</h1>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Megaphone size={24} /> Announcements</h1>
           <p className="page-subtitle">
             Winner announcements, reward pool updates, contest summaries, and creator highlights.
           </p>
@@ -233,11 +234,12 @@ export default function AnnouncementsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
                       {a.pinned && (
                         <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
                           fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
                           color: 'var(--accent-gold, #f2c98f)', background: 'rgba(242,201,143,0.1)',
                           border: '1px solid rgba(242,201,143,0.25)', borderRadius: '4px', padding: '0.15rem 0.45rem',
                         }}>
-                          📌 Pinned
+                          <Pin size={10} /> Pinned
                         </span>
                       )}
                       <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary, #fff)' }}>
