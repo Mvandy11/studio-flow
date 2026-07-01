@@ -50,6 +50,11 @@ import donationsRouter           from './routes/donations.js';
 // ─────────────────────────────────────────────────────────────
 import identityRouter            from './routes/identity.js';
 
+// ─────────────────────────────────────────────────────────────
+// ⭐ NEW — Sessions Router (video sessions backend)
+// ─────────────────────────────────────────────────────────────
+import sessionsRouter            from './routes/sessions.js';
+
 const app = express();
 
 // ─────────────────────────────────────────────────────────────
@@ -120,6 +125,11 @@ app.use('/api/comments',              commentsRouter);
 app.use('/api/identity', identityRouter);
 
 // ─────────────────────────────────────────────────────────────
+// ⭐ NEW — Sessions Route (video sessions)
+// ─────────────────────────────────────────────────────────────
+app.use('/api/sessions', sessionsRouter);
+
+// ─────────────────────────────────────────────────────────────
 // 6. Health check
 // ─────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
@@ -157,5 +167,4 @@ app.use((err, req, res, _next) => {
 });
 
 export default app;
-
 
