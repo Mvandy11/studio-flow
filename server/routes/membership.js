@@ -7,7 +7,7 @@
 
 import { Router }     from 'express';
 import nodemailer     from 'nodemailer';
-import supabase       from '../supabase/supabaseClient.js';
+import supabase from '../supabase/supabase.js';
 import supabaseAdmin  from '../supabase/supabaseAdmin.js';
 import { logError }   from '../utils/logError.js';
 
