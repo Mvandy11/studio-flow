@@ -10,13 +10,6 @@ const Feed                  = lazy(() => import('./pages/Feed'));
 const LoginPage             = lazy(() => import('./pages/LoginPage'));
 const CreatorProfile        = lazy(() => import('./pages/CreatorProfile'));
 
-// ── Events ──
-const EventsPage            = lazy(() => import('./pages/events/EventsPage'));
-const EventDetailsPage      = lazy(() => import('./pages/events/EventDetailsPage'));
-const CreateEventPage       = lazy(() => import('./pages/events/CreateEventPage'));
-const PurchasePage          = lazy(() => import('./pages/events/PurchasePage'));
-const CategoryEventsPage    = lazy(() => import('./pages/events/CategoryEventsPage'));
-
 // ── Studio ──
 const Studio                = lazy(() => import('./pages/Studio'));
 const StudioSessions        = lazy(() => import('./pages/StudioSessions'));
@@ -39,6 +32,7 @@ const MyContestEntriesPage  = lazy(() => import('./pages/contests/MyContestEntri
 const FreeChatPage          = lazy(() => import('./pages/FreeChatPage'));
 const AnnouncementsPage     = lazy(() => import('./pages/AnnouncementsPage'));
 const SubmissionsPage       = lazy(() => import('./pages/SubmissionsPage'));
+const MyVideos              = lazy(() => import('./pages/MyVideos'));
 
 // ── Creator ──
 const CreatorDashboardPage  = lazy(() => import('./pages/creator/CreatorDashboardPage'));
@@ -94,13 +88,6 @@ export default function App() {
             <Route path="/profile"    element={<CreatorProfile />} />
             <Route path="/profile/:id" element={<CreatorProfile />} />
 
-            {/* ── Events ── (specific routes before :id) */}
-            <Route path="/events"                        element={<EventsPage />} />
-            <Route path="/events/create"                 element={<CreateEventPage />} />
-            <Route path="/events/category/:category"     element={<CategoryEventsPage />} />
-            <Route path="/events/:id"                    element={<EventDetailsPage />} />
-            <Route path="/events/:eventId/purchase"      element={<PurchasePage />} />
-
             {/* ── Studio ── */}
             <Route path="/studio"              element={<Studio />} />
             <Route path="/studio/sessions"     element={<StudioSessions />} />
@@ -123,6 +110,7 @@ export default function App() {
             <Route path="/free-chat"       element={<FreeChatPage />} />
             <Route path="/announcements"   element={<AnnouncementsPage />} />
             <Route path="/generator"       element={<VideoGenerator />} />
+            <Route path="/my-videos"       element={<MyVideos />} />
             <Route path="/submissions"     element={<SubmissionsPage />} />
             <Route path="/chat"            element={<ChatPage />} />
             <Route path="/education"       element={<Education />} />

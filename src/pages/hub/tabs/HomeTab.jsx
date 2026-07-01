@@ -28,10 +28,6 @@ export default function HomeTab({ stats }) {
           <div className="hub-stat__label">Contests</div>
         </div>
         <div className="hub-stat">
-          <div className="hub-stat__value">{stats.upcomingEvents}</div>
-          <div className="hub-stat__label">Upcoming Events</div>
-        </div>
-        <div className="hub-stat">
           <div className="hub-stat__value">{stats.totalMembers}</div>
           <div className="hub-stat__label">Total Members</div>
         </div>

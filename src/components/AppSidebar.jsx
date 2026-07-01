@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom';
-import { Megaphone, Clapperboard } from 'lucide-react';
+import { Megaphone, Clapperboard, Film } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { useProfile } from '../hooks/useProfile';
@@ -73,7 +73,6 @@ export default function AppSidebar({ open, onClose }) {
         <nav className="app-sidebar__nav">
           <NavItem to="/"       icon="⌂" label="Home"   end />
           <NavItem to="/feed"   icon="◈" label="Feed" />
-          <NavItem to="/events" icon="🎬" label="Events" />
           <NavItem to="/studio" icon="⬡" label="Studio" />
         </nav>
 
@@ -83,6 +82,7 @@ export default function AppSidebar({ open, onClose }) {
         <div className="app-sidebar__section-label">AI Tools</div>
         <nav className="app-sidebar__nav">
           <NavItem to="/tools/denoise" icon="♫" label="Denoise" />
+          <NavItem to="/my-videos" icon={<Film size={16} />} label="My Videos" />
         </nav>
 
         <div className="app-sidebar__divider" />
