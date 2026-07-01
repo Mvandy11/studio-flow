@@ -10,7 +10,7 @@ import AdminPayoutPanel       from '../components/admin/AdminPayoutPanel';      
 import AdminRevenueTallyCards from '../components/admin/AdminRevenueTallyCards';   // ← NEW
 import { REVENUE_CONFIG as RC } from '../config/revenueConfig';
 
-const TABS = ['Overview', 'Contests', 'Events', 'Submissions', 'Announcements', 'Requests', 'Payouts', 'Moderation']; // ← NEW: added Payouts
+const TABS = ['Overview', 'Contests', 'Submissions', 'Announcements', 'Payouts', 'Moderation'];
 
 // Build last-6-months subscription activity from profiles rows
 function buildMonthlyHistory(rows) {
@@ -41,11 +41,10 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('Overview');
   const [contests, setContests] = useState([]);
   const [contestDash, setContestDash] = useState([]);
-  const [events, setEvents] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [genSubmissions, setGenSubmissions] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
-  const [stats, setStats] = useState({ contests: 0, events: 0, submissions: 0, announcements: 0 });
+  const [stats, setStats] = useState({ contests: 0, submissions: 0, announcements: 0 });
   const [loading, setLoading] = useState(true);
 
   // Live counts
@@ -61,7 +60,7 @@ export default function AdminDashboard() {
   const [subHistory, setSubHistory] = useState([]);
 
   // Membership tier breakdown
-  const [tierCounts, setTierCounts] = useState({ founding: 0, member_30: 0, creator_50: 0 });
+  const [tierCounts, setTierCounts] = useState({ founding: 0, standard: 0 });
 
   // Announcement form
   const [showAnnForm, setShowAnnForm] = useState(false);
@@ -142,14 +141,13 @@ export default function AdminDashboard() {
 
   async function loadAll() {
     setLoading(true);
-    let c = [], e = [], s = [], anns = [], genSubs = [];
+    let c = [], s = [], anns = [], genSubs = [];
     try {
       const token = await getToken();
       const headers = { Authorization: `Bearer ${token}` };
-      const [contestsJson, eventsJson, adminSubsJson, annJson, genSubJson, countsJson, histJson] =
+      const [contestsJson, adminSubsJson, annJson, genSubJson, countsJson, histJson] =
         await Promise.allSettled([
           api('/api/admin/contests',              { headers }),
-          api('/api/admin/events',                { headers }),
           api('/api/admin/submissions',           { headers }),
           api('/api/announcements',               { headers }),
           api('/api/submissions',                 { headers }),
@@ -158,7 +156,6 @@ export default function AdminDashboard() {
         ]);
 
       c       = contestsJson.status  === 'fulfilled' ? (contestsJson.value.data || [])                      : [];
-      e       = eventsJson.status    === 'fulfilled' ? (eventsJson.value.data || [])                        : [];
       s       = adminSubsJson.status === 'fulfilled' ? (adminSubsJson.value.data?.submissions || [])        : [];
       anns    = annJson.status       === 'fulfilled' ? (annJson.value.data || [])                           : [];
       genSubs = genSubJson.status    === 'fulfilled' ? (Array.isArray(genSubJson.value) ? genSubJson.value : []) : [];
@@ -192,24 +189,21 @@ export default function AdminDashboard() {
       const { data: tierData } = await supabase
         .from('profiles')
         .select('membership_tier')
-        .not('membership_tier', 'is', null)
-        .neq('membership_tier', 'free');
+        .not('membership_tier', 'is', null);
       if (tierData) {
         setTierCounts({
-          founding:   tierData.filter((p) => p.membership_tier === 'founding').length,
-          member_30:  tierData.filter((p) => p.membership_tier === 'member_30').length,
-          creator_50: tierData.filter((p) => p.membership_tier === 'creator_50').length,
+          founding: tierData.filter((p) => p.membership_tier === 'founding').length,
+          standard: tierData.filter((p) => p.membership_tier === 'premier').length,
         });
       }
     } catch (_) {}
 
     setContests(c);
     setContestDash([]);
-    setEvents(e);
     setSubmissions(s);
     setGenSubmissions(genSubs);
     setAnnouncements(anns);
-    setStats({ contests: c.length, events: e.length, submissions: s.length, announcements: anns.length });
+    setStats({ contests: c.length, submissions: s.length, announcements: anns.length });
     setLoading(false);
   }
 
@@ -235,31 +229,6 @@ export default function AdminDashboard() {
       loadAll();
     } catch (err) {
       alert(`Payout error: ${err.message}`);
-    }
-  }
-
-  async function deleteEvent(id) {
-    if (!confirm('Delete this event? This cannot be undone.')) return;
-    try {
-      const token = await getToken();
-      await api(`/api/events/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      loadAll();
-    } catch (err) {
-      alert(`Delete error: ${err.message}`);
-    }
-  }
-
-  async function updateEventStatus(id, status) {
-    try {
-      const token = await getToken();
-      await api(`/api/events/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status }),
-      });
-      loadAll();
-    } catch (err) {
-      alert(`Update error: ${err.message}`);
     }
   }
 
@@ -361,10 +330,6 @@ export default function AdminDashboard() {
         <div className="admin-stat-card admin-stat-card--green">
           <div className="admin-stat-value">{stats.submissions}</div>
           <div className="admin-stat-label">Contest Entries</div>
-        </div>
-        <div className="admin-stat-card admin-stat-card--gold">
-          <div className="admin-stat-value">{eventRequests}</div>
-          <div className="admin-stat-label">Event Requests</div>
         </div>
         <div className="admin-stat-card admin-stat-card--blue">
           <div className="admin-stat-value">{memberCount}</div>
@@ -483,16 +448,16 @@ export default function AdminDashboard() {
               </div>
               <div className="membership-stats" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                 <div className="stat" style={{ flex: 1, minWidth: '140px', background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
-                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(200,200,215,0.5)' }}>$30 Members</h3>
-                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-gold, #f5a623)' }}>{tierCounts.member_30}</p>
+                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(200,200,215,0.5)' }}>Founding Members ($25/mo)</h3>
+                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-gold, #f5a623)' }}>{tierCounts.founding}</p>
                 </div>
                 <div className="stat" style={{ flex: 1, minWidth: '140px', background: 'rgba(192,132,252,0.07)', border: '1px solid rgba(192,132,252,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
-                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(200,200,215,0.5)' }}>$50 Creator Members</h3>
-                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#c084fc' }}>{tierCounts.creator_50}</p>
+                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(200,200,215,0.5)' }}>Premier Members ($40/mo)</h3>
+                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#c084fc' }}>{tierCounts.standard}</p>
                 </div>
                 <div className="stat" style={{ flex: 1, minWidth: '140px', background: 'rgba(134,239,172,0.07)', border: '1px solid rgba(134,239,172,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
                   <h3 style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(200,200,215,0.5)' }}>Total Members</h3>
-                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#86efac' }}>{tierCounts.member_30 + tierCounts.creator_50}</p>
+                  <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#86efac' }}>{tierCounts.founding + tierCounts.standard}</p>
                 </div>
               </div>
             </div>
@@ -500,15 +465,13 @@ export default function AdminDashboard() {
             {/* ── Monthly Profit Calculator ── */}
             {(() => {
               const foundingMembers  = tierCounts.founding;
-              const standardMembers  = tierCounts.member_30 + tierCounts.creator_50;
+              const standardMembers  = tierCounts.standard;
               const totalMembers     = foundingMembers + standardMembers;
 
               const totalRevenue  = (foundingMembers * RC.founding.price)
                                   + (standardMembers * RC.standard.price);
               const contestPool   = (foundingMembers * RC.founding.contestPool)
                                   + (standardMembers * RC.standard.contestPool);
-              const eventPool     = (foundingMembers * RC.founding.eventPool)
-                                  + (standardMembers * RC.standard.eventPool);
               const myProfit      = (foundingMembers * RC.founding.myProfit)
                                   + (standardMembers * RC.standard.myProfit);
               return (
@@ -520,7 +483,7 @@ export default function AdminDashboard() {
                       <p style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.5)' }}>Total Members</p>
                       <p style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>{totalMembers}</p>
                       <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(200,200,215,0.35)' }}>
-                        {foundingMembers} founding · {standardMembers} standard
+                        {foundingMembers} founding · {standardMembers} premier
                       </p>
                     </div>
 
@@ -532,8 +495,8 @@ export default function AdminDashboard() {
 
                     <div style={{ background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
                       <p style={{ margin: '0 0 0.3rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.5)' }}>Pool Allocations</p>
-                      <p style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-gold, #f5a623)' }}>-${(contestPool + eventPool).toFixed(2)}</p>
-                      <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(200,200,215,0.35)' }}>contests + events</p>
+                      <p style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-gold, #f5a623)' }}>-${contestPool.toFixed(2)}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(200,200,215,0.35)' }}>contest pool only</p>
                     </div>
 
                     <div style={{ background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.3)', borderRadius: '12px', padding: '1rem', textAlign: 'center' }}>
@@ -543,17 +506,16 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.82rem', color: 'rgba(200,200,215,0.5)', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', fontSize: '0.82rem', color: 'rgba(200,200,215,0.5)', marginBottom: '0.75rem' }}>
                     <p style={{ margin: 0 }}>🏆 Contest Pool: <span style={{ color: '#fff', fontWeight: 600 }}>${contestPool.toFixed(2)}</span></p>
-                    <p style={{ margin: 0 }}>🎪 Event Pool: <span style={{ color: '#fff', fontWeight: 600 }}>${eventPool.toFixed(2)}</span></p>
                   </div>
 
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem', fontSize: '0.75rem', color: 'rgba(200,200,215,0.4)' }}>
                     <p style={{ margin: 0 }}>
-                      Founding ({foundingMembers} × $25): $5/member → <span style={{ color: '#fff' }}>${(foundingMembers * RC.founding.myProfit).toFixed(2)}</span>
+                      Founding ({foundingMembers} × $25): $15/member → <span style={{ color: '#fff' }}>${(foundingMembers * RC.founding.myProfit).toFixed(2)}</span>
                     </p>
                     <p style={{ margin: 0 }}>
-                      Standard ({standardMembers} × $40): $15/member → <span style={{ color: '#fff' }}>${(standardMembers * RC.standard.myProfit).toFixed(2)}</span>
+                      Premier ({standardMembers} × $40): $25/member → <span style={{ color: '#fff' }}>${(standardMembers * RC.standard.myProfit).toFixed(2)}</span>
                     </p>
                   </div>
                 </div>
@@ -668,48 +630,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── Events ── */}
-        {activeTab === 'Events' && (
-          <div>
-            <div className="admin-section-header">
-              <h2 className="admin-section-title">All Events</h2>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <Link to="/admin/event-requests" className="admin-action-btn" style={{ textDecoration: 'none' }}>Event Requests</Link>
-                <Link to="/events/create" className="btn btn--primary" style={{ textDecoration: 'none' }}>+ Create</Link>
-              </div>
-            </div>
-            {events.length === 0 ? <p className="admin-empty">No events yet.</p> : (
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead><tr><th>Title</th><th>Mode</th><th>Status</th><th>Price</th><th>Actions</th></tr></thead>
-                  <tbody>
-                    {events.map((ev) => {
-                      const mode   = ev.event_mode || ev.event_type || 'live';
-                      const status = ev.status || (ev.start_time && new Date(ev.start_time) < new Date() ? 'ended' : 'upcoming');
-                      return (
-                        <tr key={ev.id}>
-                          <td>{ev.title}</td>
-                          <td><span className={`admin-badge admin-badge--${mode}`}>{mode}</span></td>
-                          <td><span className={`admin-badge admin-badge--${status}`}>{status}</span></td>
-                          <td>{ev.ticket_price > 0 || ev.price > 0 ? `$${ev.ticket_price || ev.price}` : 'Free'}</td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                              {ev.stage_room_id && <Link to={`/stage/${ev.stage_room_id}`} className="admin-action-btn" style={{ textDecoration: 'none' }}>Stage</Link>}
-                              <Link to={`/events/${ev.id}`} className="admin-action-btn" style={{ textDecoration: 'none' }}>View</Link>
-                              {status === 'upcoming' && <button className="admin-action-btn" onClick={() => updateEventStatus(ev.id, 'ended')}>End</button>}
-                              <button className="admin-action-btn admin-action-btn--danger" onClick={() => deleteEvent(ev.id)}>Delete</button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ── Submissions ── */}
         {activeTab === 'Submissions' && (
           <div>
@@ -735,7 +655,7 @@ export default function AdminDashboard() {
               </div>
             )}
             <div className="admin-section-header">
-              <h2 className="admin-section-title">Event Slot Submissions</h2>
+              <h2 className="admin-section-title">Video Generator Submissions</h2>
               <span style={{ fontSize: '0.78rem', color: 'rgba(200,200,215,0.4)' }}>{genSubmissions.filter((s) => !s.status || s.status === 'pending').length} pending</span>
             </div>
             {genSubmissions.length === 0 ? <p className="admin-empty">No submissions yet.</p> : (
@@ -836,25 +756,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Requests ── */}
-        {activeTab === 'Requests' && (
-          <div>
-            <div className="admin-section-header">
-              <h2 className="admin-section-title">Custom Event Requests</h2>
-              <Link to="/admin/event-requests" className="btn btn--primary" style={{ textDecoration: 'none' }}>Open Full View</Link>
-            </div>
-            <p style={{ color: 'rgba(200,200,215,0.5)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
-              Review, approve, and assign event slots for creator custom event requests. The full management interface is on the Event Requests page.
-            </p>
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '14px', padding: '2.5rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🗂</p>
-              <p style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Event Request Management</p>
-              <p style={{ color: 'rgba(200,200,215,0.45)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>Approve or reject creator requests for custom event slots. Approved requests generate upload passwords and notify creators by email.</p>
-              <Link to="/admin/event-requests" className="btn btn--primary" style={{ textDecoration: 'none', display: 'inline-block' }}>Manage Event Requests →</Link>
             </div>
           </div>
         )}
