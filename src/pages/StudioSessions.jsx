@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { getSessionsForCreator } from '../lib/session';
+import { getSessionsForMember } from '../lib/session';
 import CreateSessionModal from '../components/CreateSessionModal';
 import SessionTile from '../components/SessionTile';
 
@@ -13,7 +13,7 @@ export default function StudioSessions() {
   useEffect(() => {
     if (!user) return;
     async function load() {
-      const data = await getSessionsForCreator(user.id);
+      const data = await getSessionsForMember(user.id);
       setSessions(data);
       setLoading(false);
     }
