@@ -21,7 +21,6 @@ function ProfileDropdown({ user, role, tier, meta, onLogout }) {
       <div className="profile-dropdown__divider" />
 
       <NavLink to="/profile"          className="profile-dropdown__item" end>◉ My Profile</NavLink>
-      <NavLink to="/subscription"     className="profile-dropdown__item">🌟 My Membership</NavLink>
       <NavLink to="/earnings"         className="profile-dropdown__item">◎ Earnings</NavLink>
       <NavLink to="/settings/payouts" className="profile-dropdown__item">💳 Payout Settings</NavLink>
       {isCreatorAdmin(role) && (

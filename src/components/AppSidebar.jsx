@@ -16,12 +16,12 @@ export default function AppSidebar({ open, onClose }) {
   // ⭐ Correct membership logic (new system)
   const isCreator50 =
     isAdmin ||
-    (profile?.membership_active && profile?.membership_tier === 'creator_50');
+    (profile?.membership_active && profile?.membership_tier === 'premier');
 
   const isMember30 =
     !isCreator50 &&
     profile?.membership_active &&
-    profile?.membership_tier === 'member_30';
+    profile?.membership_tier === 'founding';
 
   const isFree = !isCreator50 && !isMember30;
 
@@ -160,13 +160,13 @@ export default function AppSidebar({ open, onClose }) {
                 <div style={{ fontSize: '0.68rem', color: '#f2c98f', fontWeight: 600, marginTop: '2px' }}>
                   🛡 Admin
                 </div>
-              ) : profile?.membership_active && profile?.membership_tier === 'creator_50' ? (
+              ) : profile?.membership_active && profile?.membership_tier === 'premier' ? (
                 <div style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 600, marginTop: '2px' }}>
-                  🎬 Creator Member
+                  🎬 Premier Member
                 </div>
-              ) : profile?.membership_active && profile?.membership_tier === 'member_30' ? (
+              ) : profile?.membership_active && profile?.membership_tier === 'founding' ? (
                 <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600, marginTop: '2px' }}>
-                  🌟 Member
+                  🌟 Founding Member
                 </div>
               ) : (
                 <div style={{ fontSize: '0.68rem', color: '#999', fontWeight: 600, marginTop: '2px' }}>
