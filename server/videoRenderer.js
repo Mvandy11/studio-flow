@@ -1,7 +1,5 @@
 import axios from 'axios';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+import { supabase } from './supabase/client.js';
 const ELEVEN_API_KEY = process.env.ELEVENLABS_API_KEY;
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 const SADTALKER_VERSION = 'cjwbw/sadtalker:3aa3dac9353cc4d6bd62a8f95957bd844003b401d668f9728a7de0cf3dfa3938';
