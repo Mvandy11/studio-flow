@@ -7,7 +7,10 @@ export default async function requireGeneratorTier(req, res, next) {
   if (!userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { data: profile } = await supabase
-    .from('profiles').select('membership_tier').eq('id', userId).single();
+    .from('profiles').select('membership_tier, role').eq('id', userId).single();
+
+  // Admins bypass all tier and render limit checks
+  if (profile?.role === 'admin') return next();
 
   if (!profile || !GENERATOR_TIERS.includes(profile.membership_tier)) {
     return res.status(403).json({
