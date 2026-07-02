@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import "./videoGenerator.css";
 
@@ -13,8 +12,6 @@ export default function VideoGenerator() {
   const [renderStatus, setRenderStatus] = useState(null);
   const [finalVideoUrl, setFinalVideoUrl] = useState(null);
   const [error, setError] = useState(null);
-
-  if (!user) return <Navigate to="/login" replace />;
 
   // Load identities from backend
   useEffect(() => {

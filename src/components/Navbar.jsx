@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useMembership } from '../hooks/useMembership';
 import { isCreatorAdmin } from '../lib/roles';
+import { supabase } from '../lib/supabaseClient';
 import MobileDrawer from './MobileDrawer';
 
 function ProfileDropdown({ user, role, tier, meta, onLogout }) {
@@ -10,7 +11,6 @@ function ProfileDropdown({ user, role, tier, meta, onLogout }) {
 
   return (
     <div className="profile-dropdown">
-      {/* Header */}
       <div className="profile-dropdown__header">
         <div className="profile-dropdown__avatar">{initial}</div>
         <div className="profile-dropdown__info">
@@ -20,7 +20,6 @@ function ProfileDropdown({ user, role, tier, meta, onLogout }) {
 
       <div className="profile-dropdown__divider" />
 
-      {/* Nav links */}
       <NavLink to="/profile"          className="profile-dropdown__item" end>◉ My Profile</NavLink>
       <NavLink to="/subscription"     className="profile-dropdown__item">🌟 My Membership</NavLink>
       <NavLink to="/earnings"         className="profile-dropdown__item">◎ Earnings</NavLink>
@@ -39,18 +38,32 @@ function ProfileDropdown({ user, role, tier, meta, onLogout }) {
 }
 
 export default function Navbar({ onHamburger }) {
-  const { user, role, logout, loading } = useAuth();
+  const { role, logout } = useAuth();
   const { tier, meta } = useMembership();
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [profileOpen,  setProfileOpen]  = useState(false);
   const dropdownRef = useRef(null);
+
+  // ── Independent session check — avoids flashing "Log In" while
+  //    the shared AuthContext is still resolving from localStorage.
+  //    undefined = still checking | null = no session | object = logged in
+  const [sessionUser, setSessionUser] = useState(undefined);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSessionUser(session?.user ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   function openDrawer() {
     setDrawerOpen(true);
     onHamburger?.();
   }
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -61,7 +74,7 @@ export default function Navbar({ onHamburger }) {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
-  const initial = user?.email?.[0]?.toUpperCase() ?? '?';
+  const initial = sessionUser?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
     <>
@@ -95,9 +108,10 @@ export default function Navbar({ onHamburger }) {
           aria-label="Search"
         />
 
-        {/* Right actions */}
+        {/* Right actions — renders nothing while session is being checked (undefined),
+            then shows avatar or Log In once resolved */}
         <div className="app-topnav__right">
-          {loading ? null : user ? (
+          {sessionUser === undefined ? null : sessionUser ? (
             <div className="profile-menu-wrap" ref={dropdownRef}>
               <button
                 className="profile-menu-trigger"
@@ -118,7 +132,7 @@ export default function Navbar({ onHamburger }) {
 
               {profileOpen && (
                 <ProfileDropdown
-                  user={user}
+                  user={sessionUser}
                   role={role}
                   tier={tier}
                   meta={meta}

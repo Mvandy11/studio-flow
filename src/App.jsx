@@ -3,6 +3,7 @@ import './styles/components.css';
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // ── Core pages ──
 const Home                  = lazy(() => import('./pages/Home'));
@@ -89,7 +90,7 @@ export default function App() {
             <Route path="/profile/:id" element={<CreatorProfile />} />
 
             {/* ── Studio ── */}
-            <Route path="/studio"              element={<Studio />} />
+            <Route path="/studio"              element={<ProtectedRoute><Studio /></ProtectedRoute>} />
             <Route path="/studio/sessions"     element={<StudioSessions />} />
             <Route path="/session-editor"      element={<SessionEditor />} />
             <Route path="/session/:id"         element={<SessionPage />} />
@@ -109,7 +110,7 @@ export default function App() {
             {/* ── Community ── */}
             <Route path="/free-chat"       element={<FreeChatPage />} />
             <Route path="/announcements"   element={<AnnouncementsPage />} />
-            <Route path="/generator"       element={<VideoGenerator />} />
+            <Route path="/generator"       element={<ProtectedRoute><VideoGenerator /></ProtectedRoute>} />
             <Route path="/my-videos"       element={<MyVideos />} />
             <Route path="/submissions"     element={<SubmissionsPage />} />
             <Route path="/chat"            element={<ChatPage />} />
@@ -126,8 +127,8 @@ export default function App() {
             <Route path="/event-slot/view"      element={<EventSlotView />} />
 
             {/* ── Membership / Earnings ── */}
-            <Route path="/membership"       element={<MembershipPage />} />
-            <Route path="/earnings"         element={<EarningsDashboard />} />
+            <Route path="/membership"       element={<ProtectedRoute><MembershipPage /></ProtectedRoute>} />
+            <Route path="/earnings"         element={<ProtectedRoute><EarningsDashboard /></ProtectedRoute>} />
             <Route path="/premier-settings" element={<PremierSettings />} />
             <Route path="/payout-settings"  element={<PayoutSettings />} />
 
@@ -145,8 +146,8 @@ export default function App() {
             <Route path="/success"           element={<Success />} />
 
             {/* ── AI Architect additions ── */}
-            <Route path="/dashboard/identity"       element={<CreateIdentity />} />
-            <Route path="/dashboard/video-generator" element={<VideoGenerator />} />
+            <Route path="/dashboard/identity"        element={<ProtectedRoute><CreateIdentity /></ProtectedRoute>} />
+            <Route path="/dashboard/video-generator" element={<ProtectedRoute><VideoGenerator /></ProtectedRoute>} />
 
           </Routes>
 
