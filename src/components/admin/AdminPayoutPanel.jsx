@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { Wallet } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL || '';
 const fmt = n => `$${Number(n ?? 0).toFixed(2)}`;
-
-const METHOD_ICONS = { paypal: '💙', venmo: '💸', stripe: '🔵', cashapp: '💚' };
 
 export default function AdminPayoutPanel() {
   const [creators, setCreators] = useState([]);
@@ -131,7 +130,7 @@ export default function AdminPayoutPanel() {
                   </td>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-1.5">
-                      {METHOD_ICONS[c.payout_method] || '💳'}
+                      <Wallet className="w-4 h-4 text-zinc-400" />
                       <span className="capitalize text-zinc-300">{c.payout_method}</span>
                     </span>
                   </td>

@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
 import { formatDistanceToNow, format } from 'date-fns';
+import { Pin, Megaphone } from 'lucide-react';
 import '../styles/admin.css';
 import { api } from '../lib/api.js';
 import AdminPayoutPanel       from '../components/admin/AdminPayoutPanel';        // ← NEW
@@ -570,7 +571,7 @@ export default function AdminDashboard() {
                 {announcements.slice(0, 3).map((a) => (
                   <div key={a.id} style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {a.pinned && <span style={{ fontSize: '0.7rem' }}>📌</span>}
+                      {a.pinned ? <Pin size={13} style={{ color: '#f5a623', flexShrink: 0 }} /> : <Megaphone size={13} style={{ color: 'rgba(200,200,215,0.4)', flexShrink: 0 }} />}
                       <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem' }}>{a.title}</p>
                     </div>
                     <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'rgba(200,200,215,0.5)' }}>
@@ -744,7 +745,7 @@ export default function AdminDashboard() {
                 <div key={a.id} style={{ background: a.pinned ? 'rgba(245,166,35,0.06)' : 'rgba(255,255,255,0.025)', border: `1px solid ${a.pinned ? 'rgba(245,166,35,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', justifyContent: 'space-between' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
-                      {a.pinned && <span style={{ fontSize: '0.72rem' }}>📌</span>}
+                      {a.pinned ? <Pin size={13} style={{ color: '#f5a623', flexShrink: 0 }} /> : <Megaphone size={13} style={{ color: 'rgba(200,200,215,0.4)', flexShrink: 0 }} />}
                       <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{a.title}</span>
                     </div>
                     <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(200,200,215,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.body}</p>

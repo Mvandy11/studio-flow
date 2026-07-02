@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { REVENUE_CONFIG as RC } from '../../config/revenueConfig';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 const fmt = n => `$${Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -40,8 +41,7 @@ export default function AdminRevenueTallyCards() {
   );
 
   const cards = [
-    { label: 'Contest Pool (Monthly)', value: fmt(data.contest_pool_monthly),  sub: `${data.member_30_count} × $30 + ${data.creator_50_count} × $50`, detail: '$10 each → pool', color: 'from-purple-600/20', border: 'border-purple-600/30', icon: '🏆' },
-    { label: 'Event Pool (Monthly)',   value: fmt(data.event_pool_monthly),    sub: `${data.creator_50_count} Creator members`,                        detail: '$15 each → pool', color: 'from-blue-600/20',   border: 'border-blue-600/30',   icon: '🎪' },
+    { label: 'Contest Pool (Monthly)', value: fmt(data.contest_pool_monthly),  sub: `${data.member_30_count} × $${RC.founding.price} + ${data.creator_50_count} × $${RC.standard.price}`, detail: '$10 each → pool', color: 'from-purple-600/20', border: 'border-purple-600/30', icon: '🏆' },
     { label: 'Donations (All Time)',   value: fmt(data.donations_total),        sub: `This month: ${fmt(data.donations_this_month)}`,                   detail: '',                color: 'from-emerald-600/20', border: 'border-emerald-600/30', icon: '💚' },
     { label: 'Earnings Paid Out',      value: fmt(data.earnings_paid_total),    sub: `Pending: ${fmt(data.earnings_pending_total)}`,                    detail: `This month: ${fmt(data.earnings_paid_this_month)}`, color: 'from-amber-600/20', border: 'border-amber-600/30', icon: '💸' },
   ];

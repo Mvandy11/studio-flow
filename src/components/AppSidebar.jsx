@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { useProfile } from '../hooks/useProfile';
 
-const DONATION_URL = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
 
 export default function AppSidebar({ open, onClose }) {
   const { user, role, logout } = useAuth();
@@ -118,14 +117,7 @@ export default function AppSidebar({ open, onClose }) {
 
           {/* Creator */}
           {isCreator50 && (
-            <>
-              <NavItem to="/creator/dashboard"   icon="🎬" label="Creator Dashboard" />
-              <NavItem to="/creator/new-event"   icon="➕" label="Create Event" />
-              <NavItem to="/creator/events"      icon="📋" label="My Events" />
-              <NavItem to="/creator/donations"   icon="💛" label="Donations" />
-              <NavItem to="/creator/revenue"     icon="📈" label="Revenue Pool" />
-              <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
-            </>
+            <NavItem to="/contests/my-entries" icon="🏆" label="Contest Entries" />
           )}
 
           <NavItem to="/earnings" icon="◎"  label="Earnings" />
@@ -147,7 +139,6 @@ export default function AppSidebar({ open, onClose }) {
                 Admin
                 <span className="app-sidebar__badge">Admin</span>
               </NavLink>
-              <AdminItem to="/creator/new-event"  icon="🎬" label="Post Event" />
               <AdminItem to="/admin/winners"      icon="🏆" label="Winners" />
               <AdminItem to="/admin/analytics"    icon="📊" label="Analytics" />
               <AdminItem to="/admin/errors"       icon="🔴" label="Error Logs" />
@@ -158,19 +149,6 @@ export default function AppSidebar({ open, onClose }) {
 
         <div className="app-sidebar__spacer" />
 
-        {/* Donate */}
-        <div style={{ padding: '0 0.625rem', marginBottom: '0.5rem' }}>
-          <a
-            href={DONATION_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="app-sidebar__donate-link"
-          >
-            <span className="app-sidebar__link-icon">💝</span>
-            Support Studio Flow
-          </a>
-        </div>
-
         {/* User info */}
         {user && (
           <div className="app-sidebar__user">
@@ -178,20 +156,19 @@ export default function AppSidebar({ open, onClose }) {
             <div className="app-sidebar__user-info">
               <div className="app-sidebar__user-email">{user.email}</div>
 
-              {/* ⭐ Correct membership badges */}
-              {profile?.membership_active && profile?.membership_tier === 'creator_50' && (
+              {isAdmin ? (
+                <div style={{ fontSize: '0.68rem', color: '#f2c98f', fontWeight: 600, marginTop: '2px' }}>
+                  🛡 Admin
+                </div>
+              ) : profile?.membership_active && profile?.membership_tier === 'creator_50' ? (
                 <div style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 600, marginTop: '2px' }}>
                   🎬 Creator Member
                 </div>
-              )}
-
-              {profile?.membership_active && profile?.membership_tier === 'member_30' && (
+              ) : profile?.membership_active && profile?.membership_tier === 'member_30' ? (
                 <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600, marginTop: '2px' }}>
                   🌟 Member
                 </div>
-              )}
-
-              {!profile?.membership_active && (
+              ) : (
                 <div style={{ fontSize: '0.68rem', color: '#999', fontWeight: 600, marginTop: '2px' }}>
                   Free Member
                 </div>
