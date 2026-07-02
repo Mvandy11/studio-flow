@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from '../lib/supabaseClient';
+import { api } from '../lib/api';
 import "./videoGenerator.css";
 
 export default function VideoGenerator() {
@@ -60,15 +61,17 @@ export default function VideoGenerator() {
         member_id: user.id
       };
 
-      const res = await fetch("/api/sessions/video/generate", {
+      const { data: { session } } = await supabase.auth.getSession();
+      const data = await api("/api/sessions/video/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
+      if (data.error) {
         setError(data.error || "Failed to start render.");
         setLoading(false);
         return;
@@ -89,8 +92,10 @@ export default function VideoGenerator() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/sessions/video/status/${renderJobId}`);
-        const data = await res.json();
+        const { data: { session } } = await supabase.auth.getSession();
+        const data = await api(`/api/sessions/video/status/${renderJobId}`, {
+          headers: { "Authorization": `Bearer ${session.access_token}` }
+        });
 
         setRenderStatus(data.status);
 
@@ -132,7 +137,9 @@ export default function VideoGenerator() {
           <option value="">Choose identity...</option>
           {identities.map(identity => (
             <option key={identity.id} value={identity.id}>
-              {identity.persona_description || identity.id}
+              {identity.persona_description
+                ? identity.persona_description.slice(0, 40)
+                : `Identity ${identity.created_at?.slice(0, 10) || identity.id.slice(0, 8)}`}
             </option>
           ))}
         </select>
