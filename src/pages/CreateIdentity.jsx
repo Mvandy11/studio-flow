@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
 
 export default function CreateIdentity() {
   const { user } = useAuth();
@@ -46,7 +47,7 @@ export default function CreateIdentity() {
       );
       setStatus('Creating your identity...');
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/identity/create', {
+      const result = await api('/api/identity/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,8 +61,7 @@ export default function CreateIdentity() {
           tenant_id: 'studioflow'
         })
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Identity creation failed');
+      if (!result.success) throw new Error(result.error || 'Identity creation failed');
       setStatus('✅ Identity created! Redirecting...');
       setTimeout(() => navigate('/generator'), 1500);
     } catch (err) {
