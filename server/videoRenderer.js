@@ -14,7 +14,7 @@ export async function startRenderJob(identityUrl, scriptText) {
     config: { fluent: true, pad_audio: 0.0 }
   }, {
     headers: {
-      Authorization: `Basic ${DID_API_KEY}`,
+      Authorization: `Basic ${Buffer.from(DID_API_KEY + ':').toString('base64')}`,
       'Content-Type': 'application/json'
     }
   });
@@ -23,7 +23,7 @@ export async function startRenderJob(identityUrl, scriptText) {
 
 export async function getRenderStatusJob(didTalkId) {
   const response = await axios.get(`${DID_BASE}/talks/${didTalkId}`, {
-    headers: { Authorization: `Basic ${DID_API_KEY}` }
+    headers: { Authorization: `Basic ${Buffer.from(DID_API_KEY + ':').toString('base64')}` }
   });
   const { status, result_url } = response.data;
   return {

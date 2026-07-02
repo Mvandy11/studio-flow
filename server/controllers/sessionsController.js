@@ -56,7 +56,7 @@ export async function startRender(req, res) {
     let resolvedIdentityUrl = identity_url;
     if (!resolvedIdentityUrl && identity_id) {
       const { data: identity } = await supabase
-        .from("identity_profiles")
+        .from("identities")
         .select("selfie_url")
         .eq("id", identity_id)
         .single();
