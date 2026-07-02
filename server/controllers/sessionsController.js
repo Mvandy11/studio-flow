@@ -52,6 +52,9 @@ export async function startRender(req, res) {
   try {
     const { identity_url, script_text, identity_id, scenes, member_id, session_id } = req.body;
 
+    const sceneDescriptions = scenes.map(s => s.description).filter(Boolean);
+    console.log('Scene visual descriptions:', sceneDescriptions);
+
     // Resolve identity_url: use provided or look up from identity_id
     let resolvedIdentityUrl = identity_url;
     if (!resolvedIdentityUrl && identity_id) {

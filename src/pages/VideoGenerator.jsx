@@ -8,7 +8,7 @@ export default function VideoGenerator() {
   const { user } = useAuth();
   const [identities, setIdentities] = useState([]);
   const [selectedIdentity, setSelectedIdentity] = useState(null);
-  const [scenes, setScenes] = useState([{ id: 1, prompt: "" }]);
+  const [scenes, setScenes] = useState([{ id: 1, prompt: "", description: "" }]);
   const [loading, setLoading] = useState(false);
   const [renderJobId, setRenderJobId] = useState(null);
   const [renderStatus, setRenderStatus] = useState(null);
@@ -35,11 +35,15 @@ export default function VideoGenerator() {
   }, [user]);
 
   function addScene() {
-    setScenes([...scenes, { id: scenes.length + 1, prompt: "" }]);
+    setScenes([...scenes, { id: scenes.length + 1, prompt: "", description: "" }]);
   }
 
   function updateScene(id, value) {
     setScenes(scenes.map(s => s.id === id ? { ...s, prompt: value } : s));
+  }
+
+  function updateSceneDescription(id, value) {
+    setScenes(scenes.map(s => s.id === id ? { ...s, description: value } : s));
   }
 
   async function generateVideo() {
@@ -56,7 +60,7 @@ export default function VideoGenerator() {
       const payload = {
         identity_id: selectedIdentity.id,
         identity_url: selectedIdentity.selfie_url,
-        scenes: scenes.map(s => ({ id: s.id, prompt: s.prompt })),
+        scenes: scenes.map(s => ({ id: s.id, prompt: s.prompt, description: s.description })),
         script_text: scenes.map(s => s.prompt).filter(Boolean).join(" "),
         member_id: user.id
       };
@@ -153,12 +157,20 @@ export default function VideoGenerator() {
 
           {scenes.map(scene => (
             <div key={scene.id} className="vg-scene">
-              <label>Scene {scene.id}</label>
+              <label>Scene {scene.id} — Script</label>
               <textarea
                 className="vg-textarea"
-                placeholder="Describe what the AI should say in this scene..."
+                placeholder="What the AI says in this scene..."
                 value={scene.prompt}
                 onChange={(e) => updateScene(scene.id, e.target.value)}
+              />
+              <label style={{ marginTop: '10px', display: 'block' }}>Scene {scene.id} — Visual Description</label>
+              <textarea
+                className="vg-textarea"
+                placeholder="Describe the background or setting, e.g. 'Cinematic dark studio, warm spotlight, shallow depth of field'"
+                value={scene.description}
+                onChange={(e) => updateSceneDescription(scene.id, e.target.value)}
+                rows={2}
               />
             </div>
           ))}
