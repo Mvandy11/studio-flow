@@ -12,9 +12,9 @@ router.get('/list', async (req, res) => {
   const userId = req.user?.id;
   if (!userId) return res.status(401).json({ error: 'Not authenticated' });
   const { data, error } = await supabase
-    .from('identity_profiles')
+    .from('identities')
     .select('*')
-    .eq('member_id', userId)
+    .eq('profile_id', userId)
     .order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
   res.json({ identities: data });

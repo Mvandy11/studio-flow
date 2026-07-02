@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { supabase } from '../lib/supabaseClient';
 import "./videoGenerator.css";
 
 export default function VideoGenerator() {
@@ -15,17 +16,22 @@ export default function VideoGenerator() {
 
   // Load identities from backend
   useEffect(() => {
+    if (!user) return;
     async function fetchIdentities() {
       try {
-        const res = await fetch("/api/identity/list");
-        const data = await res.json();
-        setIdentities(data.identities || []);
+        const { data, error } = await supabase
+          .from('identities')
+          .select('*')
+          .eq('profile_id', user.id)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setIdentities(data || []);
       } catch (err) {
         console.error("Failed to load identities", err);
       }
     }
     fetchIdentities();
-  }, []);
+  }, [user]);
 
   function addScene() {
     setScenes([...scenes, { id: scenes.length + 1, prompt: "" }]);
