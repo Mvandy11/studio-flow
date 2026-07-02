@@ -2,7 +2,7 @@ import axios from 'axios';
 import { supabase } from './supabase/client.js';
 const ELEVEN_API_KEY = process.env.ELEVENLABS_API_KEY;
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
-const SADTALKER_VERSION = 'cjwbw/sadtalker:3aa3dac9353cc4d6bd62a8f95957bd844003b401d668f9728a7de0cf3dfa3938';
+const SADTALKER_VERSION = 'cjwbw/sadtalker:cd4c0465ae0b54a6f85af57f5c65fec9fe23e7f8';
 
 async function generateAudio(scriptText, voiceId) {
   const fallbackVoiceId = 'EXAVITQu4vr4xnSDxMaL'; // ElevenLabs default male voice
@@ -34,7 +34,7 @@ export async function startRenderJob(identityUrl, scriptText, elevenLabsVoiceId,
         source_image: identityUrl,
         driven_audio: audioUrl,
         preprocess: 'crop',
-        still: false,
+        still_mode: false,
         use_enhancer: true
       }
     },
