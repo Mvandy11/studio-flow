@@ -89,28 +89,31 @@ export default function VideoGenerator() {
   // Poll render status
   useEffect(() => {
     if (!renderJobId) return;
-
     const interval = setInterval(async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          setError('Session expired. Please refresh and try again.');
+          clearInterval(interval);
+          return;
+        }
         const data = await api(`/api/sessions/video/status/${renderJobId}`, {
-          headers: { "Authorization": `Bearer ${session.access_token}` }
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
         });
-
         setRenderStatus(data.status);
-
-        if (data.status === "completed") {
+        if (data.status === 'completed') {
           setFinalVideoUrl(data.video_url);
           clearInterval(interval);
-        } else if (data.status === "error") {
-          setError("Render failed. Please try again.");
+        } else if (data.status === 'error') {
+          setError('Render failed. Please try again.');
           clearInterval(interval);
         }
       } catch (err) {
-        console.error("Status poll error", err);
+        console.error('Status poll error', err);
+        setError(`Poll error: ${err.message}`);
+        clearInterval(interval);
       }
-    }, 3000);
-
+    }, 4000);
     return () => clearInterval(interval);
   }, [renderJobId]);
 
