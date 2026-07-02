@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { supabase } from '../supabase/client.js';
 
 export async function createIdentity(req, res) {
@@ -8,70 +7,38 @@ export async function createIdentity(req, res) {
       voice_url,
       persona_description,
       profile_id,
-      tenant_id,
-      device_id,
-      realm_id
+      tenant_id
     } = req.body;
 
-    if (!selfie_url || !voice_url || !profile_id || !tenant_id) {
+    if (!selfie_url || !voice_url || !profile_id) {
       return res.status(400).json({
-        error: 'Missing required fields: selfie_url, voice_url, profile_id, tenant_id'
+        error: 'Missing required fields: selfie_url, voice_url, profile_id'
       });
     }
 
-    // 1. Forward identity creation request to Architect OS v4.0
-    const identityResponse = await axios.post(
-      `${process.env.ARCHITECT_OS_URL}/identity/create`,
-      {
-        selfie_url,
-        voice_url,
-        persona_description,
-        profile_id,
-        tenant_id,
-        device_id,
-        realm_id
-      }
-    );
-
-    const {
-      visual_identity_model,
-      voice_identity_model,
-      persona_profile,
-      identity_bind_payload
-    } = identityResponse.data;
-
-    // 2. Store identity in Supabase
+    // Save identity to Supabase — D-ID processing will be wired in next sprint
     const { data, error } = await supabase
       .from('identities')
-      .insert([
-        {
-          profile_id,
-          tenant_id,
-          realm_id,
-          selfie_url,
-          voice_url,
-          visual_model: visual_identity_model,
-          voice_model: voice_identity_model,
-          persona_profile,
-          bind_payload: identity_bind_payload
-        }
-      ]);
+      .insert([{
+        profile_id,
+        tenant_id: tenant_id || 'studioflow',
+        selfie_url,
+        voice_url,
+        persona_description: persona_description || '',
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
 
     if (error) {
       console.error('Supabase Insert Error:', error);
-      throw error;
+      return res.status(500).json({ error: error.message });
     }
 
-    // 3. Return identity to frontend
-    res.json({
-      success: true,
-      identity: data[0]
-    });
-
+    res.json({ success: true, identity: data });
   } catch (err) {
-    console.error('Identity Engine Error:', err);
-    res.status(500).json({
-      error: err.message || 'Identity Engine failed'
-    });
+    console.error('Identity Error:', err);
+    res.status(500).json({ error: err.message || 'Identity creation failed' });
   }
 }
