@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Clapperboard } from 'lucide-react';
 import { categories } from '../../../data/categories.js';
-import FoundingMembersSection from '../../../components/home/FoundingMembersSection.jsx';
 
 export default function HomeTab({ stats }) {
   const navigate = useNavigate();
@@ -58,7 +57,6 @@ export default function HomeTab({ stats }) {
         ))}
       </div>
 
-      <FoundingMembersSection />
     </div>
   );
 }
