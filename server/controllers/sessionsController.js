@@ -57,13 +57,15 @@ export async function startRender(req, res) {
 
     // Resolve identity_url: use provided or look up from identity_id
     let resolvedIdentityUrl = identity_url;
-    if (!resolvedIdentityUrl && identity_id) {
-      const { data: identity } = await supabase
+    let identity = null;
+    if (identity_id) {
+      const { data: fetchedIdentity } = await supabase
         .from("identities")
         .select("selfie_url, elevenlabs_voice_id")
         .eq("id", identity_id)
         .single();
-      resolvedIdentityUrl = identity?.selfie_url;
+      identity = fetchedIdentity;
+      if (!resolvedIdentityUrl) resolvedIdentityUrl = identity?.selfie_url;
     }
 
     // Resolve script_text: use provided or build from scenes array
