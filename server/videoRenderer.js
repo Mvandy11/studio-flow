@@ -2,7 +2,7 @@ import axios from 'axios';
 import { supabase } from './supabase/client.js';
 const ELEVEN_API_KEY = process.env.ELEVENLABS_API_KEY;
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
-const SADTALKER_VERSION = 'cjwbw/sadtalker:cd4c0465ae0b54a6f85af57f5c65fec9fe23e7f8';
+const SADTALKER_VERSION = 'cd4c0465ae0b54a6f85af57f5c65fec9fe23e7f8';
 
 async function generateAudio(scriptText, voiceId) {
   const fallbackVoiceId = 'EXAVITQu4vr4xnSDxMaL'; // ElevenLabs default male voice
