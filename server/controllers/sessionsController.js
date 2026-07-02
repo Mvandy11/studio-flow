@@ -81,9 +81,6 @@ export async function startRender(req, res) {
       return res.status(400).json({ error: 'script_text or scenes with prompts are required' });
     }
 
-    // Start D-ID render job
-    const didTalkId = await startRenderJob(resolvedIdentityUrl, resolvedScriptText, identity?.elevenlabs_voice_id);
-
     // Resolve or create session_id
     let resolvedSessionId = session_id;
     if (!resolvedSessionId && member_id) {
@@ -100,13 +97,12 @@ export async function startRender(req, res) {
         .eq("id", resolvedSessionId);
     }
 
-    // Insert render_jobs row
+    // Insert render_jobs row (pending) so we have a jobId before starting the render
     const { data: renderJob, error: jobError } = await supabase
       .from("render_jobs")
       .insert([{
         session_id: resolvedSessionId || null,
         member_id: member_id || req.user?.id || null,
-        did_talk_id: didTalkId,
         status: "pending"
       }])
       .select()
@@ -114,7 +110,16 @@ export async function startRender(req, res) {
 
     if (jobError) return res.status(400).json({ error: jobError });
 
-    res.json({ render_job_id: renderJob.id, did_talk_id: didTalkId });
+    // Start SadTalker render job
+    const talkId = await startRenderJob(resolvedIdentityUrl, resolvedScriptText, identity?.elevenlabs_voice_id, renderJob.id);
+
+    // Store the Replicate prediction id on the render_jobs row
+    await supabase
+      .from("render_jobs")
+      .update({ did_talk_id: talkId })
+      .eq("id", renderJob.id);
+
+    res.json({ render_job_id: renderJob.id, did_talk_id: talkId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
