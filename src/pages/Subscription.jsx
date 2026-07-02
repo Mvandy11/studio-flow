@@ -59,7 +59,6 @@ export default function SubscriptionPage() {
                 '🔒 $25/mo locked forever (reg. $40/mo)',
                 '🏅 Founding Member badge — permanent',
                 '🏆 $10/mo fuels contest prizes',
-                '🎬 $10/mo fuels event rewards',
                 '⚡ Early access to every new feature',
                 '💬 Priority support',
               ].map((f, i) => (

@@ -20,7 +20,7 @@ export default function StudioTopbar() {
       }}
     >
       <h2 style={{ margin: 0, color: 'var(--accent-blue)' }}>
-        Creator Dashboard
+        Studio
       </h2>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

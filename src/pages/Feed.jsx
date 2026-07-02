@@ -329,9 +329,7 @@ export default function Feed() {
           borderTop: '1px solid rgba(255,255,255,0.06)',
         }}>
           {[
-            { to: '/events',   label: '📅 All Events'   },
             { to: '/contests', label: '🏆 All Contests'  },
-            { to: '/creator-academy', label: '🎓 Academy' },
             { to: '/tools',    label: '🛠 AI Tools'      },
           ].map(({ to, label }) => (
             <Link

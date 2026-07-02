@@ -4,8 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { useMembership } from '../modules/memberships/useMembership';
 
-const DONATION_URL = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';
-
 export default function MobileDrawer({ open, onClose }) {
   const { user, role, logout } = useAuth();
   const { tier }               = useMembership();
@@ -77,7 +75,6 @@ export default function MobileDrawer({ open, onClose }) {
           {/* ── Core (all tiers) ── */}
           <Item to="/"       icon="⌂" label="Home" end />
           <Item to="/feed"   icon="◈" label="Feed" />
-          <Item to="/events" icon="🎬" label="Events" />
           <Item to="/studio" icon="⬡" label="Studio" />
 
           {/* ── AI Tools ── */}
@@ -89,7 +86,6 @@ export default function MobileDrawer({ open, onClose }) {
           <Item to="/contests"        icon="🏆" label="Contests" />
           <Item to="/announcements"   icon="📢" label="Announcements" />
           <Item to="/free-chat"       icon="💬" label="Free Chat" />
-          <Item to="/creator-academy" icon="🎓" label="Academy" />
 
           {/* ── Free tier ── */}
           {isFree && (
@@ -103,14 +99,9 @@ export default function MobileDrawer({ open, onClose }) {
           </>}
 
           {/* ── Creator tier ── */}
-          {isCreator50 && <>
-            <Item to="/creator/dashboard"   icon="🎬" label="Creator Dashboard" />
-            <Item to="/creator/new-event"   icon="➕" label="Create Event" />
-            <Item to="/creator/events"      icon="📋" label="My Events" />
-            <Item to="/creator/donations"   icon="💛" label="Donations" />
-            <Item to="/creator/revenue"     icon="📈" label="Revenue Pool" />
+          {isCreator50 && (
             <Item to="/contests/my-entries" icon="🏆" label="Contest Entries" />
-          </>}
+          )}
 
           {/* ── Account (all tiers) ── */}
           <Item to="/earnings" icon="◎" label="Earnings" />
@@ -118,27 +109,12 @@ export default function MobileDrawer({ open, onClose }) {
 
           {/* ── Admin ── */}
           {isCreatorAdmin(role) && <>
-            <AdminItem to="/admin"              icon="🛡" label="Admin" />
-            <AdminItem to="/creator/new-event"  icon="🎬" label="Post Event" />
-            <AdminItem to="/admin/winners"      icon="🏆" label="Winners" />
-            <AdminItem to="/admin/analytics"    icon="📊" label="Analytics" />
-            <AdminItem to="/admin/errors"       icon="🔴" label="Error Logs" />
+            <AdminItem to="/admin"           icon="🛡" label="Admin" />
+            <AdminItem to="/admin/winners"   icon="🏆" label="Winners" />
+            <AdminItem to="/admin/analytics" icon="📊" label="Analytics" />
+            <AdminItem to="/admin/errors"    icon="🔴" label="Error Logs" />
           </>}
         </nav>
-
-        <div className="mob-drawer__divider" />
-
-        <a
-          href={DONATION_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mob-drawer__link"
-          style={{ color: 'var(--accent-gold)', padding: '0.65rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}
-          onClick={onClose}
-        >
-          <span className="mob-drawer__link-icon">💝</span>
-          Support Studio Flow
-        </a>
 
         <div className="mob-drawer__divider" />
 

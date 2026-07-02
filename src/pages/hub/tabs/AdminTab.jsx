@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { api } from '../../../lib/api.js';
 import { calculatePayout } from '../data.js';
 
-const ADMIN_TABS = ['Overview', 'Contests', 'Events', 'Submissions', 'Announcements', 'Tickets'];
+const ADMIN_TABS = ['Overview', 'Contests', 'Submissions', 'Announcements', 'Tickets'];
 
 export default function AdminTab() {
   const { user, role, loading: authLoading } = useAuth();
@@ -15,7 +15,6 @@ export default function AdminTab() {
   const [loading,    setLoading]    = useState(false);
 
   const [contests,     setContests]     = useState([]);
-  const [events,       setEvents]       = useState([]);
   const [submissions,  setSubmissions]  = useState([]);
   const [entries,      setEntries]      = useState([]);
   const [announcements, setAnnouncements] = useState([]);
@@ -38,14 +37,12 @@ export default function AdminTab() {
       const token = await getToken();
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [contResult, evResult, subResult] = await Promise.all([
+      const [contResult, subResult] = await Promise.all([
         api('/api/admin/contests',     { headers }),
-        api('/api/admin/events',       { headers }),
         api('/api/admin/submissions',  { headers }),
       ]);
 
       setContests(contResult.data || []);
-      setEvents(evResult.data || []);
       const allSubs = subResult.data?.submissions || [];
       setSubmissions(allSubs.filter((s) => !s.contest_id));
       setEntries(allSubs.filter((s) => !!s.contest_id));
@@ -79,20 +76,6 @@ export default function AdminTab() {
     }
   }
 
-  async function deleteEvent(id) {
-    if (!confirm('Delete this event?')) return;
-    try {
-      const token = await getToken();
-      await api(`/api/events/${id}`, {
-        method:  'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      loadAll();
-    } catch (err) {
-      alert(`Error: ${err.message}`);
-    }
-  }
-
   // ── Not logged in ──
   if (authLoading) {
     return (
@@ -107,7 +90,7 @@ export default function AdminTab() {
       <div className="hub-content">
         <div className="admin-hub-gate">
           <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🛡</div>
-          <h2 className="admin-hub-gate__title">Creator Dashboard</h2>
+          <h2 className="admin-hub-gate__title">Admin Panel</h2>
           <p className="admin-hub-gate__sub">
             You must be signed in as a creator-admin to access this panel.
           </p>
@@ -137,8 +120,7 @@ export default function AdminTab() {
   }
 
   // ── Stats ──
-  const pendingSubs  = submissions.filter((s) => !s.status || s.status === 'pending').length;
-  const activeEvents = events.filter((e) => e.status === 'upcoming' || !e.status).length;
+  const pendingSubs = submissions.filter((s) => !s.status || s.status === 'pending').length;
 
   return (
     <div className="hub-content hub-content--wide">
@@ -184,7 +166,6 @@ export default function AdminTab() {
             <>
               <div className="admin-hub-overview">
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{contests.length}</div><div className="admin-hub-stat__label">Contests</div></div>
-                <div className="admin-hub-stat"><div className="admin-hub-stat__value">{activeEvents}</div><div className="admin-hub-stat__label">Active Events</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{submissions.length}</div><div className="admin-hub-stat__label">Submissions</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{entries.length}</div><div className="admin-hub-stat__label">Contest Entries</div></div>
                 <div className="admin-hub-stat"><div className="admin-hub-stat__value">{pendingSubs}</div><div className="admin-hub-stat__label">Pending Review</div></div>
@@ -216,11 +197,9 @@ export default function AdminTab() {
 
               <h2 className="hub-section-title" style={{ marginTop: '1.5rem' }}>Quick Links</h2>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link to="/admin"               className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🛡 Full Dashboard</Link>
-                <Link to="/creator/new-event"  className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🎬 Post Event</Link>
-                <Link to="/contests/create"    className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🏆 Create Contest</Link>
-                <Link to="/events"             className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>📋 All Events</Link>
-                <Link to="/announcements"      className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>📢 Announcements</Link>
+                <Link to="/admin"            className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🛡 Full Dashboard</Link>
+                <Link to="/contests/create" className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>🏆 Create Contest</Link>
+                <Link to="/announcements"   className="hub-btn hub-btn--ghost" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>📢 Announcements</Link>
               </div>
             </>
           )}
@@ -264,48 +243,6 @@ export default function AdminTab() {
                           </td>
                         </tr>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Events ── */}
-          {activeTab === 'Events' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <h2 className="hub-section-title" style={{ margin: 0 }}>All Events ({events.length})</h2>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Link to="/creator/new-event"    className="hub-btn hub-btn--gold"  style={{ textDecoration: 'none', fontSize: '0.85rem' }}>+ Post Event</Link>
-                </div>
-              </div>
-              {events.length === 0 ? (
-                <p style={{ color: 'var(--hub-muted)', textAlign: 'center', padding: '2rem' }}>No events yet.</p>
-              ) : (
-                <div className="hub-table-wrap">
-                  <table className="hub-table">
-                    <thead>
-                      <tr><th>Title</th><th>Mode</th><th>Status</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody>
-                      {events.map((ev) => {
-                        const mode   = ev.event_mode || ev.event_type || '—';
-                        const status = ev.status || 'upcoming';
-                        return (
-                          <tr key={ev.id}>
-                            <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</td>
-                            <td><span className={`hub-badge hub-badge--${mode || 'open'}`}>{mode || '—'}</span></td>
-                            <td><span className={`hub-badge hub-badge--${status}`}>{status}</span></td>
-                            <td>
-                              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                <Link to={`/events/${ev.id}`} className="admin-action-btn" style={{ textDecoration: 'none' }}>View</Link>
-                                <button className="admin-action-btn admin-action-btn--danger" onClick={() => deleteEvent(ev.id)}>Delete</button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
                     </tbody>
                   </table>
                 </div>
