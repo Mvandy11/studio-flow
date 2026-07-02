@@ -185,7 +185,12 @@ export default function VideoGenerator() {
         {finalVideoUrl && (
           <div className="vg-video">
             <h3>Final Video</h3>
-            <video src={finalVideoUrl} controls width="100%" />
+            <video src={finalVideoUrl} controls crossOrigin="anonymous"
+              onError={() => window.open(finalVideoUrl, '_blank')} />
+            <a href={finalVideoUrl} target="_blank" rel="noreferrer"
+              style={{color:'#facc15', fontSize:'0.85rem', marginTop:'8px', display:'block'}}>
+              ↗ Open video in new tab if player fails
+            </a>
           </div>
         )}
 
