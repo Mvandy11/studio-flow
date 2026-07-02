@@ -4,17 +4,13 @@ import { supabase } from '../../lib/supabaseClient';
 import { api } from '../../lib/api.js';
 import HomeTab       from './tabs/HomeTab.jsx';
 import ContestsTab   from './tabs/ContestsTab.jsx';
-import SubmissionsTab from './tabs/SubmissionsTab.jsx';
-import AdminTab      from './tabs/AdminTab.jsx';
 import '../../styles/hub.css';
 
-const TABS = ['Home', 'Contests', 'Submissions', 'Creator Dashboard'];
+const TABS = ['Home', 'Contests'];
 
 const TAB_ICONS = {
-  'Home':               '🏠',
-  'Contests':           '🏆',
-  'Submissions':        '📬',
-  'Creator Dashboard':  '🛡',
+  'Home':     '🏠',
+  'Contests': '🏆',
 };
 
 export default function StudioFlowHub() {
@@ -72,10 +68,8 @@ export default function StudioFlowHub() {
         )}
       </nav>
 
-      {activeTab === 'Home'              && <HomeTab onTabChange={setActiveTab} stats={stats} />}
-      {activeTab === 'Contests'          && <ContestsTab />}
-      {activeTab === 'Submissions'       && <SubmissionsTab />}
-      {activeTab === 'Creator Dashboard' && <AdminTab />}
+      {activeTab === 'Home'     && <HomeTab onTabChange={setActiveTab} stats={stats} />}
+      {activeTab === 'Contests' && <ContestsTab />}
     </div>
   );
 }

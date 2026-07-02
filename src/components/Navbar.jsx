@@ -39,7 +39,7 @@ function ProfileDropdown({ user, role, tier, meta, onLogout }) {
 }
 
 export default function Navbar({ onHamburger }) {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, loading } = useAuth();
   const { tier, meta } = useMembership();
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [profileOpen,  setProfileOpen]  = useState(false);
@@ -97,7 +97,7 @@ export default function Navbar({ onHamburger }) {
 
         {/* Right actions */}
         <div className="app-topnav__right">
-          {user ? (
+          {loading ? null : user ? (
             <div className="profile-menu-wrap" ref={dropdownRef}>
               <button
                 className="profile-menu-trigger"

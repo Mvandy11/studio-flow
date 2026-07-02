@@ -65,15 +65,14 @@ export default function FoundingMemberSection() {
       <h2>Only {TOTAL_SPOTS.toLocaleString()} Spots — <span className="highlight">{claimed === null ? '...' : remaining.toLocaleString()} Remaining</span></h2>
       <p>
         First 1,000 members lock in <strong>$25/mo forever</strong> — when the 1,000 spots fill,
-        regular membership becomes <strong>$40/mo</strong>. Of each $40 membership,
-        <strong> $15 goes to the Contest Prize Pool</strong> and <strong>$10 goes to Event Rewards</strong>.
+        regular membership becomes <strong>$40/mo</strong>. Of each $25 Founding membership,
+        <strong> $10/month goes directly into the Contest Prize Pool</strong> — 100% paid out to winning members.
         First 1,000 members keep their $25 rate and their badge permanently.
       </p>
       <div className="founding-perks">
         <span><Check size={16} className="text-green-400" /> $25/mo locked forever (reg. $40/mo)</span>
         <span><Check size={16} className="text-green-400" /> First 1,000 Member badge — permanent</span>
-        <span><Check size={16} className="text-green-400" /> $10/mo fuels contest prizes</span>
-        <span><Check size={16} className="text-green-400" /> $10/mo fuels event rewards</span>
+        <span><Check size={16} className="text-green-400" /> $10/mo funds the Contest Prize Pool — paid out 100% to winners</span>
         <span><Check size={16} className="text-green-400" /> Early access to every new feature</span>
         <span><Check size={16} className="text-green-400" /> Priority support</span>
       </div>

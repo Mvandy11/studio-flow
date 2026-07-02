@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Link as LinkIcon, Star } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useMembership } from '../hooks/useMembership';
 import { supabase } from '../lib/supabaseClient';
@@ -90,14 +91,14 @@ function MembershipSection({ user }) {
   if (loading) return null;
 
   const tierDescriptions = {
-    free:       'Access to basic platform features. Upgrade to unlock events, enhanced tools, and priority support.',
-    monthly:    'Full platform access. Enjoy all features including custom events, AI tools, and contest participation.',
+    free:       'Founding Members get Video Generator access, AI Denoise, and $10/mo added to the Contest Prize Pool.',
+    monthly:    'Full platform access. Enjoy all features including AI tools, Video Generator, and contest participation.',
     enterprise: 'Premium access with priority support, dedicated features, and maximum earning potential.',
   };
 
   return (
     <div className="portfolio-section" id="membership">
-      <h2 className="portfolio-section-title">🌟 Membership</h2>
+      <h2 className="portfolio-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Star size={16} /> Membership</h2>
 
       <div style={{
         background: 'rgba(255,255,255,0.025)',
@@ -323,103 +324,6 @@ function AccountSection({ onLogout, userEmail }) {
   );
 }
 
-/* ── Creator-posted event slots section ────────────────────── */
-function CreatorEventSlots({ profileId, isOwn }) {
-  const [slots,   setSlots]   = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch(`/api/creator/events/public?creator_id=${profileId}`)
-      .then((r) => r.json())
-      .then((data) => setSlots(Array.isArray(data) ? data : []))
-      .catch(() => setSlots([]))
-      .finally(() => setLoading(false));
-  }, [profileId]);
-
-  if (loading || slots.length === 0) {
-    if (!isOwn || loading) return null;
-    // Own profile + no events yet → encourage posting
-    return (
-      <div className="portfolio-section">
-        <h2 className="portfolio-section-title">🎬 My Events</h2>
-        <div style={{
-          padding: '1.5rem', borderRadius: '14px', textAlign: 'center',
-          background: 'rgba(167,139,250,0.05)', border: '1px dashed rgba(167,139,250,0.2)',
-        }}>
-          <p style={{ margin: '0 0 0.75rem', color: 'rgba(200,200,215,0.45)', fontSize: '0.88rem' }}>
-            You haven't posted any events yet.
-          </p>
-          <Link
-            to="/creator/new-event"
-            style={{
-              display: 'inline-block', padding: '0.5rem 1.25rem',
-              borderRadius: '8px', background: 'rgba(167,139,250,0.15)',
-              border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa',
-              fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none',
-            }}
-          >
-            + Post Your First Event
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="portfolio-section">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <h2 className="portfolio-section-title" style={{ margin: 0 }}>🎬 Events</h2>
-        {isOwn && (
-          <Link
-            to="/creator/new-event"
-            style={{
-              fontSize: '0.78rem', fontWeight: 700, padding: '0.3rem 0.85rem',
-              borderRadius: '8px', background: 'rgba(167,139,250,0.1)',
-              border: '1px solid rgba(167,139,250,0.25)', color: '#a78bfa',
-              textDecoration: 'none',
-            }}
-          >
-            + Post Event
-          </Link>
-        )}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-        {slots.map((slot) => (
-          <Link
-            key={slot.id}
-            to={`/event/${slot.id}`}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '1rem',
-              padding: '0.875rem 1rem', borderRadius: '12px',
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-              textDecoration: 'none', transition: 'border-color 0.2s',
-            }}
-            onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(167,139,250,0.3)'}
-            onMouseOut={(e)  => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
-          >
-            {slot.thumbnail_url ? (
-              <img src={slot.thumbnail_url} alt={slot.title} style={{ width: '64px', height: '48px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
-            ) : (
-              <div style={{ width: '64px', height: '48px', borderRadius: '8px', background: 'rgba(167,139,250,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>
-                {slot.is_live ? '📡' : '🎬'}
-              </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-soft, #e0e0f0)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {slot.title}
-              </p>
-              <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: 'rgba(200,200,215,0.4)' }}>
-                {slot.category && `#${slot.category} · `}{slot.is_live ? '📡 Live' : '🎬 Recorded'}
-              </p>
-            </div>
-            <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.35)', flexShrink: 0 }}>→</span>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ── Main component ─────────────────────────────────────────── */
 export default function CreatorProfile() {
   const { id } = useParams();
@@ -428,7 +332,6 @@ export default function CreatorProfile() {
 
   const [profile,      setProfile]      = useState(null);
   const [sessions,     setSessions]     = useState([]);
-  const [events,       setEvents]       = useState([]);
   const [profileLoading, setProfileLoading] = useState(true);
 
   const profileId = id || user?.id;
@@ -449,20 +352,17 @@ export default function CreatorProfile() {
     async function load() {
       setProfileLoading(true);
       try {
-        const [{ data: p }, { data: s }, { data: e }] = await Promise.all([
+        const [{ data: p }, { data: s }] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', profileId).maybeSingle(),
           supabase.from('sessions').select('*').eq('creator_id', profileId).order('created_at', { ascending: false }).limit(12),
-          supabase.from('events').select('*').eq('creator_id', profileId).order('created_at', { ascending: false }).limit(6),
         ]);
         if (cancelled) return;
         setProfile(p ?? null);
         setSessions(s ?? []);
-        setEvents(e ?? []);
       } catch {
         if (!cancelled) {
           setProfile(null);
           setSessions([]);
-          setEvents([]);
         }
       } finally {
         if (!cancelled) setProfileLoading(false);
@@ -530,7 +430,6 @@ export default function CreatorProfile() {
     socialLinks={socialLinks}
     isOwn={isOwn}
     sessions={sessions}
-    events={events}
     user={user}
     role={role}
     onLogout={handleLogout}
@@ -540,25 +439,8 @@ export default function CreatorProfile() {
 /* ── ProfileView — separated to keep hooks rules clean ──────── */
 function ProfileView({
   profile, displayName, initial, socialLinks,
-  isOwn, sessions, events, user, role, onLogout,
+  isOwn, sessions, user, role, onLogout,
 }) {
-  const [goLiveUrl,    setGoLiveUrl]    = useState(profile.live_stream_url  || '');
-  const [goLiveType,   setGoLiveType]   = useState(profile.live_stream_type || 'youtube');
-  const [isLiveNow,    setIsLiveNow]    = useState(profile.is_live          || false);
-  const [goLiveSaving, setGoLiveSaving] = useState(false);
-  const [goLiveMsg,    setGoLiveMsg]    = useState('');
-
-  async function saveGoLive() {
-    setGoLiveSaving(true);
-    setGoLiveMsg('');
-    const { error } = await supabase
-      .from('profiles')
-      .update({ live_stream_url: goLiveUrl || null, live_stream_type: goLiveType, is_live: isLiveNow })
-      .eq('id', user.id);
-    setGoLiveSaving(false);
-    setGoLiveMsg(error ? error.message : isLiveNow ? '🔴 You are now live!' : '✅ Stream settings saved.');
-  }
-
   return (
     <div className="portfolio-page">
       {/* Cover */}
@@ -628,7 +510,7 @@ function ProfileView({
           {!isOwn && (
             <>
               <a href={`mailto:?subject=Hire ${displayName}`} className="portfolio-cta portfolio-cta--primary">Hire Me</a>
-              <Link to="/events/create" className="portfolio-cta portfolio-cta--secondary">Book a Session</Link>
+              <Link to="/studio/sessions" className="portfolio-cta portfolio-cta--secondary">Book a Session</Link>
             </>
           )}
           {isOwn && (
@@ -651,10 +533,6 @@ function ProfileView({
           <div className="portfolio-stat-label">Sessions</div>
         </div>
         <div className="portfolio-stat">
-          <div className="portfolio-stat-value">{events.length}</div>
-          <div className="portfolio-stat-label">Events</div>
-        </div>
-        <div className="portfolio-stat">
           <div className="portfolio-stat-value">0</div>
           <div className="portfolio-stat-label">Followers</div>
         </div>
@@ -671,7 +549,7 @@ function ProfileView({
 
           {/* Quick links */}
           <div className="portfolio-section">
-            <h2 className="portfolio-section-title">🔗 Quick Links</h2>
+            <h2 className="portfolio-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><LinkIcon size={16} /> Quick Links</h2>
 
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(200,200,215,0.35)', marginBottom: '0.6rem' }}>
@@ -680,7 +558,7 @@ function ProfileView({
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <ProfileLink to="/submissions">My Submissions</ProfileLink>
                 <ProfileLink to="/contests">My Contest Entries</ProfileLink>
-                <ProfileLink to="/events">My Events</ProfileLink>
+                <ProfileLink to="/my-videos">My Videos</ProfileLink>
                 <ProfileLink to="/earnings">My Earnings</ProfileLink>
               </div>
             </div>
@@ -691,8 +569,6 @@ function ProfileView({
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <ProfileLink to="/contests">Contests</ProfileLink>
-                <ProfileLink to="/events">Events</ProfileLink>
-                <ProfileLink to="/creator-academy">Academy</ProfileLink>
                 <ProfileLink to="/announcements">Announcements</ProfileLink>
               </div>
             </div>
@@ -704,106 +580,9 @@ function ProfileView({
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <AdminLink to="/admin">Admin Dashboard</AdminLink>
-                  <AdminLink to="/admin/event-requests">Event Requests</AdminLink>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Go Live panel */}
-          <div className="portfolio-section">
-            <h2 className="portfolio-section-title">📡 Go Live</h2>
-            <div style={{
-              background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.15)',
-              borderRadius: '16px', padding: '1.5rem',
-              display: 'flex', flexDirection: 'column', gap: '1rem',
-            }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.4rem' }}>
-                  Livestream URL
-                </label>
-                <input
-                  className="cinematic-input"
-                  placeholder="YouTube Live, Twitch, Vimeo, or Cloudflare Stream URL"
-                  value={goLiveUrl}
-                  onChange={(e) => setGoLiveUrl(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.45)', marginBottom: '0.4rem' }}>
-                  Platform
-                </label>
-                <select
-                  value={goLiveType}
-                  onChange={(e) => setGoLiveType(e.target.value)}
-                  style={{
-                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px', color: 'rgba(220,220,235,0.85)',
-                    padding: '0.55rem 0.85rem', fontSize: '0.88rem',
-                    cursor: 'pointer', width: '100%', maxWidth: '220px',
-                  }}
-                >
-                  <option value="youtube">YouTube Live</option>
-                  <option value="twitch">Twitch</option>
-                  <option value="vimeo">Vimeo Live</option>
-                  <option value="cloudflare">Cloudflare Stream</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={isLiveNow}
-                  onClick={() => setIsLiveNow((v) => !v)}
-                  style={{
-                    position: 'relative', width: '44px', height: '24px',
-                    borderRadius: '999px', border: 'none', cursor: 'pointer',
-                    background: isLiveNow ? '#ef4444' : 'rgba(255,255,255,0.12)',
-                    transition: 'background 0.2s', flexShrink: 0,
-                  }}
-                >
-                  <span style={{
-                    position: 'absolute', top: '3px',
-                    left: isLiveNow ? '23px' : '3px',
-                    width: '18px', height: '18px', borderRadius: '50%',
-                    background: '#fff', transition: 'left 0.2s',
-                  }} />
-                </button>
-                <span style={{ fontSize: '0.88rem', color: isLiveNow ? '#fca5a5' : 'rgba(200,200,215,0.55)', fontWeight: 600 }}>
-                  {isLiveNow ? '🔴 You are live' : 'Go Live'}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <button
-                  onClick={saveGoLive}
-                  disabled={goLiveSaving}
-                  style={{
-                    padding: '0.55rem 1.25rem', borderRadius: '8px',
-                    background: isLiveNow ? '#ef4444' : 'rgba(255,255,255,0.07)',
-                    border: isLiveNow ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.12)',
-                    color: '#fff', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {goLiveSaving ? 'Saving…' : isLiveNow ? '📡 Save & Go Live' : 'Save Settings'}
-                </button>
-                {goLiveMsg && (
-                  <span style={{ fontSize: '0.82rem', color: isLiveNow ? '#fca5a5' : '#86efac' }}>
-                    {goLiveMsg}
-                  </span>
-                )}
-              </div>
-
-              {goLiveUrl && (
-                <div style={{ marginTop: '0.5rem' }}>
-                  <p style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(200,200,215,0.35)', marginBottom: '0.5rem' }}>Preview</p>
-                  <LivePlayer url={goLiveUrl} label="Preview" />
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Account Settings */}
@@ -830,45 +609,6 @@ function ProfileView({
           </div>
         </div>
       )}
-
-      {/* Events */}
-      {events.length > 0 && (
-        <div className="portfolio-section">
-          <h2 className="portfolio-section-title">📅 Events</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            {events.map((ev) => (
-              <Link
-                key={ev.id}
-                to={`/events/${ev.id}`}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '0.875rem 1rem', borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-                  textDecoration: 'none', transition: 'border-color 0.2s',
-                }}
-                onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(110,168,255,0.3)'}
-                onMouseOut={(e)  => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
-              >
-                {ev.thumbnail_url && (
-                  <img src={ev.thumbnail_url} alt={ev.title} style={{ width: '64px', height: '48px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
-                )}
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-soft)' }}>{ev.title}</p>
-                  {ev.is_paid_event && (
-                    <p style={{ margin: '0.1rem 0 0', fontSize: '0.78rem', color: 'var(--accent-gold)' }}>
-                      ${ev.ticket_price} ticket
-                    </p>
-                  )}
-                </div>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(200,200,215,0.4)' }}>→</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* My Events (creator_50 direct-publish slots) */}
-      <CreatorEventSlots profileId={profile.id} isOwn={isOwn} />
 
       {/* Tip Jar — only on other creators' profiles */}
       {!isOwn && <TipJar creatorName={displayName} />}

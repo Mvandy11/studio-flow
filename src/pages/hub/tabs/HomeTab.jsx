@@ -1,10 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { Gift, Clapperboard } from 'lucide-react';
+import { Clapperboard } from 'lucide-react';
 import { categories } from '../../../data/categories.js';
-import DonationButton from '../../../components/DonationButton.jsx';
 import FoundingMembersSection from '../../../components/home/FoundingMembersSection.jsx';
-import FoundingMemberSection from '../../../components/FoundingMemberSection.jsx';
-import FoundingMembersDisplay from '../../../components/FoundingMembersDisplay.jsx';
 
 export default function HomeTab({ stats }) {
   const navigate = useNavigate();
@@ -31,20 +28,6 @@ export default function HomeTab({ stats }) {
           <div className="hub-stat__value">{stats.totalMembers}</div>
           <div className="hub-stat__label">Total Members</div>
         </div>
-      </div>
-
-      <FoundingMemberSection />
-      <FoundingMembersDisplay />
-
-      {/* Donation strip */}
-      <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.15)', borderRadius: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-        <div>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Gift size={16} /> Support the Reward Pool</p>
-          <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'rgba(200,200,215,0.5)' }}>
-            100% of donations go directly to contest winners
-          </p>
-        </div>
-        <DonationButton compact />
       </div>
 
       {/* Category cards — single source of truth: src/data/categories.js */}
