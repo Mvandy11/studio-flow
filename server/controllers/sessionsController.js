@@ -57,7 +57,7 @@ export async function startRender(req, res) {
     if (!resolvedIdentityUrl && identity_id) {
       const { data: identity } = await supabase
         .from("identities")
-        .select("selfie_url")
+        .select("selfie_url, elevenlabs_voice_id")
         .eq("id", identity_id)
         .single();
       resolvedIdentityUrl = identity?.selfie_url;
@@ -77,7 +77,7 @@ export async function startRender(req, res) {
     }
 
     // Start D-ID render job
-    const didTalkId = await startRenderJob(resolvedIdentityUrl, resolvedScriptText);
+    const didTalkId = await startRenderJob(resolvedIdentityUrl, resolvedScriptText, identity?.elevenlabs_voice_id);
 
     // Resolve or create session_id
     let resolvedSessionId = session_id;

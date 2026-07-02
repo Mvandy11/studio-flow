@@ -13,13 +13,19 @@ export default function MyVideos() {
   useEffect(() => {
     if (!user) return;
     async function fetchVideos() {
-      const { data, error } = await supabase
-        .from('render_jobs')
-        .select('*')
-        .eq('member_id', user.id)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false });
-      if (!error) setVideos(data || []);
+      try {
+        const { data, error } = await supabase
+          .from('render_jobs')
+          .select('*')
+          .eq('member_id', user.id)
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false });
+        if (!error) setVideos(data || []);
+      } catch (e) {
+        console.error('MyVideos fetch error', e);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchVideos();
   }, [user]);

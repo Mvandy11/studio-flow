@@ -3,14 +3,18 @@ import axios from 'axios';
 const DID_API_KEY = process.env.DID_API_KEY;
 const DID_BASE = 'https://api.d-id.com';
 
-export async function startRenderJob(identityUrl, scriptText) {
+export async function startRenderJob(identityUrl, scriptText, elevenLabsVoiceId = null) {
   try {
+    const scriptProvider = elevenLabsVoiceId
+      ? { type: 'elevenlabs', voice_id: elevenLabsVoiceId }
+      : { type: 'microsoft', voice_id: 'en-US-GuyNeural' };
+
     const response = await axios.post(`${DID_BASE}/talks`, {
       source_url: identityUrl,
       script: {
         type: 'text',
         input: scriptText,
-        provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' }
+        provider: scriptProvider
       },
       config: { fluent: true, pad_audio: 0.0 }
     }, {

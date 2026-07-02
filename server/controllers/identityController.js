@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { supabase } from '../supabase/client.js';
 
 export async function createIdentity(req, res) {
@@ -34,6 +35,24 @@ export async function createIdentity(req, res) {
     if (error) {
       console.error('Supabase Insert Error:', error);
       return res.status(500).json({ error: error.message });
+    }
+
+    // Clone voice with ElevenLabs and store voice ID
+    if (process.env.ELEVENLABS_API_KEY && voice_url) {
+      try {
+        const voiceRes = await axios.post(
+          'https://api.elevenlabs.io/v1/voices/add',
+          { name: `identity-${data.id}`, files: [voice_url] },
+          { headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json' } }
+        );
+        const elVoiceId = voiceRes.data?.voice_id;
+        if (elVoiceId) {
+          await supabase.from('identities').update({ elevenlabs_voice_id: elVoiceId }).eq('id', data.id);
+          data.elevenlabs_voice_id = elVoiceId;
+        }
+      } catch (elErr) {
+        console.warn('ElevenLabs voice clone failed (non-fatal):', elErr.message);
+      }
     }
 
     res.json({ success: true, identity: data });
