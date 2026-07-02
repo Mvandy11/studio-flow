@@ -4,21 +4,26 @@ const DID_API_KEY = process.env.DID_API_KEY;
 const DID_BASE = 'https://api.d-id.com';
 
 export async function startRenderJob(identityUrl, scriptText) {
-  const response = await axios.post(`${DID_BASE}/talks`, {
-    source_url: identityUrl,
-    script: {
-      type: 'text',
-      input: scriptText,
-      provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' }
-    },
-    config: { fluent: true, pad_audio: 0.0 }
-  }, {
-    headers: {
-      Authorization: `Basic ${Buffer.from(DID_API_KEY + ':').toString('base64')}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  return response.data.id;
+  try {
+    const response = await axios.post(`${DID_BASE}/talks`, {
+      source_url: identityUrl,
+      script: {
+        type: 'text',
+        input: scriptText,
+        provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' }
+      },
+      config: { fluent: true, pad_audio: 0.0 }
+    }, {
+      headers: {
+        Authorization: `Basic ${Buffer.from(DID_API_KEY + ':').toString('base64')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data.id;
+  } catch (err) {
+    const detail = err.response?.data || err.message;
+    throw new Error(`D-ID error: ${JSON.stringify(detail)}`);
+  }
 }
 
 export async function getRenderStatusJob(didTalkId) {
