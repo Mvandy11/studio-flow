@@ -5,6 +5,7 @@ const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 const SADTALKER_VERSION = 'cd4c0465ae0b54a6f85af57f5c65fec9fe23e7f8';
 
 async function generateAudio(scriptText, voiceId) {
+  if (!voiceId) throw new Error('No ElevenLabs voice ID found on this identity. Please recreate your identity to generate a voice clone.');
   const fallbackVoiceId = 'EXAVITQu4vr4xnSDxMaL'; // ElevenLabs default male voice
   const vid = voiceId || fallbackVoiceId;
   const res = await axios.post(
@@ -24,6 +25,7 @@ async function uploadAudio(audioBuffer, jobId) {
 }
 
 export async function startRenderJob(identityUrl, scriptText, elevenLabsVoiceId, jobId) {
+  if (!identityUrl) throw new Error('No selfie image found on this identity. Please recreate your identity with a selfie.');
   const audioBuffer = await generateAudio(scriptText, elevenLabsVoiceId);
   const audioUrl = await uploadAudio(audioBuffer, jobId);
   const response = await axios.post(

@@ -66,6 +66,13 @@ export async function startRender(req, res) {
         .single();
       identity = fetchedIdentity;
       if (!resolvedIdentityUrl) resolvedIdentityUrl = identity?.selfie_url;
+
+      if (!identity?.elevenlabs_voice_id) {
+        return res.status(400).json({ error: 'This identity has no voice clone. Please go to Create Identity and make a new one — it will clone your voice automatically.' });
+      }
+      if (!identity?.selfie_url) {
+        return res.status(400).json({ error: 'This identity has no selfie image. Please recreate your identity.' });
+      }
     }
 
     // Resolve script_text: use provided or build from scenes array
