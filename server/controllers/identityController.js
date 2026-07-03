@@ -1,4 +1,5 @@
 import axios from 'axios';
+import FormData from 'form-data';
 import { supabase } from '../supabase/client.js';
 
 export async function createIdentity(req, res) {
@@ -40,10 +41,17 @@ export async function createIdentity(req, res) {
     // Clone voice with ElevenLabs and store voice ID
     if (process.env.ELEVENLABS_API_KEY && voice_url) {
       try {
+        const audioRes = await axios.get(voice_url, { responseType: 'arraybuffer' });
+        const form = new FormData();
+        form.append('name', `identity-${data.id}`);
+        form.append('files', Buffer.from(audioRes.data), {
+          filename: 'voice.mp3',
+          contentType: 'audio/mpeg'
+        });
         const voiceRes = await axios.post(
           'https://api.elevenlabs.io/v1/voices/add',
-          { name: `identity-${data.id}`, files: [voice_url] },
-          { headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json' } }
+          form,
+          { headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, ...form.getHeaders() } }
         );
         const elVoiceId = voiceRes.data?.voice_id;
         if (elVoiceId) {
