@@ -1,5 +1,5 @@
 import { supabase } from "../supabase/client.js";
-import { startRenderJob, getRenderStatusJob } from "../videoRenderer.js";
+import { startRenderJob, generateAudio, uploadAudio } from "../videoRenderer.js";
 
 export async function createSession(req, res) {
   try {
@@ -52,10 +52,6 @@ export async function startRender(req, res) {
   try {
     const { identity_url, script_text, identity_id, scenes, member_id, session_id } = req.body;
 
-    const sceneDescriptions = scenes.map(s => s.description).filter(Boolean);
-    console.log('Scene visual descriptions:', sceneDescriptions);
-
-    // Resolve identity_url: use provided or look up from identity_id
     let resolvedIdentityUrl = identity_url;
     let identity = null;
     if (identity_id) {
@@ -66,67 +62,59 @@ export async function startRender(req, res) {
         .single();
       identity = fetchedIdentity;
       if (!resolvedIdentityUrl) resolvedIdentityUrl = identity?.selfie_url;
-
       if (!identity?.elevenlabs_voice_id) {
-        return res.status(400).json({ error: 'This identity has no voice clone. Please go to Create Identity and make a new one — it will clone your voice automatically.' });
+        return res.status(400).json({ error: 'This identity has no voice clone. Please go to Create Identity and make a new one.' });
       }
       if (!identity?.selfie_url) {
         return res.status(400).json({ error: 'This identity has no selfie image. Please recreate your identity.' });
       }
     }
 
-    // Resolve script_text: use provided or build from scenes array
     let resolvedScriptText = script_text;
     if (!resolvedScriptText && Array.isArray(scenes) && scenes.length > 0) {
       resolvedScriptText = scenes.map(s => s.prompt || s.text || '').filter(Boolean).join(' ');
     }
 
-    if (!resolvedIdentityUrl) {
-      return res.status(400).json({ error: 'identity_url or identity_id with selfie is required' });
-    }
-    if (!resolvedScriptText) {
-      return res.status(400).json({ error: 'script_text or scenes with prompts are required' });
-    }
+    if (!resolvedIdentityUrl) return res.status(400).json({ error: 'identity_url or identity_id with selfie is required' });
+    if (!resolvedScriptText) return res.status(400).json({ error: 'script_text or scenes with prompts are required' });
 
-    // Resolve or create session_id
     let resolvedSessionId = session_id;
     if (!resolvedSessionId && member_id) {
       const { data: newSession } = await supabase
         .from("sessions")
         .insert([{ member_id, identity_id, scenes: scenes || [], status: "rendering" }])
-        .select()
-        .single();
+        .select().single();
       resolvedSessionId = newSession?.id;
     } else if (resolvedSessionId) {
-      await supabase
-        .from("sessions")
-        .update({ status: "rendering" })
-        .eq("id", resolvedSessionId);
+      await supabase.from("sessions").update({ status: "rendering" }).eq("id", resolvedSessionId);
     }
 
-    // Insert render_jobs row (pending) so we have a jobId before starting the render
     const { data: renderJob, error: jobError } = await supabase
       .from("render_jobs")
-      .insert([{
-        session_id: resolvedSessionId || null,
-        member_id: member_id || req.user?.id || null,
-        status: "pending"
-      }])
-      .select()
-      .single();
+      .insert([{ session_id: resolvedSessionId || null, member_id: member_id || req.user?.id || null, status: "pending" }])
+      .select().single();
 
     if (jobError) return res.status(400).json({ error: jobError });
 
-    // Start SadTalker render job
-    const talkId = await startRenderJob(resolvedIdentityUrl, resolvedScriptText, identity?.elevenlabs_voice_id, renderJob.id);
+    // Respond immediately — render runs in background
+    res.json({ render_job_id: renderJob.id });
 
-    // Store the Replicate prediction id on the render_jobs row
-    await supabase
-      .from("render_jobs")
-      .update({ did_talk_id: talkId })
-      .eq("id", renderJob.id);
+    // Fire async — do not await
+    (async () => {
+      try {
+        const audioBuffer = await generateAudio(resolvedScriptText, identity?.elevenlabs_voice_id);
+        const audioUrl = await uploadAudio(audioBuffer, renderJob.id);
+        const videoUrl = await startRenderJob(resolvedIdentityUrl, audioUrl, renderJob.id);
+        await supabase.from("render_jobs").update({ status: "completed", video_url: videoUrl, completed_at: new Date().toISOString() }).eq("id", renderJob.id);
+        if (resolvedSessionId) {
+          await supabase.from("sessions").update({ status: "completed", video_url: videoUrl }).eq("id", resolvedSessionId);
+        }
+      } catch (bgErr) {
+        console.error("Background render failed:", bgErr.message);
+        await supabase.from("render_jobs").update({ status: "error" }).eq("id", renderJob.id);
+      }
+    })();
 
-    res.json({ render_job_id: renderJob.id, did_talk_id: talkId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -135,43 +123,13 @@ export async function startRender(req, res) {
 export async function getRenderStatus(req, res) {
   try {
     const render_job_id = req.params.id;
-
-    // Fetch the render_jobs row to get did_talk_id
-    const { data: renderJob, error: jobFetchError } = await supabase
+    const { data: renderJob, error } = await supabase
       .from("render_jobs")
       .select("*")
       .eq("id", render_job_id)
       .single();
-
-    if (jobFetchError || !renderJob) {
-      return res.status(404).json({ error: "Render job not found" });
-    }
-
-    // Poll D-ID for status
-    const { status, videoUrl } = await getRenderStatusJob(renderJob.did_talk_id);
-
-    if (status === "completed" && videoUrl) {
-      // Update render_jobs
-      await supabase
-        .from("render_jobs")
-        .update({ status: "completed", video_url: videoUrl, completed_at: new Date().toISOString() })
-        .eq("id", render_job_id);
-
-      // Update parent session
-      if (renderJob.session_id) {
-        await supabase
-          .from("sessions")
-          .update({ status: "completed", video_url: videoUrl })
-          .eq("id", renderJob.session_id);
-      }
-    } else if (status === "error") {
-      await supabase
-        .from("render_jobs")
-        .update({ status: "error" })
-        .eq("id", render_job_id);
-    }
-
-    res.json({ status, video_url: videoUrl });
+    if (error || !renderJob) return res.status(404).json({ error: "Render job not found" });
+    res.json({ status: renderJob.status, video_url: renderJob.video_url });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
