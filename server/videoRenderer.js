@@ -36,8 +36,26 @@ export async function startRenderJob(imageUrl, audioUrl, jobId) {
       negative_prompt: "subtitles, text, blurry, low quality, watermark, scene change"
     }
   });
-  const videoUrl = Array.isArray(output) ? output[0] : output;
-  if (!videoUrl) throw new Error('Replicate returned no video URL');
+  // Replicate client v1+ returns FileOutput objects, not plain strings
+  let videoUrl;
+  if (!output) throw new Error('Replicate returned no output');
+  if (typeof output === 'string') {
+    videoUrl = output;
+  } else if (Array.isArray(output)) {
+    const first = output[0];
+    videoUrl = typeof first === 'string' ? first : String(first);
+  } else if (typeof output?.url === 'function') {
+    videoUrl = output.url();
+  } else {
+    videoUrl = String(output);
+  }
+
+  if (!videoUrl || videoUrl === '[object Object]') {
+    console.error('Raw Replicate output:', JSON.stringify(output));
+    throw new Error('Could not extract video URL from Replicate output');
+  }
+
+  console.log('Video URL extracted:', videoUrl);
   return videoUrl;
 }
 
