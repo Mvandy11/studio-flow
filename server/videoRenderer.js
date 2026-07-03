@@ -36,7 +36,9 @@ export async function startRenderJob(imageUrl, audioUrl, jobId) {
       negative_prompt: "subtitles, text, blurry, low quality, watermark, scene change"
     }
   });
-  return output;
+  const videoUrl = Array.isArray(output) ? output[0] : output;
+  if (!videoUrl) throw new Error('Replicate returned no video URL');
+  return videoUrl;
 }
 
 export async function getRenderStatusJob(predictionId) {
