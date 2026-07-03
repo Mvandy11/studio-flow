@@ -1,4 +1,8 @@
 import axios from 'axios';
+import { execSync } from 'child_process';
+import { writeFileSync, readFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
 import { supabase } from './supabase/client.js';
 const ELEVEN_API_KEY = process.env.ELEVENLABS_API_KEY;
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
@@ -17,8 +21,17 @@ async function generateAudio(scriptText, voiceId) {
 }
 
 async function uploadAudio(audioBuffer, jobId) {
-  const fileName = `audio/${jobId}-${Date.now()}.mp3`;
-  const { error } = await supabase.storage.from('videos').upload(fileName, audioBuffer, { contentType: 'audio/mpeg', upsert: true });
+  // Convert MP3 buffer to WAV using ffmpeg
+  const tmpMp3 = path.join(tmpdir(), `audio-${Date.now()}.mp3`);
+  const tmpWav = path.join(tmpdir(), `audio-${Date.now()}.wav`);
+  writeFileSync(tmpMp3, audioBuffer);
+  execSync(`ffmpeg -y -i ${tmpMp3} ${tmpWav}`);
+  const wavBuffer = readFileSync(tmpWav);
+  unlinkSync(tmpMp3);
+  unlinkSync(tmpWav);
+
+  const fileName = `audio/${jobId}-${Date.now()}.wav`;
+  const { error } = await supabase.storage.from('videos').upload(fileName, wavBuffer, { contentType: 'audio/wav', upsert: true });
   if (error) throw new Error(`Audio upload failed: ${error.message}`);
   const { data } = supabase.storage.from('videos').getPublicUrl(fileName);
   return data.publicUrl;
