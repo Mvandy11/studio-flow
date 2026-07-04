@@ -1,3 +1,4 @@
+import axios from "axios";
 import { supabase } from "../supabase/client.js";
 import { startRenderJob, generateAudio, uploadAudio } from "../videoRenderer.js";
 
@@ -91,32 +92,67 @@ export async function startRender(req, res) {
 
     const { data: renderJob, error: jobError } = await supabase
       .from("render_jobs")
-      .insert([{ session_id: resolvedSessionId || null, member_id: member_id || req.user?.id || null, status: "pending" }])
+      .insert([{
+        session_id: resolvedSessionId || null,
+        member_id: member_id || req.user?.id || null,
+        status: "pending",
+        script_text: resolvedScriptText,
+        identity_url: resolvedIdentityUrl,
+        voice_id: identity?.elevenlabs_voice_id || null
+      }])
       .select().single();
 
     if (jobError) return res.status(400).json({ error: jobError });
 
-    // Respond immediately — render runs in background
-    res.json({ render_job_id: renderJob.id });
+    if (!process.env.MAKE_WEBHOOK_URL) {
+      await supabase.from("render_jobs").update({ status: "error", error: "MAKE_WEBHOOK_URL is not configured" }).eq("id", renderJob.id);
+      return res.status(500).json({ error: "Emotion pipeline is not configured (missing MAKE_WEBHOOK_URL)." });
+    }
+    if (!process.env.APP_BASE_URL) {
+      await supabase.from("render_jobs").update({ status: "error", error: "APP_BASE_URL is not configured" }).eq("id", renderJob.id);
+      return res.status(500).json({ error: "Emotion pipeline is not configured (missing APP_BASE_URL)." });
+    }
 
-    // Fire async — do not await
-    (async () => {
-      try {
-        const audioBuffer = await generateAudio(resolvedScriptText, identity?.elevenlabs_voice_id);
-        const audioUrl = await uploadAudio(audioBuffer, renderJob.id);
-        const videoUrl = await startRenderJob(resolvedIdentityUrl, audioUrl, renderJob.id);
-        await supabase.from("render_jobs").update({ status: "completed", video_url: videoUrl, completed_at: new Date().toISOString() }).eq("id", renderJob.id);
-        if (resolvedSessionId) {
-          await supabase.from("sessions").update({ status: "completed", video_url: videoUrl }).eq("id", resolvedSessionId);
-        }
-      } catch (bgErr) {
-        console.error("Background render failed:", bgErr.message);
-        await supabase.from("render_jobs").update({ status: "error" }).eq("id", renderJob.id);
-      }
-    })();
+    await supabase.from("render_jobs").update({ status: "awaiting_emotion" }).eq("id", renderJob.id);
+
+    try {
+      await axios.post(process.env.MAKE_WEBHOOK_URL, {
+        render_job_id: renderJob.id,
+        script_text: resolvedScriptText,
+        selfie_url: resolvedIdentityUrl,
+        elevenlabs_voice_id: identity?.elevenlabs_voice_id || null,
+        callback_url: `${process.env.APP_BASE_URL}/api/render-jobs/${renderJob.id}/emotion-callback`
+      }, { timeout: 15000 });
+    } catch (webhookErr) {
+      console.error(`[render_job ${renderJob.id}] Make.com webhook POST failed:`, webhookErr.message);
+      await supabase.from("render_jobs").update({ status: "error", error: `Failed to reach emotion pipeline: ${webhookErr.message}` }).eq("id", renderJob.id);
+      return res.status(502).json({ error: "Failed to start the emotion detection pipeline. Please try again." });
+    }
+
+    return res.json({ render_job_id: renderJob.id, status: "awaiting_emotion" });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+}
+
+// Runs the existing render pipeline (audio generation -> upload -> Replicate render)
+// using whatever script text is passed in (the emotion-rewritten script when available,
+// falling back to the original). Called by the emotion-callback handler once Make.com
+// has returned the detected emotion + rewritten script. Does not throw — persists any
+// failure onto the render_jobs row instead.
+export async function runRenderPipeline(renderJob, scriptTextForRender) {
+  try {
+    const audioBuffer = await generateAudio(scriptTextForRender, renderJob.voice_id);
+    const audioUrl = await uploadAudio(audioBuffer, renderJob.id);
+    const videoUrl = await startRenderJob(renderJob.identity_url, audioUrl, renderJob.id);
+    await supabase.from("render_jobs").update({ status: "completed", video_url: videoUrl, completed_at: new Date().toISOString() }).eq("id", renderJob.id);
+    if (renderJob.session_id) {
+      await supabase.from("sessions").update({ status: "completed", video_url: videoUrl }).eq("id", renderJob.session_id);
+    }
+  } catch (bgErr) {
+    console.error(`[render_job ${renderJob.id}] Background render failed:`, bgErr.message);
+    await supabase.from("render_jobs").update({ status: "error", error: bgErr.message }).eq("id", renderJob.id);
   }
 }
 
@@ -129,7 +165,12 @@ export async function getRenderStatus(req, res) {
       .eq("id", render_job_id)
       .single();
     if (error || !renderJob) return res.status(404).json({ error: "Render job not found" });
-    res.json({ status: renderJob.status, video_url: renderJob.video_url });
+    res.json({
+      status: renderJob.status,
+      video_url: renderJob.video_url,
+      emotion: renderJob.emotion || null,
+      rewritten_script: renderJob.rewritten_script || null
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

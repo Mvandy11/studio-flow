@@ -54,6 +54,7 @@ import identityRouter            from './routes/identity.js';
 // ⭐ NEW — Sessions Router (video sessions backend)
 // ─────────────────────────────────────────────────────────────
 import sessionsRouter            from './routes/sessions.js';
+import renderJobsRouter          from './routes/renderJobs.js';
 
 const app = express();
 
@@ -128,6 +129,11 @@ app.use('/api/identity', identityRouter);
 // ⭐ NEW — Sessions Route (video sessions)
 // ─────────────────────────────────────────────────────────────
 app.use('/api/sessions', sessionsRouter);
+
+// ─────────────────────────────────────────────────────────────
+// ⭐ NEW — Render Jobs Route (emotion pipeline callback)
+// ─────────────────────────────────────────────────────────────
+app.use('/api/render-jobs', renderJobsRouter);
 
 // ─────────────────────────────────────────────────────────────
 // 6. Health check

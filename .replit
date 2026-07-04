@@ -87,3 +87,4 @@ packages = ["nano"]
 [userenv.shared]
 VITE_API_BASE_URL = "https://studio-flow-backend.onrender.com"
 VITE_STRIPE_TEST_CHECKOUT_URL = "PLACEHOLDER"
+APP_BASE_URL = "https://studio-flow-backend.onrender.com/api/render-jobs/<job_id>/emotion-callback"
