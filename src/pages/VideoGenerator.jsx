@@ -14,6 +14,9 @@ export default function VideoGenerator() {
   const [renderStatus, setRenderStatus] = useState(null);
   const [finalVideoUrl, setFinalVideoUrl] = useState(null);
   const [error, setError] = useState(null);
+  const [showPostSubmitExplainer, setShowPostSubmitExplainer] = useState(false);
+  const [rewrittenScript, setRewrittenScript] = useState(null);
+  const [showRewriteTooltip, setShowRewriteTooltip] = useState(false);
 
   // Load identities from backend
   useEffect(() => {
@@ -55,6 +58,8 @@ export default function VideoGenerator() {
     setLoading(true);
     setFinalVideoUrl(null);
     setError(null);
+    setRewrittenScript(null);
+    setRenderStatus(null);
 
     try {
       const payload = {
@@ -82,7 +87,7 @@ export default function VideoGenerator() {
       }
 
       setRenderJobId(data.render_job_id);
-      setRenderStatus("queued");
+      setShowPostSubmitExplainer(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -90,19 +95,16 @@ export default function VideoGenerator() {
     }
   }
 
+  const STATUS_MESSAGES = {
+    awaiting_emotion: "AI is reading your intent and crafting your script...",
+    emotion_detected: "Tone locked in. Rendering your video now...",
+    rendering: "Generating voice and expression — almost there...",
+    completed: "Your video is ready.",
+    error: "Something went wrong during rendering. Your script was saved — tap Try Again and we'll pick up where we left off."
+  };
+
   function getStatusMessage(status) {
-    switch (status) {
-      case "queued":
-        return "🤖  Analyzing your script...\nOur AI is reading your message for emotional intent — then rewriting it with sharper word choice, rhythm, and pacing to match your natural tone before rendering begins.";
-      case "pending":
-        return "Sending your script to the emotion engine...";
-      case "rendering":
-        return "Generating voice and expression — almost there...";
-      case "completed":
-        return "Your video is ready.";
-      default:
-        return `Status: ${status}`;
-    }
+    return STATUS_MESSAGES[status] || `Status: ${status}`;
   }
 
   // Poll render status
@@ -119,7 +121,9 @@ export default function VideoGenerator() {
         const data = await api(`/api/sessions/video/status/${renderJobId}`, {
           headers: { 'Authorization': `Bearer ${session.access_token}` }
         });
+        setShowPostSubmitExplainer(false);
         setRenderStatus(data.status);
+        setRewrittenScript(data.rewritten_script || null);
         if (data.status === 'completed') {
           setFinalVideoUrl(data.video_url);
           clearInterval(interval);
@@ -130,6 +134,7 @@ export default function VideoGenerator() {
       } catch (err) {
         console.error('Status poll error', err);
         setError(`Poll error: ${err.message}`);
+        setShowPostSubmitExplainer(false);
         clearInterval(interval);
       }
     }, 4000);
@@ -207,7 +212,7 @@ export default function VideoGenerator() {
         {/* Generate Button */}
         <button
           className="vg-generate"
-          disabled={loading || (renderStatus && renderStatus !== 'completed' && !error)}
+          disabled={loading || showPostSubmitExplainer || (renderStatus && renderStatus !== 'completed' && !error)}
           onClick={generateVideo}
         >
           {error
@@ -219,11 +224,44 @@ export default function VideoGenerator() {
                 : "Generate My Video"}
         </button>
 
+        {/* Post-Submit Explainer — shown between job creation and first status poll response */}
+        {showPostSubmitExplainer && !error && (
+          <p className="vg-status">
+            🤖  Analyzing your script...
+            {"\n"}Our AI is reading your message for emotional intent — then rewriting it with sharper word choice, rhythm, and pacing to match your natural tone before rendering begins.
+          </p>
+        )}
+
         {/* Render Status */}
-        {renderStatus && !error && (
+        {!showPostSubmitExplainer && renderStatus && !error && (
           <p className="vg-status">
             {getStatusMessage(renderStatus)}
           </p>
+        )}
+
+        {/* Rewritten Script Preview */}
+        {!showPostSubmitExplainer && rewrittenScript && (
+          <div className="vg-rewrite-card">
+            <div className="vg-rewrite-label">
+              Your AI-enhanced script
+              <span
+                className="vg-info-icon"
+                tabIndex={0}
+                onMouseEnter={() => setShowRewriteTooltip(true)}
+                onMouseLeave={() => setShowRewriteTooltip(false)}
+                onFocus={() => setShowRewriteTooltip(true)}
+                onBlur={() => setShowRewriteTooltip(false)}
+              >
+                ⓘ
+                {showRewriteTooltip && (
+                  <span className="vg-tooltip">
+                    Our AI detected the emotional intent of your original script and enhanced the word choice, pacing, and rhythm to match — so your delivery lands harder on camera. Your message stays the same. The impact gets amplified.
+                  </span>
+                )}
+              </span>
+            </div>
+            <p className="vg-rewrite-content">{rewrittenScript}</p>
+          </div>
         )}
 
         {/* Final Video */}

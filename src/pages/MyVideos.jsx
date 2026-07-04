@@ -11,6 +11,18 @@ export default function MyVideos() {
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
+  const EMOTION_BADGES = {
+    excited: { emoji: '⚡', label: 'Excited', bg: 'rgba(245,158,11,0.18)', text: '#f59e0b' },
+    urgent: { emoji: '🔴', label: 'Urgent', bg: 'rgba(239,68,68,0.18)', text: '#ef4444' },
+    warm: { emoji: '🤎', label: 'Warm', bg: 'rgba(193,68,14,0.18)', text: '#c1440e' },
+    calm: { emoji: '🩵', label: 'Calm', bg: 'rgba(56,189,248,0.18)', text: '#38bdf8' },
+    intense: { emoji: '🟣', label: 'Intense', bg: 'rgba(147,51,234,0.18)', text: '#a855f7' },
+    confident: { emoji: '🖤', label: 'Confident', bg: 'rgba(148,163,184,0.18)', text: '#94a3b8' }
+  };
+
+  const REWRITE_TOOLTIP_TEXT = "Our AI detected the emotional intent of your original script and enhanced the word choice, pacing, and rhythm to match — so your delivery lands harder on camera. Your message stays the same. The impact gets amplified.";
 
   useEffect(() => {
     if (!user) return;
@@ -98,6 +110,8 @@ export default function MyVideos() {
             : v.status === 'rendering' ? { bg: 'rgba(234,179,8,0.15)', text: '#facc15' }
             : { bg: 'rgba(255,255,255,0.08)', text: '#9ca3af' };
           const videoUrl = Array.isArray(v.video_url) ? v.video_url[0] : v.video_url;
+          const emotionBadge = v.status === 'completed' && v.emotion ? EMOTION_BADGES[v.emotion] : null;
+          const scriptPreview = v.rewritten_script || v.script_text;
           return (
             <div
               key={v.id}
@@ -119,6 +133,12 @@ export default function MyVideos() {
                     </div>
                   </div>
                 )}
+                {emotionBadge && (
+                  <span style={{ position: 'absolute', top: 8, right: 8, fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: 9999, background: emotionBadge.bg, color: emotionBadge.text, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', zIndex: 1 }}>
+                    <span>{emotionBadge.emoji}</span>
+                    <span>{emotionBadge.label}</span>
+                  </span>
+                )}
               </div>
 
               <div style={{ padding: '1rem' }}>
@@ -137,6 +157,26 @@ export default function MyVideos() {
                 <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: 9999, background: statusColor.bg, color: statusColor.text, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {v.status}
                 </span>
+                {v.status === 'completed' && scriptPreview && (
+                  <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', flex: 1 }}>
+                      {scriptPreview}
+                    </p>
+                    <span
+                      onClick={e => e.stopPropagation()}
+                      onMouseEnter={() => setActiveTooltip(v.id)}
+                      onMouseLeave={() => setActiveTooltip(prev => (prev === v.id ? null : prev))}
+                      style={{ position: 'relative', flexShrink: 0, fontSize: '0.75rem', color: '#94a3b8', cursor: 'pointer', marginTop: '1px' }}
+                    >
+                      ⓘ
+                      {activeTooltip === v.id && (
+                        <span style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, width: 220, padding: '10px 12px', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#e2e8f0', fontSize: '0.72rem', fontWeight: 400, lineHeight: 1.5, zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+                          {REWRITE_TOOLTIP_TEXT}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           );
