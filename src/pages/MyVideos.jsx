@@ -51,10 +51,11 @@ export default function MyVideos() {
       <Film size={64} color="#FACC15" />
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', margin: 0 }}>My Videos</h1>
       <p style={{ color: '#9CA3AF', maxWidth: 440, margin: 0, lineHeight: 1.6 }}>
-        You haven't generated any videos yet. Create your identity and build your first scene.
+        Your videos will appear here.<br />
+        Hit "Generate My Video" to create your first emotion-rendered video.
       </p>
       <button onClick={() => navigate('/generator')} style={{ background: '#FACC15', color: '#000', fontWeight: 700, padding: '10px 24px', borderRadius: 9999, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
-        Create a Video
+        Generate My Video
       </button>
     </div>
   );

@@ -90,6 +90,21 @@ export default function VideoGenerator() {
     }
   }
 
+  function getStatusMessage(status) {
+    switch (status) {
+      case "queued":
+        return "🤖  Analyzing your script...\nOur AI is reading your message for emotional intent — then rewriting it with sharper word choice, rhythm, and pacing to match your natural tone before rendering begins.";
+      case "pending":
+        return "Sending your script to the emotion engine...";
+      case "rendering":
+        return "Generating voice and expression — almost there...";
+      case "completed":
+        return "Your video is ready.";
+      default:
+        return `Status: ${status}`;
+    }
+  }
+
   // Poll render status
   useEffect(() => {
     if (!renderJobId) return;
@@ -125,10 +140,16 @@ export default function VideoGenerator() {
     <div className="vg-wrapper">
       <div className="vg-card">
 
-        <h2 className="vg-title">Video Scene Generator</h2>
+        <h2 className="vg-title">Create Your Video</h2>
+        <p className="vg-subtitle">
+          Write your message. Our AI will detect the emotional tone, sharpen your script, and render it with matched voice energy and expression — automatically.
+        </p>
 
         {error && (
-          <div className="vg-error">{error}</div>
+          <div className="vg-error">
+            Something went wrong during rendering.<br />
+            Your script was saved — tap "Try Again" and we'll pick up where we left off.
+          </div>
         )}
 
         {/* Identity Selector */}
@@ -157,13 +178,16 @@ export default function VideoGenerator() {
 
           {scenes.map(scene => (
             <div key={scene.id} className="vg-scene">
-              <label>Scene {scene.id} — Script</label>
+              <label>Your Script{scenes.length > 1 ? ` — Scene ${scene.id}` : ""}</label>
               <textarea
                 className="vg-textarea"
-                placeholder="What the AI says in this scene..."
+                placeholder={`Write what you want to say — be direct and authentic. Speak like you're talking to one person.\n\nExample: "I just wanted to reach out because I've been thinking about you. The work you've been doing is exactly what this industry needs — and I'd love to connect..."`}
                 value={scene.prompt}
                 onChange={(e) => updateScene(scene.id, e.target.value)}
               />
+              <p className="vg-helper">
+                Aim for 30–90 seconds of natural speech. Don't worry about tone — our AI will read your intent and amplify it.
+              </p>
               <label style={{ marginTop: '10px', display: 'block' }}>Scene {scene.id} — Visual Description</label>
               <textarea
                 className="vg-textarea"
@@ -183,16 +207,22 @@ export default function VideoGenerator() {
         {/* Generate Button */}
         <button
           className="vg-generate"
-          disabled={loading}
+          disabled={loading || (renderStatus && renderStatus !== 'completed' && !error)}
           onClick={generateVideo}
         >
-          {loading ? "Generating..." : "Generate Video"}
+          {error
+            ? "Try Again"
+            : loading
+              ? "Generating..."
+              : finalVideoUrl
+                ? "View My Video"
+                : "Generate My Video"}
         </button>
 
         {/* Render Status */}
-        {renderStatus && (
+        {renderStatus && !error && (
           <p className="vg-status">
-            Status: {renderStatus}
+            {getStatusMessage(renderStatus)}
           </p>
         )}
 
