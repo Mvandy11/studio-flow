@@ -16,7 +16,7 @@ const replicate = new Replicate({ auth: REPLICATE_TOKEN });
 
 export async function generateAudio(scriptText, voiceId) {
   if (!voiceId) throw new Error('No ElevenLabs voice ID found on this identity. Please recreate your identity to generate a voice clone.');
-  const fallbackVoiceId = 'EXAVITQu4vr4xnSDxMaL'; // ElevenLabs default male voice
+  const fallbackVoiceId = 'EXAVITQu4vr4xnSDxMaL';
   const vid = voiceId || fallbackVoiceId;
   const res = await axios.post(
     `https://api.elevenlabs.io/v1/text-to-speech/${vid}`,
@@ -124,8 +124,13 @@ export async function startRenderJob(identityUrl, audioUrl, renderId, sourceVide
     return uploadFinalVideo(mergedVideoBuffer, renderId);
   }
 
-  // Legacy fallback: static-image driven render via Replicate.
-  const output = await replicate.run(process.env.REPLICATE_PORTRAIT_MODEL, {
+  // Legacy fallback: static-image driven render via Replicate (SadTalker).
+  const portraitModel = process.env.REPLICATE_PORTRAIT_MODEL;
+  if (!portraitModel) {
+    throw new Error('REPLICATE_PORTRAIT_MODEL is not configured. Add it to Replit Secrets.');
+  }
+
+  const output = await replicate.run(portraitModel, {
     input: {
       image: identityUrl,
       audio: audioUrl,
@@ -136,7 +141,7 @@ export async function startRenderJob(identityUrl, audioUrl, renderId, sourceVide
   });
 
   const videoUrl = extractUrlFromReplicateOutput(output);
-  console.log('Video URL extracted:', videoUrl);
+  console.log(`[render ${renderId}] Legacy portrait video URL extracted:`, videoUrl);
   return videoUrl;
 }
 
@@ -150,3 +155,4 @@ export async function getRenderStatusJob(predictionId) {
   if (status === 'failed') return { status: 'error', error };
   return { status: 'processing' };
 }
+
