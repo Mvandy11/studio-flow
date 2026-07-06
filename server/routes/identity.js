@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { createIdentity, createIdentityFromVideo } from '../controllers/identityController.js';
+import { createIdentity, createIdentityFromVideo, createIdentityFromPrompt } from '../controllers/identityController.js';
 import { supabase } from '../supabase/client.js';
 import authenticate from '../middleware/authenticate.js';
 
@@ -16,6 +16,9 @@ router.post('/create', createIdentity);
 
 // POST /api/identity/create-from-video
 router.post('/create-from-video', authenticate, upload.single('video'), createIdentityFromVideo);
+
+// POST /api/identity/create-from-prompt
+router.post('/create-from-prompt', authenticate, createIdentityFromPrompt);
 
 // GET /api/identity/list — returns all identities for the authenticated user
 router.get('/list', async (req, res) => {
