@@ -1,6 +1,14 @@
 import axios from 'axios';
 import Replicate from 'replicate';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { supabase } from './supabase/client.js';
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+
 const ELEVEN_API_KEY = process.env.ELEVENLABS_API_KEY;
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 
@@ -26,17 +34,7 @@ export async function uploadAudio(audioBuffer, jobId) {
   return data.publicUrl;
 }
 
-export async function startRenderJob(imageUrl, audioUrl, jobId) {
-  const output = await replicate.run("prunaai/p-video-avatar", {
-    input: {
-      image: imageUrl,
-      audio: audioUrl,
-      resolution: "720p",
-      video_prompt: "The person is talking naturally, making eye contact, with subtle head movement.",
-      negative_prompt: "subtitles, text, blurry, low quality, watermark, scene change"
-    }
-  });
-  // Replicate client v1+ returns FileOutput objects, not plain strings
+function extractUrlFromReplicateOutput(output) {
   let videoUrl;
   if (!output) throw new Error('Replicate returned no output');
   if (typeof output === 'string') {
@@ -54,7 +52,90 @@ export async function startRenderJob(imageUrl, audioUrl, jobId) {
     console.error('Raw Replicate output:', JSON.stringify(output));
     throw new Error('Could not extract video URL from Replicate output');
   }
+  return videoUrl;
+}
 
+export async function runLivePortrait(imageUrl, drivingVideoUrl, renderId) {
+  const output = await replicate.run("fofr/live-portrait", {
+    input: {
+      image: imageUrl,
+      video: drivingVideoUrl,
+      output_format: "mp4",
+      flag_relative_motion: true,
+      flag_do_crop: true,
+      driving_smooth_observation_variance: 0.0
+    }
+  });
+
+  const videoUrl = extractUrlFromReplicateOutput(output);
+  console.log(`[render ${renderId}] LivePortrait video URL extracted:`, videoUrl);
+  return videoUrl;
+}
+
+export async function downloadVideo(url, renderId) {
+  const res = await axios.get(url, { responseType: 'arraybuffer' });
+  const filePath = path.join(os.tmpdir(), `liveportrait-${renderId}-${Date.now()}.mp4`);
+  fs.writeFileSync(filePath, Buffer.from(res.data));
+  return filePath;
+}
+
+export async function mergeAudioIntoVideo(silentVideoPath, audioBuffer, renderId) {
+  const audioPath = path.join(os.tmpdir(), `merge-audio-${renderId}-${Date.now()}.mp3`);
+  const outputPath = path.join(os.tmpdir(), `merged-${renderId}-${Date.now()}.mp4`);
+  fs.writeFileSync(audioPath, audioBuffer);
+
+  try {
+    await new Promise((resolve, reject) => {
+      ffmpeg(silentVideoPath)
+        .input(audioPath)
+        .outputOptions(['-c:v copy', '-c:a aac', '-b:a 192k', '-shortest', '-movflags +faststart'])
+        .save(outputPath)
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    return fs.readFileSync(outputPath);
+  } finally {
+    for (const filePath of [silentVideoPath, audioPath, outputPath]) {
+      try {
+        if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (cleanupErr) {
+        console.warn(`Failed to clean up temp file ${filePath}:`, cleanupErr.message);
+      }
+    }
+  }
+}
+
+export async function uploadFinalVideo(videoBuffer, renderId) {
+  const fileName = `videos/${renderId}.mp4`;
+  const { error } = await supabase.storage.from('videos').upload(fileName, videoBuffer, { contentType: 'video/mp4', upsert: true });
+  if (error) throw new Error(`Final video upload failed: ${error.message}`);
+  const { data } = supabase.storage.from('videos').getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
+export async function startRenderJob(identityUrl, audioUrl, renderId, sourceVideoUrl = null) {
+  if (sourceVideoUrl) {
+    const liveVideoUrl = await runLivePortrait(identityUrl, sourceVideoUrl, renderId);
+    const silentVideoPath = await downloadVideo(liveVideoUrl, renderId);
+    const audioRes = await axios.get(audioUrl, { responseType: 'arraybuffer' });
+    const audioBuffer = Buffer.from(audioRes.data);
+    const mergedVideoBuffer = await mergeAudioIntoVideo(silentVideoPath, audioBuffer, renderId);
+    return uploadFinalVideo(mergedVideoBuffer, renderId);
+  }
+
+  // Legacy fallback: static-image driven render via Replicate.
+  const output = await replicate.run(process.env.REPLICATE_PORTRAIT_MODEL, {
+    input: {
+      image: identityUrl,
+      audio: audioUrl,
+      resolution: "720p",
+      video_prompt: "The person is talking naturally, making eye contact, with subtle head movement.",
+      negative_prompt: "subtitles, text, blurry, low quality, watermark, scene change"
+    }
+  });
+
+  const videoUrl = extractUrlFromReplicateOutput(output);
   console.log('Video URL extracted:', videoUrl);
   return videoUrl;
 }

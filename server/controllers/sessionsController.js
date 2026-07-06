@@ -58,7 +58,7 @@ export async function startRender(req, res) {
     if (identity_id) {
       const { data: fetchedIdentity } = await supabase
         .from("identities")
-        .select("selfie_url, elevenlabs_voice_id")
+        .select("selfie_url, elevenlabs_voice_id, source_video_url")
         .eq("id", identity_id)
         .single();
       identity = fetchedIdentity;
@@ -98,7 +98,8 @@ export async function startRender(req, res) {
         status: "pending",
         script_text: resolvedScriptText,
         identity_url: resolvedIdentityUrl,
-        voice_id: identity?.elevenlabs_voice_id || null
+        voice_id: identity?.elevenlabs_voice_id || null,
+        source_video_url: identity?.source_video_url || null
       }])
       .select().single();
 
@@ -145,7 +146,12 @@ export async function runRenderPipeline(renderJob, scriptTextForRender) {
   try {
     const audioBuffer = await generateAudio(scriptTextForRender, renderJob.voice_id);
     const audioUrl = await uploadAudio(audioBuffer, renderJob.id);
-    const videoUrl = await startRenderJob(renderJob.identity_url, audioUrl, renderJob.id);
+    const videoUrl = await startRenderJob(
+      renderJob.identity_url,
+      audioUrl,
+      renderJob.id,
+      renderJob.source_video_url ?? null
+    );
     await supabase.from("render_jobs").update({ status: "completed", video_url: videoUrl, completed_at: new Date().toISOString() }).eq("id", renderJob.id);
     if (renderJob.session_id) {
       await supabase.from("sessions").update({ status: "completed", video_url: videoUrl }).eq("id", renderJob.session_id);
