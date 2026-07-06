@@ -1,11 +1,21 @@
 import express from 'express';
-import { createIdentity } from '../controllers/identityController.js';
+import multer from 'multer';
+import { createIdentity, createIdentityFromVideo } from '../controllers/identityController.js';
 import { supabase } from '../supabase/client.js';
+import authenticate from '../middleware/authenticate.js';
 
 const router = express.Router();
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 150 * 1024 * 1024 }
+});
+
 // POST /api/identity/create
 router.post('/create', createIdentity);
+
+// POST /api/identity/create-from-video
+router.post('/create-from-video', authenticate, upload.single('video'), createIdentityFromVideo);
 
 // GET /api/identity/list — returns all identities for the authenticated user
 router.get('/list', async (req, res) => {
