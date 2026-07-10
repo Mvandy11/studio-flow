@@ -1,3 +1,7 @@
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
+exports.handler = async (event, context) => {
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ ok: true, message: "StudioFlow API online" })
+  };
+};
+
