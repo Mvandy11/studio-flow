@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabase';
 
 export async function createSession({ member_id, identity_id, title, description, scenes }) {
   const { data, error } = await supabase

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import { api } from '../lib/api';
 import "./videoGenerator.css";
 

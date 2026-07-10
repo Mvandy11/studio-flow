@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabase';
 
 export async function uploadSelfie(file, memberId) {
   const ext = file.name.split('.').pop();

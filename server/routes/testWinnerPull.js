@@ -8,7 +8,7 @@
  */
 
 import { Router } from 'express';
-import supabase from '../supabase/supabase.js';
+import { supabase } from '../supabase/client.js';
 
 const router = Router();
 

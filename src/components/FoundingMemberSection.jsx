@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Star, Check } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 
 const TOTAL_SPOTS = 1000;
 const STRIPE_CHECKOUT_URL = import.meta.env.VITE_FOUNDING_CHECKOUT_URL;

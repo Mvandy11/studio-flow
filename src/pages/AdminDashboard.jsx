@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Pin, Megaphone } from 'lucide-react';
 import '../styles/admin.css';

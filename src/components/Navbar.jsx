@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useMembership } from '../hooks/useMembership';
 import { isCreatorAdmin } from '../lib/roles';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import MobileDrawer from './MobileDrawer';
 
 function ProfileDropdown({ user, role, tier, meta, onLogout }) {

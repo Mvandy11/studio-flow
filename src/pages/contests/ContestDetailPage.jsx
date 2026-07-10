@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isCreatorAdmin } from '../../lib/roles';
 import { useMembership } from '../../hooks/useMembership';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabase';
 import { api } from '../../lib/api.js';
 import '../../styles/contests.css';
 import '../../styles/portfolio.css';

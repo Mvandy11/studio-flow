@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabase';
 
 // Create a feed event (post or session)
 export async function createFeedEvent({ creator_id, event_type, event_id }) {

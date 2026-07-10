@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabaseClient';
+import { supabase } from '../../../lib/supabase';
 
 const BUCKET = 'library';
 const DENOISE_PREFIX = 'ai-outputs/denoise/';

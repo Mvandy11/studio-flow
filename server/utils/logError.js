@@ -8,7 +8,7 @@
  * @param {Error|unknown} err   - The caught error (or any thrown value)
  * @param {string}        route - The Express req.path or a descriptive label
  */
-import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { supabase as supabaseAdmin } from '../supabase/client.js';
 
 export async function logError(err, route) {
   try {

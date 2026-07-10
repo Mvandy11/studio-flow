@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Film, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 
 export default function MyVideos() {
   const { user } = useAuth();

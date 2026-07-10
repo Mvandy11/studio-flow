@@ -12,7 +12,7 @@
 
 import { Router }     from 'express';
 import { randomUUID } from 'crypto';
-import supabaseAdmin   from '../supabase/supabaseAdmin.js';
+import { supabase as supabaseAdmin } from '../supabase/client.js';
 import { logError }    from '../utils/logError.js';
 
 const router = Router();

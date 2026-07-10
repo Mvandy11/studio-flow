@@ -6,7 +6,7 @@
  * GET  /api/payouts/history          — creator: fetch own payout_logs
  */
 import express from 'express';
-import supabase from '../supabase/supabase.js';
+import { supabase } from '../supabase/client.js';
 
 const router = express.Router();
 

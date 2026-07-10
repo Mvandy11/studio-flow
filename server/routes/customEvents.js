@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { randomUUID } from 'crypto';
-import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { supabase as supabaseAdmin } from '../supabase/client.js';
 import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();

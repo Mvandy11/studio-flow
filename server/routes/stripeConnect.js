@@ -7,7 +7,7 @@
  */
 import { Router } from 'express';
 import Stripe from 'stripe';
-import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { supabase as supabaseAdmin } from '../supabase/client.js';
 
 const router  = Router();
 const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });

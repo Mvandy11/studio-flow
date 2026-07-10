@@ -5,7 +5,7 @@ import { useStudioFlowStore } from '../context/useStudioFlowStore';
 import SessionCard from '../components/SessionCard';
 import type { Session } from '../mock/seed';
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 
 type StatusGroup = { label: string; statuses: Session['status'][] };
 

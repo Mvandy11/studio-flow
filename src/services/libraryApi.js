@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 
 /**
  * Fetch AI output records from the ai_outputs table, optionally filtered by tool.

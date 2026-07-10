@@ -3,7 +3,7 @@ import { useParams, Link }  from 'react-router-dom';
 import { useAuth }          from '../../hooks/useAuth';
 import { useMembership }    from '../../modules/memberships';
 import { isCreatorAdmin }   from '../../lib/roles';
-import { supabase }         from '../../lib/supabaseClient';
+import { supabase }         from '../../lib/supabase';
 import LiveChatPanel        from '../../components/live/LiveChatPanel';
 import LiveEventViewer      from '../../components/live/LiveEventViewer';
 

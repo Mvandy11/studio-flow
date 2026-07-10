@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
 import { api } from '../lib/api.js';
 import { format } from 'date-fns';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import { Megaphone, Pin } from 'lucide-react';
 
 export default function AnnouncementsPage() {

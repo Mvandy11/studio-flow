@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import StudioSidebar from '../components/StudioSidebar';
 import StudioTopbar from '../components/StudioTopbar';

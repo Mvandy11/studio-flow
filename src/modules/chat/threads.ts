@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabase';
 import type { ChatMessage } from '../../lib/types';
 
 /** Fetch all replies for a parent message, oldest-first. */

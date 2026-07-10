@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import supabase from '../lib/supabaseClient';
+import supabase from '../lib/supabase';
 
 const TIER_META = {
   creator_50: { label: '$50 Creator', color: 'rgba(167,139,250,0.9)', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.3)' },

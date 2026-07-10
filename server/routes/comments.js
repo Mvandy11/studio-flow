@@ -13,7 +13,7 @@
  * DELETE /api/comments/:id      — delete own comment (auth or admin)
  */
 import { Router } from 'express';
-import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { supabase as supabaseAdmin } from '../supabase/client.js';
 
 const router = Router();
 

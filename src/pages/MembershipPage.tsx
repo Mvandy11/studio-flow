@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMembership } from '../hooks/useMembership';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import CancelMembershipButton from '../components/CancelMembershipButton';
 
 const STRIPE_DONATION      = 'https://buy.stripe.com/28E14pgpncgofnmbh3b7y0t';

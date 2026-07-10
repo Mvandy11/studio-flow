@@ -1,5 +1,5 @@
 import express from "express";
-import { supabase } from "../supabaseClient.js";
+import { supabase } from "../server/supabase/client.js";
 import { startRenderJob, getRenderStatus } from "../videoRenderer.js";
 
 const router = express.Router();

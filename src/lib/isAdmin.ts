@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabase';
 
 /**
  * Fetch the user's profile role and return true if they are an admin.

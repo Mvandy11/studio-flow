@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
-import supabase from '../../supabase/supabase.js';
+import { supabase } from '../../supabase/client.js';
 
 const router = express.Router();
 

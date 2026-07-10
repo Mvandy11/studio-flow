@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Link as LinkIcon, Star } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useMembership } from '../hooks/useMembership';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import { isCreatorAdmin } from '../lib/roles';
 import LivePlayer from '../components/LivePlayer';
 import MembershipBadge from '../components/MembershipBadge';

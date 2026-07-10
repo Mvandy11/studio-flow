@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isCreatorAdmin } from '../lib/roles';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import { api } from '../lib/api.js';
 import { formatDistanceToNow } from 'date-fns';
 

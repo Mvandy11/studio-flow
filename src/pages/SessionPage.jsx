@@ -5,7 +5,7 @@ import { getSessionById } from '../lib/session';
 import { useRealtimeChat } from '../hooks/useRealtimeChat';
 import ChatBubble from '../components/ChatBubble';
 import LivePlayer from '../components/LivePlayer';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 

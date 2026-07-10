@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import supabase from '../supabase/supabase.js';
-import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { supabase } from '../supabase/client.js';
+import { supabase as supabaseAdmin } from '../supabase/client.js';
 
 const router = Router();
 

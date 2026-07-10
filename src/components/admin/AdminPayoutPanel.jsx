@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabase';
 import { Wallet } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL || '';

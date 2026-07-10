@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth.js';
-import { supabase } from '../../../lib/supabaseClient';
+import { supabase } from '../../../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function MyTicketsTab({ refreshKey }) {

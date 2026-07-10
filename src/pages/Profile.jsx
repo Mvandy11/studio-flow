@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProfile } from '../hooks/useProfile';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import ProfileHeader from '../components/ProfileHeader';
 import CinematicModal from '../components/CinematicModal';
 

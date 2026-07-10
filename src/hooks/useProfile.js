@@ -8,7 +8,7 @@
  * - Cancelled flag prevents stale state on fast unmount
  */
 import { useEffect, useState, useCallback } from 'react';
-import supabase from '../lib/supabaseClient';
+import supabase from '../lib/supabase';
 import { updateProfile } from '../lib/profile';
 import { useAuth } from './useAuth';
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { EDUCATION_CATEGORIES } from '../data.js';
-import { supabase } from '../../../lib/supabaseClient';
+import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth.js';
 
 export default function EducationTab() {

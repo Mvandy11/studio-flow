@@ -11,7 +11,7 @@
 
 import express from 'express';
 import Stripe from 'stripe';
-import supabaseAdmin from '../supabase/supabaseAdmin.js';
+import { supabase as supabaseAdmin } from '../supabase/client.js';
 import { logError } from '../utils/logError.js';
 import { donationLink, eventPaymentBaseLink } from '../config/stripeLinks.js';
 

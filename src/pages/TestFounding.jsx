@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 
 const TEST_CHECKOUT_URL = import.meta.env.VITE_STRIPE_TEST_CHECKOUT_URL;
 
