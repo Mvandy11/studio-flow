@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { supabase } from '../utils/supabaseClient.js';
+import { supabase } from '../supabase/client.js';
 import { v4 as uuid } from 'uuid';
 
 const router = express.Router();
@@ -78,3 +78,4 @@ router.post('/create-from-video', upload.single('video'), async (req, res) => {
 });
 
 export default router;
+
