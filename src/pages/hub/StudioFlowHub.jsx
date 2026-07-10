@@ -26,7 +26,7 @@ export default function StudioFlowHub() {
     async function loadStats() {
       try {
         const [contData, memberRes] = await Promise.all([
-          api('/api/contests'),
+          api('/contests'),
           supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true }),

@@ -30,7 +30,7 @@ export default function AnnouncementsPage() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api('/api/announcements');
+      const { data } = await api('/announcements');
       setAnnouncements(data || []);
     } catch (err) {
       setError(err.message);
@@ -76,7 +76,7 @@ export default function AnnouncementsPage() {
     if (!confirm('Delete this announcement?')) return;
     try {
       const token = await getToken();
-      await api(`/api/announcements/${id}`, {
+      await api(`/announcements/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

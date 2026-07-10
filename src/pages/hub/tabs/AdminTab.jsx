@@ -38,8 +38,8 @@ export default function AdminTab() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [contResult, subResult] = await Promise.all([
-        api('/api/admin/contests',     { headers }),
-        api('/api/admin/submissions',  { headers }),
+        api('/admin/contests',     { headers }),
+        api('/admin/submissions',  { headers }),
       ]);
 
       setContests(contResult.data || []);
@@ -48,7 +48,7 @@ export default function AdminTab() {
       setEntries(allSubs.filter((s) => !!s.contest_id));
 
       // Announcements
-      const annResult = await api('/api/announcements');
+      const annResult = await api('/announcements');
       setAnnouncements(annResult.data || []);
 
       // Tickets (event_tickets — includes view_only/free tickets)
@@ -65,7 +65,7 @@ export default function AdminTab() {
   async function updateContestStatus(id, status) {
     try {
       const token = await getToken();
-      await api(`/api/contests/${id}`, {
+      await api(`/contests/${id}`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ status }),

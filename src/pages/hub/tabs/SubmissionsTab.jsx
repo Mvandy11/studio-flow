@@ -17,7 +17,7 @@ export default function SubmissionsTab() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setLoading(false); return; }
     try {
-      const data = await api('/api/submissions', {
+      const data = await api('/submissions', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       setSubmissions(Array.isArray(data) ? data : []);

@@ -30,7 +30,7 @@ export default function ContestsPage() {
       setLoading(true);
       setError(null);
       try {
-        const json = await api('/api/contests?limit=100');
+        const json = await api('/contests?limit=100');
         setContests(json.data || []);
       } catch (err) {
         setError(err.message);

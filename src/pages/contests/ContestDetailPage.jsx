@@ -56,7 +56,7 @@ export default function ContestDetailPage() {
     setError(null);
     try {
       // All public reads go through the API server (service role key — bypasses RLS)
-      const json = await api(`/api/contests/${id}`);
+      const json = await api(`/contests/${id}`);
 
       setContest(json.contest);
       setEntries(json.entries || []);
@@ -306,7 +306,7 @@ export default function ContestDetailPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const result = await api(`/api/contests/${id}/pull-winners`, {
+      const result = await api(`/contests/${id}/pull-winners`, {
         method:  'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -360,7 +360,7 @@ export default function ContestDetailPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const result = await api(`/api/contests/${id}/payout`, {
+      const result = await api(`/contests/${id}/payout`, {
         method:  'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });

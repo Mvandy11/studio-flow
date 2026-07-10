@@ -36,7 +36,7 @@ export default function AdminEventRequests() {
     setLoading(true);
     try {
       const token = await getToken();
-      const json = await api('/api/admin/event-requests', {
+      const json = await api('/admin/event-requests', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRequests(json.data || []);
@@ -56,7 +56,7 @@ export default function AdminEventRequests() {
     setSaveError('');
     try {
       const token = await getToken();
-      await api(`/api/admin/event-requests/${approving.id}/approve`, {
+      await api(`/admin/event-requests/${approving.id}/approve`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ title: slotTitle.trim(), password: slotPassword.trim() }),
@@ -78,7 +78,7 @@ export default function AdminEventRequests() {
     const reason = prompt('Optional rejection reason (leave blank to skip):') ?? '';
     try {
       const token = await getToken();
-      await api(`/api/admin/event-requests/${id}/reject`, {
+      await api(`/admin/event-requests/${id}/reject`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ reason: reason.trim() || null }),

@@ -226,7 +226,7 @@ export default function EventDetailsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const json = await api(`/api/events/${eventId}`);
+        const json = await api(`/events/${eventId}`);
         setEvent(json.data);
       } catch (err) {
         setError(err.message);
@@ -276,7 +276,7 @@ export default function EventDetailsPage() {
     setPickErr('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const result = await api(`/api/events/${eventId}/pick-winner`, {
+      const result = await api(`/events/${eventId}/pick-winner`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
       });
@@ -291,7 +291,7 @@ export default function EventDetailsPage() {
   async function handleSendPayout() {
     if (!winnerResult) return;
     const { data: { session } } = await supabase.auth.getSession();
-    await api('/api/payouts/initiate', {
+    await api('/payouts/initiate', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
       body: JSON.stringify({

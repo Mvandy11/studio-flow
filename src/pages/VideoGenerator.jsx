@@ -71,7 +71,7 @@ export default function VideoGenerator() {
       };
 
       const { data: { session } } = await supabase.auth.getSession();
-      const data = await api("/api/sessions/video/generate", {
+      const data = await api("/sessions/video/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,7 +118,7 @@ export default function VideoGenerator() {
           clearInterval(interval);
           return;
         }
-        const data = await api(`/api/sessions/video/status/${renderJobId}`, {
+        const data = await api(`/sessions/video/status/${renderJobId}`, {
           headers: { 'Authorization': `Bearer ${session.access_token}` }
         });
         setShowPostSubmitExplainer(false);

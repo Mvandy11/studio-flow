@@ -70,7 +70,7 @@ export default function CreateEventPage() {
           ? (form.stage_room_id.trim() || `room-${Date.now()}`)
           : null;
 
-        const result = await api('/api/events', {
+        const result = await api('/events', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({

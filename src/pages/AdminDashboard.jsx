@@ -148,12 +148,12 @@ export default function AdminDashboard() {
       const headers = { Authorization: `Bearer ${token}` };
       const [contestsJson, adminSubsJson, annJson, genSubJson, countsJson, histJson] =
         await Promise.allSettled([
-          api('/api/admin/contests',              { headers }),
-          api('/api/admin/submissions',           { headers }),
-          api('/api/announcements',               { headers }),
-          api('/api/submissions',                 { headers }),
-          api('/api/admin/counts',                { headers }),
-          api('/api/admin/subscription-history',  { headers }),
+          api('/admin/contests',              { headers }),
+          api('/admin/submissions',           { headers }),
+          api('/announcements',               { headers }),
+          api('/submissions',                 { headers }),
+          api('/admin/counts',                { headers }),
+          api('/admin/subscription-history',  { headers }),
         ]);
 
       c       = contestsJson.status  === 'fulfilled' ? (contestsJson.value.data || [])                      : [];
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
 
   async function updateContestStatus(id, status) {
     const token = await getToken();
-    await api(`/api/contests/${id}`, {
+    await api(`/contests/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ status }),
@@ -222,7 +222,7 @@ export default function AdminDashboard() {
     if (!confirm('Trigger payout for all marked winners? This will record earnings in their accounts.')) return;
     try {
       const token = await getToken();
-      const result = await api(`/api/contests/${contestId}/payout`, {
+      const result = await api(`/contests/${contestId}/payout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -254,7 +254,7 @@ export default function AdminDashboard() {
   async function deleteAnnouncement(id) {
     if (!confirm('Delete this announcement?')) return;
     const token = await getToken();
-    await api(`/api/announcements/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await api(`/announcements/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     loadAll();
   }
 
@@ -280,7 +280,7 @@ export default function AdminDashboard() {
     setApprovalSaving(true); setApprovalError('');
     try {
       const token = await getToken();
-      await api('/api/admin/approve', {
+      await api('/admin/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
     if (reason === null) return;
     try {
       const token = await getToken();
-      await api('/api/admin/reject', {
+      await api('/admin/reject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ submission_id: id, reason: reason.trim() || undefined }),

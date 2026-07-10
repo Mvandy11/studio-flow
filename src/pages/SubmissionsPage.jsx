@@ -24,7 +24,7 @@ export default function SubmissionsPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setLoading(false); return; }
-      const json = await api('/api/submissions', {
+      const json = await api('/submissions', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       setSubmissions(Array.isArray(json) ? json : []);

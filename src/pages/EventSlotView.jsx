@@ -47,7 +47,7 @@ export default function EventSlotView() {
       const { data: { session } } = await supabase.auth.getSession();
       const headers = {};
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-      const json = await api(`/api/live/slot/${slotId}`, { headers });
+      const json = await api(`/live/slot/${slotId}`, { headers });
       if (!json?.slot) { setError('Event not found.'); return; }
       setSlot(json.slot);
       setEvent(json.event || null);
@@ -68,7 +68,7 @@ export default function EventSlotView() {
       const body = { event_mode: mode };
       if (mode === 'recorded' && videoUrl.trim()) body.video_url = videoUrl.trim();
 
-      await api(`/api/slots/${slotId}/event-mode`, {
+      await api(`/slots/${slotId}/event-mode`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body:    JSON.stringify(body),
@@ -87,7 +87,7 @@ export default function EventSlotView() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setLiveError('You must be logged in.'); return; }
-      await api(`/api/live/slot/${slotId}/start`, {
+      await api(`/live/slot/${slotId}/start`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -105,7 +105,7 @@ export default function EventSlotView() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setLiveError('You must be logged in.'); return; }
-      await api(`/api/live/slot/${slotId}/end`, {
+      await api(`/live/slot/${slotId}/end`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -152,7 +152,7 @@ export default function EventSlotView() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setError('Please log in to purchase access.'); setBuying(false); return; }
 
-      const json = await api('/api/payments/create-event-payment', {
+      const json = await api('/payments/create-event-payment', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body:    JSON.stringify({ event_slot_id: slotId, amount: slot.price }),

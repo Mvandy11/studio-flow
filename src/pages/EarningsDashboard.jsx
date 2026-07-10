@@ -107,7 +107,7 @@ export default function EarningsDashboard() {
     setRequesting(true);
     setRequestMsg('');
     try {
-      const json = await api('/api/payouts/request', {
+      const json = await api('/payouts/request', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ userId: user.id }),

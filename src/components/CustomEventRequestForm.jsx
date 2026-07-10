@@ -29,7 +29,7 @@ export default function CustomEventRequestForm() {
         return;
       }
 
-      await api('/api/custom-events/request', {
+      await api('/custom-events/request', {
         method:  'POST',
         headers: {
           'Content-Type':  'application/json',
