@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
+const API_BASE = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api`;
+
 const MIN_SECONDS = 10;
 const MAX_SECONDS = 120;
 
@@ -117,7 +119,7 @@ export default function CreateIdentity({ onCreated }) {
 
       setTimeout(() => setProgressMessage('Cloning your voice with ElevenLabs...'), 1500);
 
-      const res = await fetch('/api/identity/create-from-video', {
+      const res = await fetch(`${API_BASE}/identity/create-from-video`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` },
         body: formData

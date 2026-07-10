@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 
+const API_BASE = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api`;
+
 export default function IdentityVideoRecorder() {
   const [ready, setReady] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -58,7 +60,7 @@ export default function IdentityVideoRecorder() {
       const formData = new FormData();
       formData.append("identity_video", file);
 
-      const res = await fetch("/api/identity/create-from-video", {
+      const res = await fetch(`${API_BASE}/identity/create-from-video`, {
         method: "POST",
         body: formData
       });
