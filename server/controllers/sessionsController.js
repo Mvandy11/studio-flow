@@ -51,23 +51,42 @@ export async function updateSession(req, res) {
 
 export async function startRender(req, res) {
   try {
-    const { identity_url, script_text, identity_id, scenes, member_id, session_id } = req.body;
+    const {
+      identity_url,
+      identity_type,
+      script_text,
+      identity_id,
+      scenes,
+      member_id,
+      session_id
+    } = req.body;
+
+    const isVideoIdentity = identity_type === 'video';
 
     let resolvedIdentityUrl = identity_url;
     let identity = null;
-    if (identity_id) {
-      const { data: fetchedIdentity } = await supabase
-        .from("identities")
-        .select("selfie_url, elevenlabs_voice_id, source_video_url")
-        .eq("id", identity_id)
-        .single();
-      identity = fetchedIdentity;
-      if (!resolvedIdentityUrl) resolvedIdentityUrl = identity?.selfie_url;
-      if (!identity?.elevenlabs_voice_id) {
-        return res.status(400).json({ error: 'This identity has no voice clone. Please go to Create Identity and make a new one.' });
+
+    if (isVideoIdentity) {
+      // Video identity — sourced from identity_records, no selfie/voice requirements
+      if (!resolvedIdentityUrl) {
+        return res.status(400).json({ error: 'identity_url (video_url) is required for video identities' });
       }
-      if (!identity?.selfie_url) {
-        return res.status(400).json({ error: 'This identity has no selfie image. Please recreate your identity.' });
+    } else {
+      // Legacy identity — fetch from identities table and require voice + selfie
+      if (identity_id) {
+        const { data: fetchedIdentity } = await supabase
+          .from("identities")
+          .select("selfie_url, elevenlabs_voice_id, source_video_url")
+          .eq("id", identity_id)
+          .single();
+        identity = fetchedIdentity;
+        if (!resolvedIdentityUrl) resolvedIdentityUrl = identity?.selfie_url;
+        if (!identity?.elevenlabs_voice_id) {
+          return res.status(400).json({ error: 'This identity has no voice clone. Please go to Create Identity and make a new one.' });
+        }
+        if (!identity?.selfie_url) {
+          return res.status(400).json({ error: 'This identity has no selfie image. Please recreate your identity.' });
+        }
       }
     }
 
@@ -76,7 +95,7 @@ export async function startRender(req, res) {
       resolvedScriptText = scenes.map(s => s.prompt || s.text || '').filter(Boolean).join(' ');
     }
 
-    if (!resolvedIdentityUrl) return res.status(400).json({ error: 'identity_url or identity_id with selfie is required' });
+    if (!resolvedIdentityUrl) return res.status(400).json({ error: 'identity_url is required' });
     if (!resolvedScriptText) return res.status(400).json({ error: 'script_text or scenes with prompts are required' });
 
     let resolvedSessionId = session_id;
@@ -98,8 +117,9 @@ export async function startRender(req, res) {
         status: "pending",
         script_text: resolvedScriptText,
         identity_url: resolvedIdentityUrl,
+        identity_type: isVideoIdentity ? 'video' : 'legacy',
         voice_id: identity?.elevenlabs_voice_id || null,
-        source_video_url: identity?.source_video_url || null
+        source_video_url: isVideoIdentity ? resolvedIdentityUrl : (identity?.source_video_url || null)
       }])
       .select().single();
 
@@ -116,14 +136,23 @@ export async function startRender(req, res) {
 
     await supabase.from("render_jobs").update({ status: "awaiting_emotion" }).eq("id", renderJob.id);
 
+    // Build the Make.com payload — shape depends on identity type
+    const makePayload = {
+      render_job_id: renderJob.id,
+      script_text: resolvedScriptText,
+      identity_type: isVideoIdentity ? 'video' : 'legacy',
+      callback_url: `${process.env.APP_BASE_URL}/api/render-jobs/${renderJob.id}/emotion-callback`,
+      ...(isVideoIdentity
+        ? { video_url: resolvedIdentityUrl }
+        : {
+            selfie_url: resolvedIdentityUrl,
+            elevenlabs_voice_id: identity?.elevenlabs_voice_id || null
+          }
+      )
+    };
+
     try {
-      await axios.post(process.env.MAKE_WEBHOOK_URL, {
-        render_job_id: renderJob.id,
-        script_text: resolvedScriptText,
-        selfie_url: resolvedIdentityUrl,
-        elevenlabs_voice_id: identity?.elevenlabs_voice_id || null,
-        callback_url: `${process.env.APP_BASE_URL}/api/render-jobs/${renderJob.id}/emotion-callback`
-      }, { timeout: 15000 });
+      await axios.post(process.env.MAKE_WEBHOOK_URL, makePayload, { timeout: 15000 });
     } catch (webhookErr) {
       console.error(`[render_job ${renderJob.id}] Make.com webhook POST failed:`, webhookErr.message);
       await supabase.from("render_jobs").update({ status: "error", error: `Failed to reach emotion pipeline: ${webhookErr.message}` }).eq("id", renderJob.id);
