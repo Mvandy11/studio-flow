@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 
 const API_BASE = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api`;
 
@@ -57,11 +58,19 @@ export default function IdentityVideoRecorder() {
       const blob = new Blob(chunksRef.current, { type: "video/mp4" });
       const file = new File([blob], "identity.mp4", { type: "video/mp4" });
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        setError("You must be logged in to create an identity.");
+        return;
+      }
+
       const formData = new FormData();
-      formData.append("identity_video", file);
+      formData.append("video", file);
+      formData.append("creator_id", session.user.id);
 
       const res = await fetch(`${API_BASE}/identity/create-from-video`, {
         method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: formData
       });
 

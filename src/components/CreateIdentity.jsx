@@ -115,7 +115,7 @@ export default function CreateIdentity({ onCreated }) {
       const formData = new FormData();
       formData.append('video', videoBlob, 'identity.webm');
       formData.append('name', name);
-      formData.append('profile_id', user?.id || '');
+      formData.append('creator_id', user?.id || '');
 
       setTimeout(() => setProgressMessage('Cloning your voice with ElevenLabs...'), 1500);
 
