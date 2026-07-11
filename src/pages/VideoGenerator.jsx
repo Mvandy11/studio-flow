@@ -18,18 +18,13 @@ export default function VideoGenerator() {
   const [rewrittenScript, setRewrittenScript] = useState(null);
   const [showRewriteTooltip, setShowRewriteTooltip] = useState(false);
 
-  // Load identities from backend
+  // Load identities from backend (merges legacy identities + new video identity_records)
   useEffect(() => {
     if (!user) return;
     async function fetchIdentities() {
       try {
-        const { data, error } = await supabase
-          .from('identities')
-          .select('*')
-          .eq('profile_id', user.id)
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        setIdentities(data || []);
+        const data = await api(`/identity/list?creator_id=${user.id}`);
+        setIdentities(data.identities || []);
       } catch (err) {
         console.error("Failed to load identities", err);
       }
@@ -64,7 +59,11 @@ export default function VideoGenerator() {
     try {
       const payload = {
         identity_id: selectedIdentity.id,
-        identity_url: selectedIdentity.selfie_url,
+        identity_type: selectedIdentity.type,
+        // video identities use video_url; legacy identities use selfie_url
+        identity_url: selectedIdentity.type === 'video'
+          ? selectedIdentity.video_url
+          : selectedIdentity.selfie_url,
         scenes: scenes.map(s => ({ id: s.id, prompt: s.prompt, description: s.description })),
         script_text: scenes.map(s => s.prompt).filter(Boolean).join(" "),
         member_id: user.id
@@ -168,13 +167,16 @@ export default function VideoGenerator() {
           }}
         >
           <option value="">Choose identity...</option>
-          {identities.map(identity => (
-            <option key={identity.id} value={identity.id}>
-              {identity.persona_description
-                ? identity.persona_description.slice(0, 40)
-                : `Identity ${identity.created_at?.slice(0, 10) || identity.id.slice(0, 8)}`}
-            </option>
-          ))}
+          {identities.map(identity => {
+            const label = identity.type === 'video'
+              ? `🎥 Video Identity — ${identity.created_at?.slice(0, 10) || identity.id.slice(0, 8)}`
+              : identity.persona_description
+                ? `🖼 ${identity.persona_description.slice(0, 40)}`
+                : `🖼 Identity ${identity.created_at?.slice(0, 10) || identity.id.slice(0, 8)}`;
+            return (
+              <option key={identity.id} value={identity.id}>{label}</option>
+            );
+          })}
         </select>
 
         {/* Scene Builder */}

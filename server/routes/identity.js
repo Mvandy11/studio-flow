@@ -11,6 +11,40 @@ const upload = multer({
   limits: { fileSize: 200 * 1024 * 1024 } // 200MB
 });
 
+// GET /api/identity/list?creator_id=<uuid>
+// Returns a unified list of legacy identities + new video identities for a creator.
+router.get('/list', async (req, res) => {
+  try {
+    const creatorId = req.query.creator_id;
+    if (!creatorId) {
+      return res.status(400).json({ error: 'creator_id query param is required' });
+    }
+
+    // Query both tables in parallel
+    const [legacyResult, videoResult] = await Promise.all([
+      supabase
+        .from('identities')
+        .select('*')
+        .eq('profile_id', creatorId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('identity_records')
+        .select('*')
+        .eq('creator_id', creatorId)
+        .order('created_at', { ascending: false })
+    ]);
+
+    const legacy = (legacyResult.data || []).map(r => ({ ...r, type: 'legacy' }));
+    const videos = (videoResult.data || []).map(r => ({ ...r, type: 'video' }));
+
+    // Merge: video identities first (newest creation path), then legacy
+    return res.json({ identities: [...videos, ...legacy] });
+  } catch (err) {
+    console.error('identity list error:', err);
+    return res.status(500).json({ error: 'Failed to fetch identities' });
+  }
+});
+
 // POST /api/identity/create-from-video
 router.post('/create-from-video', upload.single('video'), async (req, res) => {
   try {
