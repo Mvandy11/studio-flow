@@ -1,6 +1,6 @@
 import express from "express";
 import { supabase } from "../server/supabase/client.js";
-import { startRenderJob, getRenderStatus } from "../videoRenderer.js";
+import { fireMakeWebhook } from "../server/videoRenderer.js";
 
 const router = express.Router();
 

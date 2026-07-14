@@ -1,6 +1,6 @@
 import axios from "axios";
 import { supabase } from "../supabase/client.js";
-import { startRenderJob, generateAudio, uploadAudio } from "../videoRenderer.js";
+import { fireMakeWebhook } from "../videoRenderer.js";
 
 export async function createSession(req, res) {
   try {
@@ -173,18 +173,14 @@ export async function startRender(req, res) {
 // failure onto the render_jobs row instead.
 export async function runRenderPipeline(renderJob, scriptTextForRender) {
   try {
-    const audioBuffer = await generateAudio(scriptTextForRender, renderJob.voice_id);
-    const audioUrl = await uploadAudio(audioBuffer, renderJob.id);
-    const videoUrl = await startRenderJob(
-      renderJob.identity_url,
-      audioUrl,
+    await fireMakeWebhook(
       renderJob.id,
-      renderJob.source_video_url ?? null
+      renderJob.identity_id ?? null,
+      renderJob.member_id ?? null,
+      renderJob.identity_url
     );
-    await supabase.from("render_jobs").update({ status: "completed", video_url: videoUrl, completed_at: new Date().toISOString() }).eq("id", renderJob.id);
-    if (renderJob.session_id) {
-      await supabase.from("sessions").update({ status: "completed", video_url: videoUrl }).eq("id", renderJob.session_id);
-    }
+    // Make.com will handle the actual render and call back via /api/render-jobs/:id/video-callback
+    // Status stays "rendering" until that callback updates it to "completed"
   } catch (bgErr) {
     console.error(`[render_job ${renderJob.id}] Background render failed:`, bgErr.message);
     await supabase.from("render_jobs").update({ status: "error", error: bgErr.message }).eq("id", renderJob.id);
