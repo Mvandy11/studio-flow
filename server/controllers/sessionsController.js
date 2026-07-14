@@ -39,14 +39,18 @@ export async function startRender(req, res) {
 
     const { data: identity, error: identityError } = await supabase
       .from("identities")
-      .select("source_video_url, selfie_url")
+      .select("source_video_url, selfie_url, voice_url")
       .eq("id", identity_id)
       .single();
 
     if (identityError || !identity) return res.status(404).json({ error: 'Identity not found.' });
 
-    const videoUrl = identity.source_video_url;
-    if (!videoUrl) return res.status(400).json({ error: 'This identity has no source video. Please upload a video when creating your identity.' });
+    const hasVideo = !!identity.source_video_url;
+    const hasComponents = !!(identity.selfie_url && identity.voice_url);
+
+    if (!hasVideo && !hasComponents) {
+      return res.status(400).json({ error: 'Identity needs either a source video, or both a selfie and voice recording.' });
+    }
 
     const { data: renderJob, error: jobError } = await supabase
       .from("render_jobs")
@@ -54,7 +58,7 @@ export async function startRender(req, res) {
         session_id: session_id || null,
         member_id: member_id || req.user?.id || null,
         identity_url: identity.selfie_url || null,
-        source_video_url: videoUrl,
+        source_video_url: identity.source_video_url || null,
         status: "pending"
       }])
       .select().single();
@@ -73,7 +77,14 @@ export async function startRender(req, res) {
     await supabase.from("render_jobs").update({ status: "processing" }).eq("id", renderJob.id);
 
     try {
-      await fireMakeWebhook(renderJob.id, identity_id, member_id, videoUrl);
+      await fireMakeWebhook(
+        renderJob.id,
+        identity_id,
+        member_id,
+        identity.source_video_url || null,
+        identity.selfie_url || null,
+        identity.voice_url || null
+      );
     } catch (webhookErr) {
       await supabase.from("render_jobs").update({ status: "error", error: `Make webhook failed: ${webhookErr.message}` }).eq("id", renderJob.id);
       return res.status(502).json({ error: "Failed to reach the video pipeline. Please try again." });
