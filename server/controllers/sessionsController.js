@@ -82,8 +82,8 @@ export async function startRender(req, res) {
         identity_id,
         member_id,
         identity.source_video_url || null,
-        identity.selfie_url || null,
-        identity.voice_url || null
+        identity.selfie_url || null,   // image_url
+        identity.voice_url || null     // audio_url
       );
     } catch (webhookErr) {
       await supabase.from("render_jobs").update({ status: "error", error: `Make webhook failed: ${webhookErr.message}` }).eq("id", renderJob.id);
