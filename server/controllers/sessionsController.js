@@ -98,33 +98,59 @@ export async function startRender(req, res) {
 }
 
 export async function videoCallback(req, res) {
+  const render_job_id = req.params.id;
   try {
-    const render_job_id = req.params.id;
-    const { video_url, identity_id, creator_id } = req.body;
+    const { status, output, error: predError } = req.body;
 
-    if (!video_url) return res.status(400).json({ error: 'video_url is required in callback body.' });
+    console.log(`[video-callback] render_job_id=${render_job_id} status=${status}`);
 
-    const { data: renderJob } = await supabase
-      .from("render_jobs")
-      .select("session_id")
-      .eq("id", render_job_id)
-      .single();
+    // Acknowledge intermediate statuses without writing to DB
+    if (!status || (status !== 'succeeded' && status !== 'failed' && status !== 'canceled')) {
+      return res.status(200).json({ received: true });
+    }
 
+    if (status === 'succeeded') {
+      // Replicate output can be an array or a plain string
+      const raw = Array.isArray(output) ? output[0] : output;
+      if (!raw) {
+        return res.status(422).json({ error: 'Prediction succeeded but output URL is missing.' });
+      }
+      const video_url = raw;
+
+      const { data: renderJob } = await supabase
+        .from("render_jobs")
+        .select("session_id")
+        .eq("id", render_job_id)
+        .single();
+
+      await supabase.from("render_jobs").update({
+        status: "completed",
+        video_url,
+        completed_at: new Date().toISOString()
+      }).eq("id", render_job_id);
+
+      if (renderJob?.session_id) {
+        await supabase.from("sessions").update({ status: "completed", video_url }).eq("id", renderJob.session_id);
+      }
+
+      console.log(`[video-callback] Saved video_url for ${render_job_id}`);
+      return res.status(200).json({ received: true });
+    }
+
+    // status === 'failed' | 'canceled'
+    const errMsg = predError ?? `Prediction ${status}`;
     await supabase.from("render_jobs").update({
-      status: "completed",
-      video_url,
+      status: "failed",
+      error_message: errMsg,
       completed_at: new Date().toISOString()
     }).eq("id", render_job_id);
 
-    if (renderJob?.session_id) {
-      await supabase.from("sessions").update({ status: "completed", video_url }).eq("id", renderJob.session_id);
-    }
-
-    console.log(`[render_job ${render_job_id}] Completed. Video: ${video_url}`);
-    return res.json({ success: true });
+    console.log(`[video-callback] Prediction failed for ${render_job_id}: ${errMsg}`);
+    return res.status(200).json({ received: true });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(`[video-callback] Unexpected error for ${render_job_id}:`, err.message);
+    return res.status(500).json({ error: err.message });
   }
 }
 
