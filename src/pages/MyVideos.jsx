@@ -100,6 +100,51 @@ function VideoCard({ job, identityMap, highlighted }) {
           <p className="mv-card__error">{errorText}</p>
         )}
 
+        {status === 'completed' && (() => {
+          const scriptText    = localJob.script || localJob.script_text || '';
+          const scriptPreview = scriptText.length > 120 ? scriptText.slice(0, 120) + '...' : scriptText;
+          const scenes        = localJob.scenes;
+          const scenesPreview = scenes
+            ? (typeof scenes === 'string'
+                ? scenes.slice(0, 100) + (scenes.length > 100 ? '...' : '')
+                : JSON.stringify(scenes).slice(0, 100) + '...')
+            : null;
+
+          if (!scriptPreview && !scenesPreview) return null;
+
+          return (
+            <div style={{
+              marginTop: '0.75rem',
+              paddingTop: '0.75rem',
+              borderTop: '1px solid rgba(255,255,255,0.07)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+            }}>
+              {scriptPreview && (
+                <div>
+                  <p style={{ margin: '0 0 0.2rem', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(200,200,215,0.35)' }}>
+                    📝 Script
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(200,200,215,0.55)', lineHeight: 1.5 }}>
+                    {scriptPreview}
+                  </p>
+                </div>
+              )}
+              {scenesPreview && (
+                <div>
+                  <p style={{ margin: '0 0 0.2rem', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(200,200,215,0.35)' }}>
+                    🎬 Scene
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(200,200,215,0.55)', lineHeight: 1.5 }}>
+                    {scenesPreview}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {status === 'completed' && videoUrl && (
           <div className="mv-card__actions">
             <a className="mv-btn mv-btn--sm" href={videoUrl} download>
