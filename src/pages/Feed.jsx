@@ -95,11 +95,12 @@ function FeedCard({ item }) {
 
 /* ── Video feed card (render_jobs) ───────────────────────── */
 function VideoFeedCard({ job }) {
-  const videoUrl   = Array.isArray(job.video_url) ? job.video_url[0] : job.video_url;
-  const identity   = job.identities;
-  const avatarUrl  = identity?.selfie_url || identity?.image_url;
-  const creatorName = identity?.name || 'Creator';
-  const excerpt    = job.script ? job.script.slice(0, 100) + (job.script.length > 100 ? '…' : '') : null;
+  const videoUrl    = Array.isArray(job.video_url) ? job.video_url[0] : job.video_url;
+  const identity    = job.identities;
+  const avatarUrl   = identity?.selfie_url || identity?.image_url;
+  const creatorName = identity?.name ?? 'Unknown Creator';
+  const scriptText  = job.script || job.script_text || '';
+  const excerpt     = scriptText ? scriptText.slice(0, 100) + (scriptText.length > 100 ? '…' : '') : null;
 
   return (
     <div style={{
@@ -199,7 +200,7 @@ export default function Feed() {
 
         supabase
           .from('render_jobs')
-          .select('id, video_url, script, created_at, status, identity_id, identities(name, selfie_url, image_url)')
+          .select(`id, video_url, script, script_text, created_at, status, identity_id, identities (name, selfie_url, image_url)`)
           .eq('status', 'completed')
           .order('created_at', { ascending: false })
           .limit(20),
@@ -224,8 +225,10 @@ export default function Feed() {
         setAnnouncements(annRes.value.data ?? []);
       }
 
+      // render_jobs — log result for debugging
       if (vidRes.status === 'fulfilled') {
-        if (vidRes.value.error) console.error('[Feed] render_jobs error:', vidRes.value.error);
+        console.log('Feed — data:', vidRes.value.data);
+        console.log('Feed — error:', vidRes.value.error);
         setVideos(vidRes.value.data ?? []);
       } else {
         console.error('[Feed] render_jobs rejected:', vidRes.reason);

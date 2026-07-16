@@ -60,7 +60,8 @@ function VideoCard({ job, identityMap, highlighted }) {
     return () => supabase.removeChannel(channel);
   }, [localJob.id, localJob.status]);
 
-  const { status, video_url, error_message, identity_id, created_at } = localJob;
+  const { status, video_url, error_message, error: errorField, identity_id, created_at } = localJob;
+  const errorText = error_message || errorField;
   const identityName = identityMap[identity_id] ?? 'Unknown identity';
   const videoUrl = Array.isArray(video_url) ? video_url[0] : video_url;
 
@@ -95,8 +96,8 @@ function VideoCard({ job, identityMap, highlighted }) {
         <p className="mv-card__date">{formatDate(created_at)}</p>
         <StatusBadge status={status} />
 
-        {status === 'failed' && error_message && (
-          <p className="mv-card__error">{error_message}</p>
+        {status === 'failed' && errorText && (
+          <p className="mv-card__error">{errorText}</p>
         )}
 
         {status === 'completed' && videoUrl && (
@@ -167,20 +168,23 @@ export default function MyVideos() {
     try {
       const { data, error } = await supabase
         .from('render_jobs')
-        .select('*')
+        .select('id, status, video_url, script, script_text, created_at, completed_at, error_message, identity_id, creator_id')
         .eq('creator_id', user.id)
         .order('created_at', { ascending: false });
 
       clearTimeout(timer);
 
+      console.log('My Videos — user.id:', user.id);
+      console.log('My Videos — data:', data);
+      console.log('My Videos — error:', error);
+
       if (error) {
-        console.error('[MyVideos] render_jobs query error:', error);
         setFetchError(true);
         setLoading(false);
         return;
       }
 
-      const rows = data || [];
+      const rows = data ?? [];
       setJobs(rows);
 
       // Fetch identity names in bulk
