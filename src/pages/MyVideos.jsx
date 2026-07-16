@@ -1,186 +1,321 @@
-import { useEffect, useState } from 'react';
-import { Film, Trash2, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import './myVideos.css';
 
-export default function MyVideos() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [videos, setVideos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [playing, setPlaying] = useState(null);
-  const [deleting, setDeleting] = useState(null);
-  const [activeTooltip, setActiveTooltip] = useState(null);
+const LOAD_TIMEOUT_MS = 5000;
 
-  const EMOTION_BADGES = {
-    excited: { emoji: '⚡', label: 'Excited', bg: 'rgba(245,158,11,0.18)', text: '#f59e0b' },
-    urgent: { emoji: '🔴', label: 'Urgent', bg: 'rgba(239,68,68,0.18)', text: '#ef4444' },
-    warm: { emoji: '🤎', label: 'Warm', bg: 'rgba(193,68,14,0.18)', text: '#c1440e' },
-    calm: { emoji: '🩵', label: 'Calm', bg: 'rgba(56,189,248,0.18)', text: '#38bdf8' },
-    intense: { emoji: '🟣', label: 'Intense', bg: 'rgba(147,51,234,0.18)', text: '#a855f7' },
-    confident: { emoji: '🖤', label: 'Confident', bg: 'rgba(148,163,184,0.18)', text: '#94a3b8' }
+// ─── helpers ─────────────────────────────────────────────────────────────────
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function StatusBadge({ status }) {
+  const map = {
+    completed:  { label: '✅ Completed',  cls: 'mv-badge--green' },
+    pending:    { label: '🔄 Processing', cls: 'mv-badge--yellow' },
+    processing: { label: '🔄 Processing', cls: 'mv-badge--yellow' },
+    failed:     { label: '❌ Failed',     cls: 'mv-badge--red' },
   };
+  const { label, cls } = map[status] ?? { label: status, cls: '' };
+  return <span className={`mv-badge ${cls}`}>{label}</span>;
+}
 
-  const REWRITE_TOOLTIP_TEXT = "Our AI detected the emotional intent of your original script and enhanced the word choice, pacing, and rhythm to match — so your delivery lands harder on camera. Your message stays the same. The impact gets amplified.";
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div className="mv-card mv-card--skeleton">
+      <div className="mv-skeleton mv-skeleton--video" />
+      <div className="mv-card__body">
+        <div className="mv-skeleton mv-skeleton--title" />
+        <div className="mv-skeleton mv-skeleton--badge" />
+      </div>
+    </div>
+  );
+}
 
+// ─── Single video card ────────────────────────────────────────────────────────
+function VideoCard({ job, identityMap, highlighted }) {
+  const navigate = useNavigate();
+  const [localJob, setLocalJob] = useState(job);
+
+  // Subscribe to realtime for pending/processing jobs
   useEffect(() => {
-    if (!user) return;
-    async function fetchVideos() {
-      try {
-        const { data, error } = await supabase
-          .from('render_jobs')
-          .select('*')
-          .eq('member_id', user.id)
-          .order('created_at', { ascending: false });
-        if (!error) setVideos(data || []);
-      } catch (e) {
-        console.error('MyVideos fetch error', e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchVideos();
-  }, [user]);
+    if (localJob.status !== 'pending' && localJob.status !== 'processing') return;
 
-  async function handleDelete(e, videoId) {
-    e.stopPropagation();
-    if (!window.confirm('Delete this video? This cannot be undone.')) return;
-    setDeleting(videoId);
-    await supabase.from('render_jobs').delete().eq('id', videoId);
-    setVideos(prev => prev.filter(v => v.id !== videoId));
-    setDeleting(null);
+    const channel = supabase
+      .channel(`mv_job_${localJob.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'render_jobs',
+        filter: `id=eq.${localJob.id}`,
+      }, payload => {
+        setLocalJob(prev => ({ ...prev, ...payload.new }));
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [localJob.id, localJob.status]);
+
+  const { status, video_url, error_message, identity_id, created_at } = localJob;
+  const identityName = identityMap[identity_id] ?? 'Unknown identity';
+  const videoUrl = Array.isArray(video_url) ? video_url[0] : video_url;
+
+  function copyLink() {
+    if (videoUrl) navigator.clipboard.writeText(videoUrl).catch(() => {});
   }
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
-      Loading...
-    </div>
-  );
-
-  if (videos.length === 0) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1.5rem', textAlign: 'center', padding: '0 1.5rem' }}>
-      <Film size={64} color="#FACC15" />
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', margin: 0 }}>My Videos</h1>
-      <p style={{ color: '#9CA3AF', maxWidth: 440, margin: 0, lineHeight: 1.6 }}>
-        Your videos will appear here.<br />
-        Hit "Generate My Video" to create your first emotion-rendered video.
-      </p>
-      <button onClick={() => navigate('/generator')} style={{ background: '#FACC15', color: '#000', fontWeight: 700, padding: '10px 24px', borderRadius: 9999, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
-        Generate My Video
-      </button>
-    </div>
-  );
-
   return (
-    <div style={{ padding: '1.5rem' }}>
-      {/* Lightbox modal */}
-      {playing && (
-        <div
-          onClick={() => setPlaying(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
-        >
-          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: 800 }}>
-            <button
-              onClick={() => setPlaying(null)}
-              style={{ position: 'absolute', top: -36, right: 0, background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}
-            >
-              <X size={28} />
-            </button>
-            <video
-              src={playing}
-              controls
-              autoPlay
-              style={{ width: '100%', borderRadius: 12, display: 'block' }}
-            />
-          </div>
+    <div className={`mv-card${highlighted ? ' mv-card--highlighted' : ''}`}>
+
+      {/* Video / placeholder area */}
+      {status === 'completed' && videoUrl ? (
+        <video
+          className="mv-card__video"
+          src={videoUrl}
+          controls
+          poster={identityMap[`img_${identity_id}`] ?? undefined}
+        />
+      ) : status === 'failed' ? (
+        <div className="mv-card__placeholder mv-card__placeholder--failed">
+          <span className="mv-placeholder-icon">❌</span>
+        </div>
+      ) : (
+        <div className="mv-card__placeholder mv-card__placeholder--processing">
+          <span className="mv-placeholder-icon mv-pulse">⏳</span>
+          <p className="mv-processing-label">Generating…</p>
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', margin: 0 }}>My Videos</h1>
-        <button onClick={() => navigate('/generator')} style={{ background: '#FACC15', color: '#000', fontSize: '0.875rem', fontWeight: 700, padding: '8px 16px', borderRadius: 9999, border: 'none', cursor: 'pointer' }}>
-          + New Video
-        </button>
+      <div className="mv-card__body">
+        <p className="mv-card__identity">{identityName}</p>
+        <p className="mv-card__date">{formatDate(created_at)}</p>
+        <StatusBadge status={status} />
+
+        {status === 'failed' && error_message && (
+          <p className="mv-card__error">{error_message}</p>
+        )}
+
+        {status === 'completed' && videoUrl && (
+          <div className="mv-card__actions">
+            <a className="mv-btn mv-btn--sm" href={videoUrl} download>
+              Download
+            </a>
+            <button className="mv-btn mv-btn--sm" onClick={copyLink}>
+              Share
+            </button>
+          </div>
+        )}
+
+        {status === 'failed' && (
+          <div className="mv-card__actions">
+            <button className="mv-btn mv-btn--sm mv-btn--primary" onClick={() => navigate('/generator')}>
+              Try Again
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function Toast({ message, onDismiss }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 6000);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  return (
+    <div className="mv-toast" onClick={onDismiss}>
+      {message}
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function MyVideos() {
+  const { user, loading: authLoading } = useAuth();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+
+  const [jobs, setJobs]           = useState([]);
+  const [identityMap, setIdentityMap] = useState({});
+  const [loading, setLoading]     = useState(true);
+  const [fetchError, setFetchError] = useState(false);
+  const [toast, setToast]         = useState(null);
+  const [highlightedJob, setHighlightedJob] = useState(null);
+  const highlightRef = useRef(null);
+
+  // Parse ?job= query param
+  const jobParam = new URLSearchParams(location.search).get('job');
+
+  const load = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    setFetchError(false);
+
+    // 5-second timeout guard
+    const timer = setTimeout(() => {
+      setFetchError(true);
+      setLoading(false);
+    }, LOAD_TIMEOUT_MS);
+
+    try {
+      const { data, error } = await supabase
+        .from('render_jobs')
+        .select('*')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false });
+
+      clearTimeout(timer);
+
+      if (error) {
+        console.error('[MyVideos] render_jobs query error:', error);
+        setFetchError(true);
+        setLoading(false);
+        return;
+      }
+
+      const rows = data || [];
+      setJobs(rows);
+
+      // Fetch identity names in bulk
+      const ids = [...new Set(rows.map(r => r.identity_id).filter(Boolean))];
+      if (ids.length > 0) {
+        const { data: identities, error: idErr } = await supabase
+          .from('identities')
+          .select('id, name, image_url')
+          .in('id', ids);
+
+        if (idErr) {
+          console.error('[MyVideos] identities query error:', idErr);
+        } else {
+          const map = {};
+          (identities || []).forEach(i => {
+            map[i.id] = i.name;
+            map[`img_${i.id}`] = i.image_url;
+          });
+          setIdentityMap(map);
+        }
+      }
+    } catch (err) {
+      clearTimeout(timer);
+      console.error('[MyVideos] unexpected error:', err);
+      setFetchError(true);
+    } finally {
+      clearTimeout(timer);
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Load on mount / user change
+  useEffect(() => {
+    if (authLoading) return;       // wait for auth to resolve
+    if (!user) { setLoading(false); return; }
+    load();
+  }, [user, authLoading, load]);
+
+  // Handle ?job= param
+  useEffect(() => {
+    if (!jobParam) return;
+    setHighlightedJob(jobParam);
+    setToast('🎬 Your video is being generated — we\'ll update this page automatically.');
+
+    // Remove from URL after 3 s
+    const t = setTimeout(() => {
+      window.history.replaceState({}, '', location.pathname);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [jobParam, location.pathname]);
+
+  // Scroll to highlighted card
+  useEffect(() => {
+    if (!highlightedJob || !highlightRef.current) return;
+    highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlightedJob, jobs]);
+
+  // ── Render states ──────────────────────────────────────────────────────────
+  const showSkeleton = loading;
+
+  if (showSkeleton) {
+    return (
+      <div className="mv-wrapper">
+        {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
+        <div className="mv-header">
+          <div>
+            <h1 className="mv-title">My Videos</h1>
+            <p className="mv-subtitle">Your generated avatar videos</p>
+          </div>
+        </div>
+        <div className="mv-grid">
+          <SkeletonCard /><SkeletonCard /><SkeletonCard />
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="mv-wrapper">
+        <div className="mv-state-center">
+          <p className="mv-state-icon">⚠️</p>
+          <p className="mv-state-title">Couldn't load your videos.</p>
+          <p className="mv-state-sub">Please refresh and try again.</p>
+          <button className="mv-btn mv-btn--primary" onClick={load}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (jobs.length === 0) {
+    return (
+      <div className="mv-wrapper">
+        <div className="mv-state-center">
+          <p className="mv-state-icon">🎬</p>
+          <p className="mv-state-title">No videos yet</p>
+          <p className="mv-state-sub">Generate your first avatar video to see it here.</p>
+          <button className="mv-btn mv-btn--primary" onClick={() => navigate('/generator')}>
+            Generate a Video →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mv-wrapper">
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
+
+      <div className="mv-header">
+        <div>
+          <h1 className="mv-title">My Videos</h1>
+          <p className="mv-subtitle">Your generated avatar videos</p>
+        </div>
+        <div className="mv-header__right">
+          <span className="mv-count-badge">{jobs.length} video{jobs.length !== 1 ? 's' : ''}</span>
+          <button className="mv-btn mv-btn--primary" onClick={() => navigate('/generator')}>
+            + New Video
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-        {videos.map(v => {
-          const statusColor = v.status === 'completed' ? { bg: 'rgba(34,197,94,0.15)', text: '#4ade80' }
-            : v.status === 'rendering' ? { bg: 'rgba(234,179,8,0.15)', text: '#facc15' }
-            : { bg: 'rgba(255,255,255,0.08)', text: '#9ca3af' };
-          const videoUrl = Array.isArray(v.video_url) ? v.video_url[0] : v.video_url;
-          const emotionBadge = v.status === 'completed' && v.emotion ? EMOTION_BADGES[v.emotion] : null;
-          const scriptPreview = v.rewritten_script || v.script_text;
-          return (
-            <div
-              key={v.id}
-              onClick={() => videoUrl && setPlaying(videoUrl)}
-              style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', cursor: videoUrl ? 'pointer' : 'default', position: 'relative', transition: 'border-color 0.2s' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(250,204,21,0.4)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
-            >
-              {/* Thumbnail */}
-              <div style={{ width: '100%', height: 160, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                {videoUrl
-                  ? <video src={videoUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
-                  : <Film size={40} color="#4B5563" />
-                }
-                {videoUrl && (
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(250,204,21,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '18px solid #000', marginLeft: 3 }} />
-                    </div>
-                  </div>
-                )}
-                {emotionBadge && (
-                  <span style={{ position: 'absolute', top: 8, right: 8, fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: 9999, background: emotionBadge.bg, color: emotionBadge.text, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', zIndex: 1 }}>
-                    <span>{emotionBadge.emoji}</span>
-                    <span>{emotionBadge.label}</span>
-                  </span>
-                )}
-              </div>
-
-              <div style={{ padding: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '0.5rem' }}>
-                    {v.title || `Video ${v.created_at?.slice(0, 10) || ''}`}
-                  </h3>
-                  <button
-                    onClick={e => handleDelete(e, v.id)}
-                    disabled={deleting === v.id}
-                    style={{ background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: 6, padding: '4px 6px', cursor: 'pointer', flexShrink: 0 }}
-                  >
-                    <Trash2 size={14} color="#f87171" />
-                  </button>
-                </div>
-                <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: 9999, background: statusColor.bg, color: statusColor.text, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {v.status}
-                </span>
-                {v.status === 'completed' && scriptPreview && (
-                  <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', flex: 1 }}>
-                      {scriptPreview}
-                    </p>
-                    <span
-                      onClick={e => e.stopPropagation()}
-                      onMouseEnter={() => setActiveTooltip(v.id)}
-                      onMouseLeave={() => setActiveTooltip(prev => (prev === v.id ? null : prev))}
-                      style={{ position: 'relative', flexShrink: 0, fontSize: '0.75rem', color: '#94a3b8', cursor: 'pointer', marginTop: '1px' }}
-                    >
-                      ⓘ
-                      {activeTooltip === v.id && (
-                        <span style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, width: 220, padding: '10px 12px', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#e2e8f0', fontSize: '0.72rem', fontWeight: 400, lineHeight: 1.5, zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
-                          {REWRITE_TOOLTIP_TEXT}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      <div className="mv-grid">
+        {jobs.map(job => (
+          <div
+            key={job.id}
+            ref={job.id === highlightedJob ? highlightRef : null}
+          >
+            <VideoCard
+              job={job}
+              identityMap={identityMap}
+              highlighted={job.id === highlightedJob}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
