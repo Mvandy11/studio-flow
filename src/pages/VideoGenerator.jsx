@@ -1,24 +1,111 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from '../lib/supabase';
 import { api } from '../lib/api';
+import { useRenderJobStatus } from '../hooks/useRenderJobStatus';
 import "./videoGenerator.css";
 
+// ─────────────────────────────────────────────
+// Status panel — shown after a successful submit
+// ─────────────────────────────────────────────
+function StatusPanel({ renderJobId, onReset }) {
+  const { status, video_url, error_message, loading } = useRenderJobStatus(renderJobId);
+  const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <div className="vg-status-panel">
+        <div className="vg-spinner" />
+        <p className="vg-status-text">🎬 Your video is being generated...</p>
+        <p className="vg-status-sub">This usually takes 2–5 minutes. We'll update this page automatically.</p>
+        <p className="vg-job-ref">Job: {renderJobId}</p>
+      </div>
+    );
+  }
+
+  if (status === "completed" && video_url) {
+    return (
+      <div className="vg-status-panel vg-status-panel--done">
+        <p className="vg-status-text">✅ Your video is ready!</p>
+        <video
+          src={video_url}
+          controls
+          autoPlay
+          playsInline
+          style={{ width: "100%", borderRadius: "12px", marginTop: "16px" }}
+        />
+        <div className="vg-status-actions">
+          <a
+            href={video_url}
+            download
+            className="vg-btn vg-btn--primary"
+          >
+            Download
+          </a>
+          <button
+            className="vg-btn"
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({ url: video_url, title: "My Studio Flow video" }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(video_url);
+              }
+            }}
+          >
+            Share
+          </button>
+          <button
+            className="vg-btn"
+            onClick={() => navigate("/my-videos")}
+          >
+            Go to My Videos →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <div className="vg-status-panel vg-status-panel--error">
+        <p className="vg-status-text">❌ Something went wrong during rendering. Please try again.</p>
+        {error_message && <p className="vg-job-ref">{error_message}</p>}
+        <button className="vg-btn vg-btn--primary" onClick={onReset}>
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // pending | processing | any in-progress status
+  return (
+    <div className="vg-status-panel">
+      <div className="vg-spinner" />
+      <p className="vg-status-text">🎬 Your video is being generated...</p>
+      <p className="vg-status-sub">This usually takes 2–5 minutes. We'll update this page automatically.</p>
+      <p className="vg-job-ref">Job: {renderJobId}</p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Main page
+// ─────────────────────────────────────────────
 export default function VideoGenerator() {
   const { user } = useAuth();
-  const [identities, setIdentities] = useState([]);
-  const [selectedIdentity, setSelectedIdentity] = useState(null);
-  const [scenes, setScenes] = useState([{ id: 1, prompt: "", description: "" }]);
-  const [loading, setLoading] = useState(false);
-  const [renderJobId, setRenderJobId] = useState(null);
-  const [renderStatus, setRenderStatus] = useState(null);
-  const [finalVideoUrl, setFinalVideoUrl] = useState(null);
-  const [error, setError] = useState(null);
-  const [showPostSubmitExplainer, setShowPostSubmitExplainer] = useState(false);
-  const [rewrittenScript, setRewrittenScript] = useState(null);
-  const [showRewriteTooltip, setShowRewriteTooltip] = useState(false);
 
-  // Load identities from backend (merges legacy identities + new video identity_records)
+  const [identities, setIdentities]           = useState([]);
+  const [identitiesLoaded, setIdentitiesLoaded] = useState(false);
+  const [selectedIdentity, setSelectedIdentity] = useState(null);
+  const [scenes, setScenes]                   = useState([{ id: 1, prompt: "", description: "" }]);
+  const [submitting, setSubmitting]           = useState(false);
+  const [renderJobId, setRenderJobId]         = useState(null);
+  const [formError, setFormError]             = useState(null);
+  const [scriptError, setScriptError]         = useState(null);
+  const [identityError, setIdentityError]     = useState(null);
+
+  // ── Load identities ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     async function fetchIdentities() {
@@ -27,143 +114,112 @@ export default function VideoGenerator() {
         setIdentities(data.identities || []);
       } catch (err) {
         console.error("Failed to load identities", err);
+        setIdentities([]);
+      } finally {
+        setIdentitiesLoaded(true);
       }
     }
     fetchIdentities();
   }, [user]);
 
+  // ── Scene helpers ────────────────────────────────────────────────────────
   function addScene() {
-    setScenes([...scenes, { id: scenes.length + 1, prompt: "", description: "" }]);
+    setScenes(prev => [...prev, { id: prev.length + 1, prompt: "", description: "" }]);
   }
 
   function updateScene(id, value) {
-    setScenes(scenes.map(s => s.id === id ? { ...s, prompt: value } : s));
+    setScenes(prev => prev.map(s => s.id === id ? { ...s, prompt: value } : s));
   }
 
   function updateSceneDescription(id, value) {
-    setScenes(scenes.map(s => s.id === id ? { ...s, description: value } : s));
+    setScenes(prev => prev.map(s => s.id === id ? { ...s, description: value } : s));
   }
 
-  async function generateVideo() {
-    if (!selectedIdentity) {
-      setError("Please select an identity.");
-      return;
-    }
+  // ── Submit ───────────────────────────────────────────────────────────────
+  async function handleGenerate() {
+    // Validate
+    let valid = true;
+    if (!selectedIdentity) { setIdentityError("Please select an identity."); valid = false; }
+    else setIdentityError(null);
 
-    setLoading(true);
-    setFinalVideoUrl(null);
-    setError(null);
-    setRewrittenScript(null);
-    setRenderStatus(null);
+    const combinedScript = scenes.map(s => s.prompt).filter(Boolean).join(" ").trim();
+    if (!combinedScript) { setScriptError("Please write your script before generating."); valid = false; }
+    else setScriptError(null);
+
+    if (!valid) return;
+
+    setFormError(null);
+    setSubmitting(true);
 
     try {
-      const payload = {
-        identity_id: selectedIdentity.id,
-        identity_type: selectedIdentity.type,
-        // video identities use video_url; legacy identities use selfie_url
-        identity_url: selectedIdentity.type === 'video'
-          ? selectedIdentity.video_url
-          : selectedIdentity.selfie_url,
-        scenes: scenes.map(s => ({ id: s.id, prompt: s.prompt, description: s.description })),
-        script_text: scenes.map(s => s.prompt).filter(Boolean).join(" "),
-        member_id: user.id
-      };
-
       const { data: { session } } = await supabase.auth.getSession();
-      const data = await api("/sessions/video/generate", {
+      if (!session?.access_token) throw new Error("Session expired. Please refresh.");
+
+      const data = await api("/render-jobs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${session.access_token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          identity_id: selectedIdentity.id,
+          script: combinedScript,
+          scenes: scenes.map(s => s.description).filter(Boolean)
+        })
       });
 
-      if (data.error) {
-        setError(data.error || "Failed to start render.");
-        setLoading(false);
-        return;
-      }
-
       setRenderJobId(data.render_job_id);
-      setShowPostSubmitExplainer(true);
     } catch (err) {
-      setError(err.message);
+      setFormError("Something went wrong. Please try again.");
+      console.error("Generate error:", err);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
-  const STATUS_MESSAGES = {
-    awaiting_emotion: "AI is reading your intent and crafting your script...",
-    emotion_detected: "Tone locked in. Rendering your video now...",
-    rendering: "Generating voice and expression — almost there...",
-    completed: "Your video is ready.",
-    error: "Something went wrong during rendering. Your script was saved — tap Try Again and we'll pick up where we left off."
-  };
-
-  function getStatusMessage(status) {
-    return STATUS_MESSAGES[status] || `Status: ${status}`;
+  // ── Reset after failure ──────────────────────────────────────────────────
+  function handleReset() {
+    setRenderJobId(null);
+    setFormError(null);
+    setScriptError(null);
+    setIdentityError(null);
   }
 
-  // Poll render status
-  useEffect(() => {
-    if (!renderJobId) return;
-    const interval = setInterval(async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          setError('Session expired. Please refresh and try again.');
-          clearInterval(interval);
-          return;
-        }
-        const data = await api(`/sessions/video/status/${renderJobId}`, {
-          headers: { 'Authorization': `Bearer ${session.access_token}` }
-        });
-        setShowPostSubmitExplainer(false);
-        setRenderStatus(data.status);
-        setRewrittenScript(data.rewritten_script || null);
-        if (data.status === 'completed') {
-          setFinalVideoUrl(data.video_url);
-          clearInterval(interval);
-        } else if (data.status === 'error') {
-          setError('Render failed. Please try again.');
-          clearInterval(interval);
-        }
-      } catch (err) {
-        console.error('Status poll error', err);
-        setError(`Poll error: ${err.message}`);
-        setShowPostSubmitExplainer(false);
-        clearInterval(interval);
-      }
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [renderJobId]);
+  // ── If we have a job ID, show the status panel ───────────────────────────
+  if (renderJobId) {
+    return (
+      <div className="vg-wrapper">
+        <div className="vg-card">
+          <h2 className="vg-title">Create Your Video</h2>
+          <StatusPanel renderJobId={renderJobId} onReset={handleReset} />
+        </div>
+      </div>
+    );
+  }
 
+  // ── Form ─────────────────────────────────────────────────────────────────
   return (
     <div className="vg-wrapper">
       <div className="vg-card">
 
         <h2 className="vg-title">Create Your Video</h2>
         <p className="vg-subtitle">
-          Write your message. Our AI will detect the emotional tone, sharpen your script, and render it with matched voice energy and expression — automatically.
+          Write your message. Our AI will render it with your chosen identity — automatically.
         </p>
 
-        {error && (
-          <div className="vg-error">
-            Something went wrong during rendering.<br />
-            Your script was saved — tap "Try Again" and we'll pick up where we left off.
-          </div>
+        {formError && (
+          <div className="vg-error">{formError}</div>
         )}
 
-        {/* Identity Selector */}
-        <label className="vg-label">Select Member Identity</label>
+        {/* Identity selector */}
+        <label className="vg-label">Select Identity</label>
         <select
-          className="vg-select"
+          className={`vg-select${identityError ? " vg-select--error" : ""}`}
+          value={selectedIdentity?.id || ""}
           onChange={(e) => {
-            const id = e.target.value;
-            const identity = identities.find(i => i.id === id);
-            setSelectedIdentity(identity || null);
+            const identity = identities.find(i => i.id === e.target.value) || null;
+            setSelectedIdentity(identity);
+            if (identity) setIdentityError(null);
           }}
         >
           <option value="">Choose identity...</option>
@@ -173,29 +229,43 @@ export default function VideoGenerator() {
               : identity.persona_description
                 ? `🖼 ${identity.persona_description.slice(0, 40)}`
                 : `🖼 Identity ${identity.created_at?.slice(0, 10) || identity.id.slice(0, 8)}`;
-            return (
-              <option key={identity.id} value={identity.id}>{label}</option>
-            );
+            return <option key={identity.id} value={identity.id}>{label}</option>;
           })}
         </select>
 
-        {/* Scene Builder */}
-        <div className="vg-scenes">
-          <h3>Scenes</h3>
+        {identityError && (
+          <p className="vg-field-error">{identityError}</p>
+        )}
 
-          {scenes.map(scene => (
+        {identitiesLoaded && identities.length === 0 && (
+          <p className="vg-empty-identities">
+            No identities yet.{" "}
+            <a href="/create-identity" className="vg-link">Create one first →</a>
+          </p>
+        )}
+
+        {/* Scene builder */}
+        <div className="vg-scenes">
+          <h3>Script &amp; Scenes</h3>
+
+          {scenes.map((scene, idx) => (
             <div key={scene.id} className="vg-scene">
               <label>Your Script{scenes.length > 1 ? ` — Scene ${scene.id}` : ""}</label>
               <textarea
                 className="vg-textarea"
-                placeholder={`Write what you want to say — be direct and authentic. Speak like you're talking to one person.\n\nExample: "I just wanted to reach out because I've been thinking about you. The work you've been doing is exactly what this industry needs — and I'd love to connect..."`}
+                placeholder={`Write what you want to say — be direct and authentic. Speak like you're talking to one person.\n\nExample: "I just wanted to reach out because I've been thinking about you..."`}
                 value={scene.prompt}
-                onChange={(e) => updateScene(scene.id, e.target.value)}
+                onChange={(e) => { updateScene(scene.id, e.target.value); if (scriptError) setScriptError(null); }}
               />
+              {idx === 0 && scriptError && (
+                <p className="vg-field-error">{scriptError}</p>
+              )}
               <p className="vg-helper">
-                Aim for 30–90 seconds of natural speech. Don't worry about tone — our AI will read your intent and amplify it.
+                Aim for 30–90 seconds of natural speech.
               </p>
-              <label style={{ marginTop: '10px', display: 'block' }}>Scene {scene.id} — Visual Description</label>
+              <label style={{ marginTop: "10px", display: "block" }}>
+                Scene {scene.id} — Visual Description
+              </label>
               <textarea
                 className="vg-textarea"
                 placeholder="Describe the background or setting, e.g. 'Cinematic dark studio, warm spotlight, shallow depth of field'"
@@ -211,73 +281,20 @@ export default function VideoGenerator() {
           </button>
         </div>
 
-        {/* Generate Button */}
+        {/* Generate button */}
         <button
           className="vg-generate"
-          disabled={loading || showPostSubmitExplainer || (renderStatus && renderStatus !== 'completed' && !error)}
-          onClick={generateVideo}
+          disabled={submitting}
+          onClick={handleGenerate}
         >
-          {error
-            ? "Try Again"
-            : loading
-              ? "Generating..."
-              : finalVideoUrl
-                ? "View My Video"
-                : "Generate My Video"}
+          {submitting ? (
+            <>
+              <span className="vg-btn-spinner" /> Generating...
+            </>
+          ) : (
+            "Generate My Video"
+          )}
         </button>
-
-        {/* Post-Submit Explainer — shown between job creation and first status poll response */}
-        {showPostSubmitExplainer && !error && (
-          <p className="vg-status">
-            🤖  Analyzing your script...
-            {"\n"}Our AI is reading your message for emotional intent — then rewriting it with sharper word choice, rhythm, and pacing to match your natural tone before rendering begins.
-          </p>
-        )}
-
-        {/* Render Status */}
-        {!showPostSubmitExplainer && renderStatus && !error && (
-          <p className="vg-status">
-            {getStatusMessage(renderStatus)}
-          </p>
-        )}
-
-        {/* Rewritten Script Preview */}
-        {!showPostSubmitExplainer && rewrittenScript && (
-          <div className="vg-rewrite-card">
-            <div className="vg-rewrite-label">
-              Your AI-enhanced script
-              <span
-                className="vg-info-icon"
-                tabIndex={0}
-                onMouseEnter={() => setShowRewriteTooltip(true)}
-                onMouseLeave={() => setShowRewriteTooltip(false)}
-                onFocus={() => setShowRewriteTooltip(true)}
-                onBlur={() => setShowRewriteTooltip(false)}
-              >
-                ⓘ
-                {showRewriteTooltip && (
-                  <span className="vg-tooltip">
-                    Our AI detected the emotional intent of your original script and enhanced the word choice, pacing, and rhythm to match — so your delivery lands harder on camera. Your message stays the same. The impact gets amplified.
-                  </span>
-                )}
-              </span>
-            </div>
-            <p className="vg-rewrite-content">{rewrittenScript}</p>
-          </div>
-        )}
-
-        {/* Final Video */}
-        {finalVideoUrl && (
-          <div className="vg-video">
-            <h3>Final Video</h3>
-            <video src={finalVideoUrl} controls crossOrigin="anonymous"
-              onError={() => window.open(finalVideoUrl, '_blank')} />
-            <a href={finalVideoUrl} target="_blank" rel="noreferrer"
-              style={{color:'#facc15', fontSize:'0.85rem', marginTop:'8px', display:'block'}}>
-              ↗ Open video in new tab if player fails
-            </a>
-          </div>
-        )}
 
       </div>
     </div>

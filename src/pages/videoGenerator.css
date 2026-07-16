@@ -168,3 +168,146 @@
   z-index: 10;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
+
+/* ── Generate button states ───────────────────────────────────────── */
+.vg-generate {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.vg-generate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Field-level validation errors ───────────────────────────────── */
+.vg-field-error {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #f87171;
+}
+
+.vg-select--error {
+  border-color: #ef4444;
+}
+
+/* ── Empty identities nudge ───────────────────────────────────────── */
+.vg-empty-identities {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.vg-link {
+  color: #facc15;
+  text-decoration: none;
+}
+
+.vg-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Post-submit status panel ─────────────────────────────────────── */
+.vg-status-panel {
+  margin-top: 24px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.vg-status-panel--done {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.vg-status-panel--error {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.vg-status-text {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 12px 0 8px;
+}
+
+.vg-status-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.vg-job-ref {
+  font-size: 11px;
+  color: #475569;
+  margin: 4px 0 0;
+  font-family: monospace;
+}
+
+.vg-status-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+/* ── Shared button style used in status panel ─────────────────────── */
+.vg-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.15s;
+}
+
+.vg-btn:hover {
+  background: #334155;
+}
+
+.vg-btn--primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.vg-btn--primary:hover {
+  background: #2563eb;
+}
+
+/* ── Spinners ─────────────────────────────────────────────────────── */
+.vg-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #334155;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: vg-spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+.vg-btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: vg-spin 0.7s linear infinite;
+}
+
+@keyframes vg-spin {
+  to { transform: rotate(360deg); }
+}
