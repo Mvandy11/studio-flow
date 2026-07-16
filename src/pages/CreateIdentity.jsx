@@ -267,7 +267,7 @@ export default function CreateIdentityPage() {
       // ── Insert row ────────────────────────────────────────────────────────
       const { error: insertErr } = await supabase
         .from('identities')
-        .insert({ creator_id: creatorId, name: name.trim(), image_url: imageUrl, audio_url: audioUrl });
+        .insert({ profile_id: creatorId, name: name.trim(), image_url: imageUrl, audio_url: audioUrl });
       if (insertErr) throw new Error(`Save failed: ${insertErr.message}`);
 
       setDone(true);
