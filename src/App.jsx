@@ -145,7 +145,8 @@ export default function App() {
             <Route path="/donate/success"    element={<DonateSuccess />} />
             <Route path="/success"           element={<Success />} />
 
-            {/* ── AI Architect additions ── */}
+            {/* ── Identity / Video Generator ── */}
+            <Route path="/create-identity"           element={<ProtectedRoute><CreateIdentity /></ProtectedRoute>} />
             <Route path="/dashboard/identity"        element={<ProtectedRoute><CreateIdentity /></ProtectedRoute>} />
             <Route path="/dashboard/video-generator" element={<ProtectedRoute><VideoGenerator /></ProtectedRoute>} />
 

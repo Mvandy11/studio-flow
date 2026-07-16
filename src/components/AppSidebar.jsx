@@ -81,7 +81,7 @@ export default function AppSidebar({ open, onClose }) {
         <div className="app-sidebar__section-label">AI Tools</div>
         <nav className="app-sidebar__nav">
           <NavItem to="/tools/denoise" icon="♫" label="Denoise" />
-          <NavItem to="/dashboard/identity" icon={<UserCircle size={16} />} label="Create Identity" />
+          <NavItem to="/create-identity" icon={<UserCircle size={16} />} label="Create Identity" />
           <NavItem to="/my-videos" icon={<Film size={16} />} label="My Videos" />
         </nav>
 
