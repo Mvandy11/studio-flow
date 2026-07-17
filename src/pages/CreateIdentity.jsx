@@ -454,7 +454,7 @@ function StepGenerate({ name, photoPreview, audioBlob, audioFile, scriptText, sc
         <p className="ci-hint"><strong>{name}</strong> is being created. This usually takes 2–5 minutes.</p>
         {jobId && <p style={{ fontSize: '0.72rem', color: 'rgba(200,200,215,0.3)', marginTop: '0.5rem' }}>Job ID: {jobId}</p>}
         <div className="ci-nav" style={{ justifyContent: 'center', marginTop: 28, flexWrap: 'wrap' }}>
-          <button className="ci-btn ci-btn--primary" onClick={() => navigate('/my-videos')}>Watch in My Videos →</button>
+          <button className="ci-btn ci-btn--primary" onClick={() => window.location.href = '/my-videos'}>Watch in My Videos →</button>
           <button className="ci-btn" onClick={onReset}>Create Another Avatar</button>
         </div>
       </div>

@@ -56,3 +56,6 @@ Thumbs.db
 
 # Asset dumps
 attached_assets/
+
+# Local Netlify folder
+.netlify
