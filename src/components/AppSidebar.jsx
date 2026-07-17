@@ -81,7 +81,7 @@ export default function AppSidebar({ open, onClose }) {
         <div className="app-sidebar__section-label">AI Tools</div>
         <nav className="app-sidebar__nav">
           <NavItem to="/tools/denoise" icon="♫" label="Denoise" />
-          <NavItem to="/create-identity" icon={<UserCircle size={16} />} label="Create Identity" />
+          <NavItem to="/create-identity" icon={<UserCircle size={16} />} label="Create Avatar" />
           <NavItem to="/my-videos" icon={<Film size={16} />} label="My Videos" />
         </nav>
 
@@ -93,7 +93,6 @@ export default function AppSidebar({ open, onClose }) {
           <NavItem to="/contests"        icon="🏆" label="Contests" />
           <NavItem to="/announcements"   icon={<Megaphone size={16} />} label="Announcements" />
           <NavItem to="/free-chat"       icon="🗣" label="Free Chat" />
-          <NavItem to="/generator" icon={<Clapperboard size={16} />} label="Video Generator" />
         </nav>
 
         <div className="app-sidebar__divider" />
