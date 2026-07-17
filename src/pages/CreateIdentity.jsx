@@ -679,10 +679,8 @@ export default function CreateIdentityPage() {
         throw new Error(body.error || body.message || `Request failed (${res.status})`);
       }
 
-      // Success — redirect to My Videos with a toast message
-      navigate('/my-videos', {
-        state: { toast: `${name} is being generated! Check back in 2–5 minutes.` },
-      });
+      // Success — redirect to My Videos (window.location avoids async scope issues)
+      window.location.href = '/my-videos';
     } catch (err) {
       console.error('[CreateAvatar] generate error:', err);
       setGenerateError(err.message || 'Something went wrong. Please try again.');
