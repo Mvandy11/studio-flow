@@ -285,6 +285,14 @@ export default function MyVideos() {
   const [highlightedJob, setHighlightedJob] = useState(null);
   const highlightRef = useRef(null);
 
+  // Show toast passed via navigate() state (e.g. from Create Avatar redirect)
+  useEffect(() => {
+    if (location.state?.toast) {
+      setToast(location.state.toast);
+      window.history.replaceState({}, '', location.pathname + location.search);
+    }
+  }, []);
+
   // Parse ?job= query param
   const jobParam = new URLSearchParams(location.search).get('job');
 

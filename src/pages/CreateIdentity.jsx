@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -652,10 +652,17 @@ export default function CreateIdentityPage() {
       // ── Step B+C: Create render job + fire webhook ────────────────────────────
       setGenerateStatus('Submitting your video for generation...');
 
+      // Get the Supabase access token so the authenticate middleware accepts the request
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) throw new Error('Not authenticated. Please sign in and try again.');
+
       const res = await fetch('/api/render-jobs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           identity_id:       identity.id,
           creator_id:        creatorId,
@@ -678,9 +685,10 @@ export default function CreateIdentityPage() {
         throw new Error(body.error || body.message || `Request failed (${res.status})`);
       }
 
-      const job = await res.json();
-      setJobId(job.id || job.jobId || job.render_job_id || null);
-      setGenerateStatus('done');
+      // Success — redirect to My Videos with a toast message
+      navigate('/my-videos', {
+        state: { toast: `${name} is being generated! Check back in 2–5 minutes.` },
+      });
     } catch (err) {
       console.error('[CreateAvatar] generate error:', err);
       setGenerateError(err.message || 'Something went wrong. Please try again.');

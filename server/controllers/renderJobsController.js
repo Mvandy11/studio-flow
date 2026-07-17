@@ -2,42 +2,45 @@ import { supabase } from "../supabase/client.js";
 import { fireMakeWebhook } from "../videoRenderer.js";
 
 // POST /api/render-jobs
-// Triggered by the frontend when the user clicks "Generate My Video".
+// Triggered by the frontend when the user clicks "Generate My Avatar Video".
 export async function startRenderJob(req, res) {
   const creator_id = req.user?.id;
   if (!creator_id) return res.status(401).json({ error: "Not authenticated" });
 
-  const { identity_id, script, scenes } = req.body;
+  const {
+    identity_id,
+    script,
+    script_text,
+    scenes,
+    scene_description,
+    image_url: bodyImageUrl,
+    audio_url: bodyAudioUrl,
+    emotional_physics,
+    logic_profile,
+    agent_rules,
+  } = req.body;
+
   if (!identity_id) return res.status(400).json({ error: "identity_id is required" });
 
   try {
-    // ── 1. Look up the identity (try identity_records first, then identities) ──
-    let image_url = null;
-    let audio_url = null;
+    // ── 1. Resolve image_url / audio_url ─────────────────────────────────────
+    // Frontend sends them directly; fall back to DB lookup if omitted.
+    let image_url     = bodyImageUrl  || null;
+    let audio_url     = bodyAudioUrl  || null;
     let video_url_src = null;
 
-    const { data: ir } = await supabase
-      .from("identity_records")
-      .select("image_url, audio_url, video_url")
-      .eq("id", identity_id)
-      .maybeSingle();
-
-    if (ir) {
-      image_url   = ir.image_url  || null;
-      audio_url   = ir.audio_url  || null;
-      video_url_src = ir.video_url || null;
-    } else {
+    if (!image_url || !audio_url) {
       const { data: leg } = await supabase
         .from("identities")
-        .select("image_url, audio_url, source_video_url, selfie_url, voice_url")
+        .select("image_url, audio_url, selfie_url, voice_url, source_video_url")
         .eq("id", identity_id)
         .maybeSingle();
 
-      if (!leg) return res.status(404).json({ error: "Identity not found" });
-
-      image_url   = leg.image_url  || leg.selfie_url  || null;
-      audio_url   = leg.audio_url  || leg.voice_url   || null;
-      video_url_src = leg.source_video_url || null;
+      if (leg) {
+        image_url     = image_url  || leg.image_url  || leg.selfie_url  || null;
+        audio_url     = audio_url  || leg.audio_url  || leg.voice_url   || null;
+        video_url_src = leg.source_video_url || null;
+      }
     }
 
     // ── 2. Insert render_job row ──────────────────────────────────────────────
@@ -46,17 +49,22 @@ export async function startRenderJob(req, res) {
       .insert({
         creator_id,
         identity_id,
-        script:     script  || null,
-        scenes:     scenes  || null,
-        status:     "pending",
-        created_at: new Date().toISOString(),
+        script:            script       || script_text || null,
+        script_text:       script_text  || script      || null,
+        scenes:            scenes       || null,
+        scene_description: scene_description || null,
+        status:            "pending",
+        created_at:        new Date().toISOString(),
+        emotional_physics: emotional_physics || null,
+        logic_profile:     logic_profile    || null,
+        agent_rules:       agent_rules      || null,
       })
       .select("id")
       .single();
 
     if (insertErr || !job) {
       console.error("[render-jobs] insert error:", insertErr?.message);
-      return res.status(500).json({ error: "Failed to start render" });
+      return res.status(500).json({ error: "Failed to create render job" });
     }
 
     const render_job_id = job.id;
@@ -67,21 +75,26 @@ export async function startRenderJob(req, res) {
         render_job_id,
         identity_id,
         creator_id,
-        video_url_src,   // video_url (null for component-based identities)
-        image_url,        // image_url
-        audio_url         // audio_url
+        video_url_src,
+        image_url,
+        audio_url,
+        script || script_text || '',
+        scene_description || '',
+        emotional_physics  || null,
+        logic_profile      || null,
+        agent_rules        || null
       );
     } catch (webhookErr) {
       console.error("[render-jobs] webhook error:", webhookErr.message);
       await supabase
         .from("render_jobs")
-        .update({ status: "error", error_message: `Webhook failed: ${webhookErr.message}` })
+        .update({ status: "failed", error_message: `Webhook failed: ${webhookErr.message}` })
         .eq("id", render_job_id);
-      return res.status(502).json({ error: "Failed to start render" });
+      return res.status(502).json({ error: "Failed to reach the video pipeline. Please try again." });
     }
 
     // ── 4. Respond ────────────────────────────────────────────────────────────
-    return res.status(200).json({ render_job_id, status: "accepted" });
+    return res.status(200).json({ render_job_id, id: render_job_id, status: "accepted" });
 
   } catch (err) {
     console.error("[render-jobs] unexpected error:", err.message);
@@ -94,23 +107,6 @@ export async function startRenderJob(req, res) {
 export async function emotionCallback(req, res) {
   const jobId = req.params.id;
   try {
-    const { render_job_id } = req.body || {};
-
-    if (render_job_id && render_job_id !== jobId) {
-      return res.status(400).json({ error: "render_job_id in body does not match URL param" });
-    }
-
-    const { data: renderJob, error: fetchError } = await supabase
-      .from("render_jobs")
-      .select("id, status")
-      .eq("id", jobId)
-      .single();
-
-    if (fetchError || !renderJob) {
-      return res.status(404).json({ error: "Render job not found" });
-    }
-
-    // No-op acknowledgement — rendering is now handled by video-callback
     return res.status(200).json({ ok: true, note: "emotion-callback is deprecated; use video-callback" });
   } catch (err) {
     console.error(`[render_job ${jobId}] emotion-callback error:`, err.message);
