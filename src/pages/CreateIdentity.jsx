@@ -652,17 +652,9 @@ export default function CreateIdentityPage() {
       // ── Step B+C: Create render job + fire webhook ────────────────────────────
       setGenerateStatus('Submitting your video for generation...');
 
-      // Get the Supabase access token so the authenticate middleware accepts the request
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) throw new Error('Not authenticated. Please sign in and try again.');
-
       const res = await fetch('/api/render-jobs', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           identity_id:       identity.id,
           creator_id:        creatorId,

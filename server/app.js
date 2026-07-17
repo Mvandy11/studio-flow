@@ -131,7 +131,93 @@ app.use('/api/identity', identityRouter);
 app.use('/api/sessions', sessionsRouter);
 
 // ─────────────────────────────────────────────────────────────
-// ⭐ NEW — Render Jobs Route (emotion pipeline callback)
+// ⭐ Render Jobs — inline handlers (no auth required)
+// ─────────────────────────────────────────────────────────────
+const { supabase: supabaseClient } = await import('./supabase/client.js');
+
+app.post('/api/render-jobs', async (req, res) => {
+  try {
+    const {
+      identity_id, creator_id, image_url, audio_url,
+      script, scene_description, emotional_physics,
+      logic_profile, agent_rules
+    } = req.body;
+
+    const { data: job, error } = await supabaseClient
+      .from('render_jobs')
+      .insert({
+        identity_id,
+        creator_id,
+        script,
+        scene_description,
+        emotional_physics,
+        logic_profile,
+        agent_rules,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const render_job_id = job.id;
+    const callback_url  = `https://studio-flow-backend.onrender.com/api/render-jobs/${render_job_id}/video-callback`;
+
+    await fetch('https://hook.us2.make.com/m3h98bjnh4ejvngfp4wqzt4xr13ic2qa', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        creator_id,
+        identity_id,
+        render_job_id,
+        image_url,
+        audio_url,
+        video_url: '',
+        callback_url,
+        script,
+        scene_description,
+        emotional_physics,
+        logic_profile,
+        agent_rules,
+      }),
+    });
+
+    console.log('[render-jobs] job created:', render_job_id);
+    res.json({ success: true, render_job_id, id: render_job_id });
+  } catch (err) {
+    console.error('render-jobs POST error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/render-jobs/:id/video-callback', async (req, res) => {
+  try {
+    const { id }  = req.params;
+    const payload = req.body;
+
+    const video_url = Array.isArray(payload.output)
+      ? payload.output[0]
+      : payload.output;
+
+    if (video_url) {
+      await supabaseClient
+        .from('render_jobs')
+        .update({ video_url, status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', id);
+      console.log(`[video-callback] saved video_url for job ${id}`);
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    console.error('video-callback error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+console.log('Routes registered: POST /api/render-jobs OK');
+
+// ─────────────────────────────────────────────────────────────
+// ⭐ Render Jobs router (kept for legacy emotion-callback)
 // ─────────────────────────────────────────────────────────────
 app.use('/api/render-jobs', renderJobsRouter);
 
