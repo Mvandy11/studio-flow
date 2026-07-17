@@ -23,6 +23,48 @@ function StatusBadge({ status }) {
   return <span className={`mv-badge ${cls}`}>{label}</span>;
 }
 
+// ─── Confirm delete modal ─────────────────────────────────────────────────────
+function ConfirmDeleteModal({ onCancel, onConfirm, deleting }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '1rem',
+    }}>
+      <div style={{
+        background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '16px', padding: '1.75rem 1.5rem',
+        maxWidth: 360, width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+      }}>
+        <h3 style={{ margin: '0 0 0.6rem', fontSize: '1rem', fontWeight: 700, color: 'rgba(220,220,235,0.9)' }}>
+          Delete this video?
+        </h3>
+        <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'rgba(200,200,215,0.55)', lineHeight: 1.55 }}>
+          This will permanently remove the video from your account. This cannot be undone.
+        </p>
+        <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(200,200,215,0.7)', fontSize: '0.85rem', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.5 : 1 }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.35)', color: 'rgba(252,165,165,0.9)', fontSize: '0.85rem', cursor: deleting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: deleting ? 0.7 : 1 }}
+          >
+            {deleting && <span className="ci-spinner" style={{ width: 12, height: 12 }} />}
+            {deleting ? 'Deleting...' : 'Yes, Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
@@ -37,9 +79,11 @@ function SkeletonCard() {
 }
 
 // ─── Single video card ────────────────────────────────────────────────────────
-function VideoCard({ job, identityMap, highlighted }) {
+function VideoCard({ job, identityMap, highlighted, user, onDeleteSuccess, onDeleteError }) {
   const navigate = useNavigate();
-  const [localJob, setLocalJob] = useState(job);
+  const [localJob, setLocalJob]       = useState(job);
+  const [showModal, setShowModal]     = useState(false);
+  const [deleting, setDeleting]       = useState(false);
 
   // Subscribe to realtime for pending/processing jobs
   useEffect(() => {
@@ -59,6 +103,24 @@ function VideoCard({ job, identityMap, highlighted }) {
 
     return () => supabase.removeChannel(channel);
   }, [localJob.id, localJob.status]);
+
+  async function handleConfirmDelete() {
+    setDeleting(true);
+    const { error } = await supabase
+      .from('render_jobs')
+      .delete()
+      .eq('id', localJob.id)
+      .eq('creator_id', user.id);
+
+    if (error) {
+      setDeleting(false);
+      setShowModal(false);
+      onDeleteError('Couldn\'t delete video. Try again.');
+    } else {
+      setShowModal(false);
+      onDeleteSuccess(localJob.id);
+    }
+  }
 
   const { status, video_url, error_message, error: errorField, identity_id, created_at } = localJob;
   const errorText = error_message || errorField;
@@ -158,6 +220,13 @@ function VideoCard({ job, identityMap, highlighted }) {
             <button className="mv-btn mv-btn--sm" onClick={copyLink}>
               Share
             </button>
+            <button
+              className="mv-btn mv-btn--sm"
+              onClick={() => setShowModal(true)}
+              style={{ color: 'rgba(252,165,165,0.75)', borderColor: 'rgba(220,38,38,0.25)' }}
+            >
+              🗑️ Delete
+            </button>
           </div>
         )}
 
@@ -166,9 +235,24 @@ function VideoCard({ job, identityMap, highlighted }) {
             <button className="mv-btn mv-btn--sm mv-btn--primary" onClick={() => navigate('/generator')}>
               Try Again
             </button>
+            <button
+              className="mv-btn mv-btn--sm"
+              onClick={() => setShowModal(true)}
+              style={{ color: 'rgba(252,165,165,0.75)', borderColor: 'rgba(220,38,38,0.25)' }}
+            >
+              🗑️ Delete
+            </button>
           </div>
         )}
       </div>
+
+      {showModal && (
+        <ConfirmDeleteModal
+          deleting={deleting}
+          onCancel={() => setShowModal(false)}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 }
@@ -332,8 +416,8 @@ export default function MyVideos() {
           <p className="mv-state-icon">🎬</p>
           <p className="mv-state-title">No videos yet</p>
           <p className="mv-state-sub">Generate your first avatar video to see it here.</p>
-          <button className="mv-btn mv-btn--primary" onClick={() => navigate('/generator')}>
-            Generate a Video →
+          <button className="mv-btn mv-btn--primary" onClick={() => navigate('/create-identity')}>
+            Create Avatar →
           </button>
         </div>
       </div>
@@ -367,6 +451,12 @@ export default function MyVideos() {
               job={job}
               identityMap={identityMap}
               highlighted={job.id === highlightedJob}
+              user={user}
+              onDeleteSuccess={id => {
+                setJobs(prev => prev.filter(j => j.id !== id));
+                setToast('Video deleted.');
+              }}
+              onDeleteError={msg => setToast(msg)}
             />
           </div>
         ))}
