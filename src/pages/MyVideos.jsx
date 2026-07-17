@@ -73,13 +73,18 @@ function VideoCard({ job, identityMap, highlighted }) {
     <div className={`mv-card${highlighted ? ' mv-card--highlighted' : ''}`}>
 
       {/* Video / placeholder area */}
-      {status === 'completed' && videoUrl ? (
-        <video
-          className="mv-card__video"
-          src={videoUrl}
-          controls
-          poster={identityMap[`img_${identity_id}`] ?? undefined}
-        />
+      {status === 'completed' ? (
+        localJob.video_url ? (
+          <video
+            controls
+            src={localJob.video_url}
+            style={{ width: '100%', borderRadius: '8px', display: 'block' }}
+          />
+        ) : (
+          <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontSize: '0.85rem', color: 'rgba(200,200,215,0.6)' }}>
+            Video processing...
+          </div>
+        )
       ) : status === 'failed' ? (
         <div className="mv-card__placeholder mv-card__placeholder--failed">
           <span className="mv-placeholder-icon">❌</span>
