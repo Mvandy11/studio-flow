@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { API_BASE } from '../lib/apiBase';
 import './createIdentity.css';
+
+const API_BASE = 'https://studio-flow-backend.onrender.com';
 
 const BUCKET = 'identities';
 const STEP_LABELS = ['Name', 'Photo', 'Voice', 'Identity', 'Script', 'Generate'];
@@ -653,7 +654,7 @@ export default function CreateIdentityPage() {
       // ── Step B+C: Create render job + fire webhook ────────────────────────────
       setGenerateStatus('Submitting your video for generation...');
 
-      const res = await fetch(`${API_BASE}/render-jobs`, {
+      const res = await fetch(`${API_BASE}/api/render-jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
