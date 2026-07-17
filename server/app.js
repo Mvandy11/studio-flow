@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
@@ -224,6 +225,24 @@ app.use('/api/render-jobs', renderJobsRouter);
 // ─────────────────────────────────────────────────────────────
 // 6. Health check
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Proxy — forward any unhandled /api/* to the canonical backend.
+// Comes AFTER all inline route handlers so specific routes win.
+// Comes BEFORE the SPA catch-all so it is never swallowed.
+// ─────────────────────────────────────────────────────────────
+app.use('/api', createProxyMiddleware({
+  target: 'https://studio-flow-backend.onrender.com',
+  changeOrigin: true,
+  secure: true,
+  on: {
+    error: (err, req, res) => {
+      console.error('Proxy error:', err.message);
+      res.status(502).json({ error: 'Backend unavailable' });
+    },
+  },
+}));
+
+console.log('Routes registered: POST /api/render-jobs OK');
 app.get('/api/health', (_req, res) => {
   res.json({
     status:    'ok',
