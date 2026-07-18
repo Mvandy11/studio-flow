@@ -140,20 +140,24 @@ app.post('/api/render-jobs', async (req, res) => {
   try {
     const {
       identity_id, creator_id, image_url, audio_url,
-      script, scene_description, emotional_physics,
-      logic_profile, agent_rules
+      script, script_text, scene_description,
+      emotional_physics, logic_profile, agent_rules,
+      voice_style, personality_type, primary_topic,
+      energy_level, speaking_pace,
     } = req.body;
+
+    const resolvedScript = script || script_text || '';
 
     const { data: job, error } = await supabaseClient
       .from('render_jobs')
       .insert({
         identity_id,
         creator_id,
-        script,
-        scene_description,
-        emotional_physics,
-        logic_profile,
-        agent_rules,
+        script:            resolvedScript,
+        scene_description: scene_description || '',
+        emotional_physics: emotional_physics || null,
+        logic_profile:     logic_profile     || null,
+        agent_rules:       agent_rules       || null,
         status: 'pending',
       })
       .select()
@@ -162,31 +166,47 @@ app.post('/api/render-jobs', async (req, res) => {
     if (error) throw error;
 
     const render_job_id = job.id;
-    const callback_url  = `https://studio-flow-backend.onrender.com/api/render-jobs/${render_job_id}/video-callback`;
+    const backendBase   = process.env.BACKEND_URL || 'https://studio-flow-backend.onrender.com';
+    const callback_url  = `${backendBase}/api/render-jobs/${render_job_id}/video-callback`;
 
-    await fetch('https://hook.us2.make.com/m3h98bjnh4ejvngfp4wqzt4xr13ic2qa', {
+    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL;
+    if (!makeWebhookUrl) throw new Error('MAKE_WEBHOOK_URL env var is not set');
+
+    console.log('[render-jobs] Calling Make.com webhook:', makeWebhookUrl);
+
+    const webhookRes = await fetch(makeWebhookUrl, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        render_job_id,
         creator_id,
         identity_id,
-        render_job_id,
-        image_url,
-        audio_url,
-        video_url: '',
+        image_url:         image_url         || '',
+        audio_url:         audio_url         || '',
+        video_url:         '',
         callback_url,
-        script,
-        scene_description,
-        emotional_physics,
-        logic_profile,
-        agent_rules,
+        script:            resolvedScript,
+        scene_description: scene_description || '',
+        voice_style:       voice_style       || '',
+        personality_type:  personality_type  || '',
+        primary_topic:     primary_topic     || '',
+        energy_level:      energy_level      || '',
+        speaking_pace:     speaking_pace     || '',
+        emotional_physics: emotional_physics || null,
+        logic_profile:     logic_profile     || null,
+        agent_rules:       agent_rules       || null,
       }),
     });
 
-    console.log('[render-jobs] job created:', render_job_id);
+    if (!webhookRes.ok) {
+      const text = await webhookRes.text().catch(() => '');
+      throw new Error(`Make.com webhook returned ${webhookRes.status}: ${text}`);
+    }
+
+    console.log('[render-jobs] Make.com webhook OK — job:', render_job_id);
     res.json({ success: true, render_job_id, id: render_job_id });
   } catch (err) {
-    console.error('render-jobs POST error:', err);
+    console.error('[render-jobs] POST error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
