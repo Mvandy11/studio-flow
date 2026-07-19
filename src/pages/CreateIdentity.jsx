@@ -755,6 +755,8 @@ export default function CreateIdentityPage() {
           voice_url:         audioUrl,
           audio_url:         audioUrl,
           status:            'active',
+          script:            scriptText            || null,
+          scene_description: sceneDescription      || null,
           emotional_physics: emotionalPhysics,
           logic_profile:     logicProfile,
           agent_rules:       agentRules,
