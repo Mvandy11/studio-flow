@@ -187,6 +187,22 @@ app.post('/api/render-jobs', async (req, res) => {
       }
     }
 
+    // Auto-generate a script from profile if still empty
+    if (!resolvedScript) {
+      const tone   = emotional_physics?.emotional_physics?.dominant_emotion || 'energetic';
+      const pace   = speaking_pace   || 'normal';
+      const energy = energy_level    || 'high';
+      const topic  = primary_topic   || 'life';
+      const ptype  = personality_type || 'motivator';
+      const vstyle = voice_style     || 'conversational';
+
+      resolvedScript = `Hey, it's ${identity_id ? 'your host' : 'me'} — and I'm here to talk about ${topic}. ` +
+        `As a ${ptype} with a ${vstyle} style, I bring ${energy} energy to everything I do. ` +
+        `Whether you're just starting out or leveling up, today is YOUR day. Let's make it count!`;
+
+      console.log('[render-jobs] script auto-generated from profile, length:', resolvedScript.length);
+    }
+
     console.log('[render-jobs] script length:', resolvedScript.length,
                 '| image_url:', image_url?.slice(0, 40),
                 '| audio_url:', audio_url?.slice(0, 40));
