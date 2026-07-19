@@ -165,6 +165,25 @@ app.post('/api/render-jobs', async (req, res) => {
 
     if (error) throw error;
 
+    // ── Fallback: fetch missing fields from identities table ──────────────────
+    if (!resolvedScript && identity_id) {
+      const { data: identity } = await supabaseClient
+        .from('identities')
+        .select('script, scene_description, emotional_physics, logic_profile, agent_rules')
+        .eq('id', identity_id)
+        .single();
+      if (identity) {
+        resolvedScript    = identity.script            || '';
+        scene_description = identity.scene_description || scene_description || '';
+        emotional_physics = identity.emotional_physics || emotional_physics || null;
+        logic_profile     = identity.logic_profile     || logic_profile     || null;
+        agent_rules       = identity.agent_rules       || agent_rules       || null;
+      }
+    }
+
+    console.log('[render-jobs] resolvedScript length:', resolvedScript.length,
+                '| scene_description:', scene_description?.slice(0, 30));
+
     const render_job_id = job.id;
     const backendBase   = process.env.BACKEND_URL || 'https://studio-flow-backend.onrender.com';
     const callback_url  = `${backendBase}/api/render-jobs/${render_job_id}/video-callback`;
