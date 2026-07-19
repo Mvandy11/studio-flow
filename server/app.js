@@ -150,20 +150,40 @@ app.post('/api/render-jobs', async (req, res) => {
     let resolvedScene  = scene_description || '';
 
     if ((!resolvedScript || !resolvedScene) && identity_id) {
+      // Try identities table first
       const { data: identity } = await supabaseClient
         .from('identities')
         .select('script, scene_description, emotional_physics, logic_profile, agent_rules, image_url, audio_url')
         .eq('id', identity_id)
         .single();
 
-      if (identity) {
-        if (!resolvedScript)    resolvedScript    = identity.script            || '';
-        if (!resolvedScene)     resolvedScene     = identity.scene_description || '';
+      if (identity?.script) {
+        resolvedScript  = identity.script;
+        resolvedScene   = identity.scene_description || resolvedScene;
         if (!emotional_physics) emotional_physics = identity.emotional_physics || null;
         if (!logic_profile)     logic_profile     = identity.logic_profile     || null;
         if (!agent_rules)       agent_rules       = identity.agent_rules       || null;
-        if (!image_url)         image_url         = identity.image_url         || '';
-        if (!audio_url)         audio_url         = identity.audio_url         || '';
+        if (!image_url)         image_url         = identity.image_url         || image_url;
+        if (!audio_url)         audio_url         = identity.audio_url         || audio_url;
+      }
+
+      // If identities had no script, look in prior render_jobs for same identity
+      if (!resolvedScript) {
+        const { data: priorJob } = await supabaseClient
+          .from('render_jobs')
+          .select('script, scene_description')
+          .eq('identity_id', identity_id)
+          .not('script', 'is', null)
+          .neq('script', '')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (priorJob?.script) {
+          resolvedScript = priorJob.script;
+          if (!resolvedScene) resolvedScene = priorJob.scene_description || '';
+          console.log('[render-jobs] script loaded from prior render_job');
+        }
       }
     }
 
