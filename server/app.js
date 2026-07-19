@@ -138,7 +138,7 @@ const { supabase: supabaseClient } = await import('./supabase/client.js');
 
 app.post('/api/render-jobs', async (req, res) => {
   try {
-    const {
+    let {
       identity_id, creator_id, image_url, audio_url,
       script, script_text, scene_description,
       emotional_physics, logic_profile, agent_rules,
@@ -146,7 +146,30 @@ app.post('/api/render-jobs', async (req, res) => {
       energy_level, speaking_pace,
     } = req.body;
 
-    const resolvedScript = script || script_text || '';
+    let resolvedScript = script || script_text || '';
+    let resolvedScene  = scene_description || '';
+
+    if ((!resolvedScript || !resolvedScene) && identity_id) {
+      const { data: identity } = await supabaseClient
+        .from('identities')
+        .select('script, scene_description, emotional_physics, logic_profile, agent_rules, image_url, audio_url')
+        .eq('id', identity_id)
+        .single();
+
+      if (identity) {
+        if (!resolvedScript)    resolvedScript    = identity.script            || '';
+        if (!resolvedScene)     resolvedScene     = identity.scene_description || '';
+        if (!emotional_physics) emotional_physics = identity.emotional_physics || null;
+        if (!logic_profile)     logic_profile     = identity.logic_profile     || null;
+        if (!agent_rules)       agent_rules       = identity.agent_rules       || null;
+        if (!image_url)         image_url         = identity.image_url         || '';
+        if (!audio_url)         audio_url         = identity.audio_url         || '';
+      }
+    }
+
+    console.log('[render-jobs] script length:', resolvedScript.length,
+                '| image_url:', image_url?.slice(0, 40),
+                '| audio_url:', audio_url?.slice(0, 40));
 
     const { data: job, error } = await supabaseClient
       .from('render_jobs')
@@ -154,7 +177,7 @@ app.post('/api/render-jobs', async (req, res) => {
         identity_id,
         creator_id,
         script:            resolvedScript,
-        scene_description: scene_description || '',
+        scene_description: resolvedScene,
         emotional_physics: emotional_physics || null,
         logic_profile:     logic_profile     || null,
         agent_rules:       agent_rules       || null,
@@ -164,25 +187,6 @@ app.post('/api/render-jobs', async (req, res) => {
       .single();
 
     if (error) throw error;
-
-    // ── Fallback: fetch missing fields from identities table ──────────────────
-    if (!resolvedScript && identity_id) {
-      const { data: identity } = await supabaseClient
-        .from('identities')
-        .select('script, scene_description, emotional_physics, logic_profile, agent_rules')
-        .eq('id', identity_id)
-        .single();
-      if (identity) {
-        resolvedScript    = identity.script            || '';
-        scene_description = identity.scene_description || scene_description || '';
-        emotional_physics = identity.emotional_physics || emotional_physics || null;
-        logic_profile     = identity.logic_profile     || logic_profile     || null;
-        agent_rules       = identity.agent_rules       || agent_rules       || null;
-      }
-    }
-
-    console.log('[render-jobs] resolvedScript length:', resolvedScript.length,
-                '| scene_description:', scene_description?.slice(0, 30));
 
     const render_job_id = job.id;
     const backendBase   = process.env.BACKEND_URL || 'https://studio-flow-backend.onrender.com';
@@ -205,7 +209,7 @@ app.post('/api/render-jobs', async (req, res) => {
         video_url:         '',
         callback_url,
         script:            resolvedScript,
-        scene_description: scene_description || '',
+        scene_description: resolvedScene,
         voice_style:       voice_style       || '',
         personality_type:  personality_type  || '',
         primary_topic:     primary_topic     || '',
